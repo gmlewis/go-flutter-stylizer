@@ -4,7 +4,7 @@
 organizes your Flutter classes in an opinionated and consistent manner.
 
 It is based on the [Flutter Stylizer VSCode plugin](
-https://github.com/gmlewis/flutter-stylizer/issues) but is
+https://github.com/gmlewis/flutter-stylizer) but is
 written in Go instead of TypeScript.
 
 This makes it particularly well-suited to be used in GitHub Actions
