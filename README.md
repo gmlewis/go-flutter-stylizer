@@ -1,4 +1,4 @@
-# `flutter-stylizer` is a stand-alone version of the VSCode plugin of the same name.
+# flutter-stylizer
 
 `flutter-stylizer` is a stand-alone statically-linked Go executable that
 organizes your Flutter classes in an opinionated and consistent manner.
