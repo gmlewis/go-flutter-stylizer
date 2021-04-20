@@ -18,13 +18,8 @@ package dart
 
 import "strings"
 
-// TextEditor represents an editor that can manipulate text.
-type TextEditor interface {
-}
-
 // Class represents a Dart class.
 type Class struct {
-	editor                    TextEditor
 	className                 string
 	classOffset               int
 	openCurlyOffset           int
@@ -47,15 +42,19 @@ type Class struct {
 }
 
 // NewClass returns a new Dart Class.
-func NewClass(editor TextEditor, className string, classOffset int,
-	openCurlyOffset int, closeCurlyOffset int, groupAndSortGetterMethods bool) *Class {
+//
+// classOffset is the byte offset of the beginning of the line with "class ...".
+// openCurlyOffset is the position of the "{" for that class.
+// closeCurlyOffset is the position of the "}" for that class.
+// groupAndSortGetterMethods determines how getter methods are processed.
+func NewClass(className string, classOffset int, openCurlyOffset int,
+	closeCurlyOffset int, groupAndSortGetterMethods bool) *Class {
 	lessThanOffset := strings.Index(className, "<")
 	if lessThanOffset >= 0 { // Strip off <T>.
 		className = className[0:lessThanOffset]
 	}
 
 	return &Class{
-		editor:                    editor,
 		className:                 className,
 		classOffset:               classOffset,
 		openCurlyOffset:           openCurlyOffset,
