@@ -1,9 +1,13 @@
 package dart
 
 import (
+	_ "embed"
 	"strings"
 	"testing"
 )
+
+//go:embed basic_classes.dart.txt
+var basicClasses string
 
 func TestFindMatchingBracket(t *testing.T) {
 	bc, bcOCO, bcCCO := setupClass(t, "class Class1 {", basicClasses)
@@ -17,6 +21,56 @@ func TestFindMatchingBracket(t *testing.T) {
 			class:      bc,
 			openOffset: bcOCO,
 			want:       bcCCO,
+		},
+		"build()": {
+			class:      bc,
+			openOffset: strings.Index(basicClasses, "build()") + 5,
+			want:       strings.Index(basicClasses, "build()") + 6,
+		},
+		"build() {}": {
+			class:      bc,
+			openOffset: strings.Index(basicClasses, "build() {}") + 8,
+			want:       strings.Index(basicClasses, "build() {}") + 9,
+		},
+		"Class1();": {
+			class:      bc,
+			openOffset: strings.Index(basicClasses, "Class1();") + 6,
+			want:       strings.Index(basicClasses, "Class1();") + 7,
+		},
+		"Class1.fromNum();": {
+			class:      bc,
+			openOffset: strings.Index(basicClasses, "Class1.fromNum();") + 14,
+			want:       strings.Index(basicClasses, "Class1.fromNum();") + 15,
+		},
+		"var myfunc = (int n) => n;": {
+			class:      bc,
+			openOffset: strings.Index(basicClasses, "var myfunc = (int n) => n;") + 13,
+			want:       strings.Index(basicClasses, "var myfunc = (int n) => n;") + 19,
+		},
+		"toString()": {
+			class:      bc,
+			openOffset: strings.Index(basicClasses, "toString()") + 8,
+			want:       strings.Index(basicClasses, "toString()") + 9,
+		},
+		"toString() {": {
+			class:      bc,
+			openOffset: strings.Index(basicClasses, "toString() {") + 11,
+			want:       strings.Index(basicClasses, "toString() {") + 85,
+		},
+		"print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');": {
+			class:      bc,
+			openOffset: strings.Index(basicClasses, "print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');") + 5,
+			want:       strings.Index(basicClasses, "print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');") + 50,
+		},
+		"${sqrt(2)}": {
+			class:      bc,
+			openOffset: strings.Index(basicClasses, "${sqrt(2)}") + 1,
+			want:       strings.Index(basicClasses, "${sqrt(2)}") + 9,
+		},
+		"sqrt(2)": {
+			class:      bc,
+			openOffset: strings.Index(basicClasses, "sqrt(2)") + 4,
+			want:       strings.Index(basicClasses, "sqrt(2)") + 6,
 		},
 	}
 
@@ -47,44 +101,3 @@ func setupClass(t *testing.T, searchFor, buf string) (*Class, int, int) {
 	c.FindFeatures(buf)
 	return c, openCurlyOffset, closeCurlyOffset
 }
-
-var basicClasses = `// This is a test file. After running this through "Flutter Stylizer",
-// the output should match the content of file "basic_classes_out.dart".
-
-import 'dart:math';
-
-// Class1 is the first class.
-class Class1 {
-  // _pvi is a private instance variable.
-  List<String> _pvi = ['one', 'two'];
-  @override
-  build() {}  // build method
-
-  // This is a random single-line comment somewhere in the class.
-
-  // _spv is a static private variable.
-  static final String _spv = 'spv';
-
-  /* This is a
-   * random multi-
-   * line comment
-   * somewhere in the middle
-   * of the class */
-
-  // _spvni is a static private variable with no initializer.
-  static double _spvni;
-  int _pvini;
-  static int sv;
-  int v;
-  final double fv = 42.0;
-  Class1();
-  Class1.fromNum();
-  var myfunc = (int n) => n;
-  get vv => v; // getter
-  @override
-  toString() {
-    print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');
-    return '';
-  }
-}
-`
