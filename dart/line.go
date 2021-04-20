@@ -76,3 +76,7 @@ func NewLine(line string, startOffset int) *Line {
 		entityType:  entityType,
 	}
 }
+
+func isComment(line *Line) bool {
+	return line.entityType == SingleLineComment || line.entityType == MultiLineComment
+}
