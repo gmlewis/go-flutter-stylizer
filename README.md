@@ -32,6 +32,48 @@ usable yet.
 $ go get -u github.com/gmlewis/go-flutter-stylizer/cmd/flutter-stylizer
 ```
 
+## Usage:
+
+```
+$ flutter-stylizer --help
+
+Usage:
+  flutter-stylizer [flags] [path ... | ./...]
+
+Flags:
+      --config string   config file (default is $HOME/.flutter-stylizer.yaml)
+  -d, --diff            display diffs (cannot be used with -l or -w)
+  -h, --help            help for flutter-stylizer
+  -l, --list            list files whose formatting differs from flutter-stylizer's (cannot be used with -d or -w)
+  -w, --write           write result to (source) file instead of stdout (cannot be used with -d or -l)
+```
+
+## Examples:
+
+### Stylize all Dart files in directory tree
+
+```
+$ flutter-stylizer -w ./...
+```
+
+### Show stylizer differences for all Dart files in directory tree
+
+```
+$ flutter-stylizer -d ./...
+```
+
+### List all Dart files with stylizer differences in directory tree
+
+```
+$ flutter-stylizer -l ./...
+```
+
+### Show stylized output for a source file
+
+```
+$ flutter-stylizer lib/path/to/file.dart
+```
+
 ## Features
 
 `flutter-stylizer` organizes the class(es) within a `*.dart` file
@@ -45,6 +87,8 @@ in the following manner (with a blank line separating these parts):
   - (`public-static-variables` in configuration)
 * Any instance variables are listed next, in sorted order.
   - (`public-instance-variables` in configuration)
+* Any `@override` variables are listed next, in sorted order.
+  - (`public-override-variables` in configuration)
 * Any private static (class) variables are listed next, in sorted order.
   - (`private-static-variables` in configuration)
 * Any private instance variables are listed next, in sorted order.
@@ -52,6 +96,7 @@ in the following manner (with a blank line separating these parts):
 * Any `@override` methods are listed next, in sorted order.
   - (`public-override-methods` in configuration)
 * Any other methods are listed next in their original (unchanged) order.
+  (As of version `v0.0.19`, two new flags affect this section; see below.)
   - (`public-other-methods` in configuration)
 * The `build` method is listed last.
   - (`build-method` in configuration)
@@ -76,19 +121,35 @@ To override the default order of the stylizer, add a section to your
 `--config` flag to point to it), like this:
 
 ```
+groupAndSortGetterMethods: false
 memberOrdering:
   public-constructor
   named-constructors
   public-static-variables
   public-instance-variables
+  public-override-variables
   private-static-variables
   private-instance-variables
   public-override-methods
   public-other-methods
   build-method
+sortOtherMethods: false,
 ```
 
 And then rearrange member names as desired.
+
+Note that as of `v0.0.19`, two new flags were added to modify the
+behavior of the "public-other-methods" as requested in #18:
+
+- `groupAndSortGetterMethods` (default: `false`)
+  - Whether to group getters separately (before 'public-other-methods')
+    and sort them within their group.
+
+- `sortOtherMethods` (default: `false`)
+  - Whether to sort the 'public-other-methods' within their group.
+
+These features are experimental and should be used with caution.
+Please file any bugs you find on the [GitHub issue tracker].
 
 ## Limitations
 
@@ -107,6 +168,8 @@ of running this plugin on the example code.
 Even better, please submit a PR with your new "before"/"after" example coded-up
 as a unit test along with the code to fix the problem, and I'll try to
 incorporate the fix into the repo.
+
+***Please remember to state which version of the program you are using and include your configuration settings!***
 
 [GitHub issue tracker]: https://github.com/gmlewis/go-flutter-stylizer/issues
 

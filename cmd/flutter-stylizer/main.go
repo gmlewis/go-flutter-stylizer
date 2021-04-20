@@ -16,8 +16,8 @@ limitations under the License.
 
 package main
 
-import "github.com/gmlewis/go-flutter-stylizer/cmd/flutter-stylizer/cmd"
+import "github.com/gmlewis/go-flutter-stylizer/cli"
 
 func main() {
-	cmd.Execute()
+	cli.Execute()
 }
