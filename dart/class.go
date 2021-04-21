@@ -441,109 +441,110 @@ func (c *Class) findSequence(buf string) (string, int, string) {
 
 	var leadingText string
 	var lineCount int
-	//     let openParenCount = 0
-	//     let openBraceCount = 0
-	//     let openCurlyCount = 0
-	//     for i := 0; i < buf.length; i++ {
-	//       if (openParenCount > 0) {
-	//         for (; i < buf.length; i++) {
-	//           switch (buf[i]) {
-	//             case '(':
-	//               openParenCount++
-	//               break
-	//             case ')':
-	//               openParenCount--
-	//               break
-	//             case '\n':
-	//               lineCount++
-	//               break
-	//           }
-	//           if (openParenCount == 0) {
-	//             result.push(buf[i])
-	//             break
-	//           }
-	//         }
-	//       } else if (openBraceCount > 0) {
-	//         for (; i < buf.length; i++) {
-	//           switch (buf[i]) {
-	//             case '[':
-	//               openBraceCount++
-	//               break
-	//             case ']':
-	//               openBraceCount--
-	//               break
-	//             case '\n':
-	//               lineCount++
-	//               break
-	//           }
-	//           if (openBraceCount == 0) {
-	//             result.push(buf[i])
-	//             return [result.join(""), lineCount, leadingText]
-	//           }
-	//         }
-	//       } else if (openCurlyCount > 0) {
-	//         for (; i < buf.length; i++) {
-	//           switch (buf[i]) {
-	//             case '{':
-	//               openCurlyCount++
-	//               break
-	//             case '}':
-	//               openCurlyCount--
-	//               break
-	//             case '\n':
-	//               lineCount++
-	//               break
-	//           }
-	//           if (openCurlyCount == 0) {
-	//             result.push(buf[i])
-	//             return [result.join(""), lineCount, leadingText]
-	//           }
-	//         }
-	//       } else {
-	//         switch (buf[i]) {
-	//           case '(':
-	//             openParenCount++
-	//             result.push(buf[i])
-	//             if (leadingText == "") {
-	//               leadingText = buf.substring(0, i).trim()
-	//             }
-	//             break
-	//           case '[':
-	//             openBraceCount++
-	//             result.push(buf[i])
-	//             if (leadingText == "") {
-	//               leadingText = buf.substring(0, i).trim()
-	//             }
-	//             break
-	//           case '{':
-	//             openCurlyCount++
-	//             result.push(buf[i])
-	//             if (leadingText == "") {
-	//               leadingText = buf.substring(0, i).trim()
-	//             }
-	//             break
-	//           case ';':
-	//             result.push(buf[i])
-	//             if (leadingText == "") {
-	//               leadingText = buf.substring(0, i).trim()
-	//             }
-	//             return [result.join(""), lineCount, leadingText]
-	//           case '=':
-	//             if (i < buf.length - 1 && buf[i + 1] == '>') {
-	//               result.push("=>")
-	//             } else {
-	//               result.push(buf[i])
-	//             }
-	//             if (leadingText == "") {
-	//               leadingText = buf.substring(0, i).trim()
-	//             }
-	//             break
-	//           case '\n':
-	//             lineCount++
-	//             break
-	//         }
-	//       }
-	//     }
+	var openParenCount int
+	var openBraceCount int
+	var openCurlyCount int
+	for i := 0; i < len(buf); i++ {
+		if openParenCount > 0 {
+			for ; i < len(buf); i++ {
+				switch buf[i] {
+				case '(':
+					openParenCount++
+					break
+				case ')':
+					openParenCount--
+					break
+				case '\n':
+					lineCount++
+					break
+				}
+				if openParenCount == 0 {
+					result = append(result, string(buf[i]))
+					break
+				}
+			}
+		} else if openBraceCount > 0 {
+			for ; i < len(buf); i++ {
+				switch buf[i] {
+				case '[':
+					openBraceCount++
+					break
+				case ']':
+					openBraceCount--
+					break
+				case '\n':
+					lineCount++
+					break
+				}
+				if openBraceCount == 0 {
+					result = append(result, string(buf[i]))
+					return strings.Join(result, ""), lineCount, leadingText
+				}
+			}
+		} else if openCurlyCount > 0 {
+			for ; i < len(buf); i++ {
+				switch buf[i] {
+				case '{':
+					openCurlyCount++
+					break
+				case '}':
+					openCurlyCount--
+					break
+				case '\n':
+					lineCount++
+					break
+				}
+				if openCurlyCount == 0 {
+					result = append(result, string(buf[i]))
+					return strings.Join(result, ""), lineCount, leadingText
+				}
+			}
+		} else {
+			switch buf[i] {
+			case '(':
+				openParenCount++
+				result = append(result, string(buf[i]))
+				if leadingText == "" {
+					leadingText = strings.TrimSpace(buf[0:i])
+				}
+				break
+			case '[':
+				openBraceCount++
+				result = append(result, string(buf[i]))
+				if leadingText == "" {
+					leadingText = strings.TrimSpace(buf[0:i])
+				}
+				break
+			case '{':
+				openCurlyCount++
+				result = append(result, string(buf[i]))
+				if leadingText == "" {
+					leadingText = strings.TrimSpace(buf[0:i])
+				}
+				break
+			case ';':
+				result = append(result, string(buf[i]))
+				if leadingText == "" {
+					leadingText = strings.TrimSpace(buf[0:i])
+				}
+				return strings.Join(result, ""), lineCount, leadingText
+			case '=':
+				if i < len(buf)-1 && buf[i+1] == '>' {
+					result = append(result, "=>")
+				} else {
+					result = append(result, string(buf[i]))
+				}
+				if leadingText == "" {
+					leadingText = strings.TrimSpace(buf[0:i])
+				}
+				break
+			case '\n':
+				lineCount++
+				break
+			}
+		}
+	}
+
 	return strings.Join(result, ""), lineCount, leadingText
 }
 
@@ -578,7 +579,7 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 
 	curlyDeltaOffset := strings.Index(c.classBody[relCloseParenOffset:], "{")
 	semicolonOffset := strings.Index(c.classBody[relCloseParenOffset:], ";")
-	nextOffset := 0
+	var nextOffset int
 	if curlyDeltaOffset < 0 || (curlyDeltaOffset >= 0 && semicolonOffset >= 0 && semicolonOffset < curlyDeltaOffset) { // no body.
 		nextOffset = relCloseParenOffset + semicolonOffset
 	} else {
