@@ -18,7 +18,6 @@ package dart
 
 import (
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -125,13 +124,13 @@ func (c *Class) FindFeatures() error {
 	return nil
 }
 
-func (c *Class) genStripped(startLine int) string {
-	var strippedLines []string
-	for i := startLine; i < len(c.lines); i++ {
-		strippedLines = append(strippedLines, c.lines[i].stripped)
-	}
-	return strings.Join(strippedLines, "\n")
-}
+// func (c *Class) genStripped(startLine int) string {
+// 	var strippedLines []string
+// 	for i := startLine; i < len(c.lines); i++ {
+// 		strippedLines = append(strippedLines, c.lines[i].stripped)
+// 	}
+// 	return strings.Join(strippedLines, "\n")
+// }
 
 func (c *Class) identifyMainConstructor() error {
 	className := c.className + "("
@@ -368,9 +367,12 @@ func (c *Class) identifyOthers() error {
 func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 	entity := &Entity{}
 
-	buf := c.genStripped(lineNum)
-	sequence, lineCount, leadingText := c.findSequence(buf)
-	log.Printf("scanMethod(line=#%v), sequence=%v, lineCount=%v, leadingText=%q", lineNum+1, sequence, lineCount, leadingText)
+	// buf := c.genStripped(lineNum)
+	sequence, lineCount, leadingText, err := c.findSequence(lineNum)
+	if err != nil {
+		return nil, err
+	}
+	c.e.logf("scanMethod(line=#%v), sequence=%v, lineCount=%v, leadingText=%q", lineNum+1, sequence, lineCount, leadingText)
 
 	nameParts := strings.Split(leadingText, " ")
 	var staticKeyword bool
@@ -431,7 +433,7 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 
 	for i := 0; i <= lineCount; i++ {
 		if c.lines[lineNum+i].entityType >= MainConstructor && c.lines[lineNum+i].entityType != entity.entityType {
-			log.Printf("scanMethod: Changing line #%v from type %v to type %v", lineNum+i+1, c.lines[lineNum+i].entityType, entity.entityType)
+			c.e.logf("scanMethod: Changing line #%v from type %v to type %v", lineNum+i+1, c.lines[lineNum+i].entityType, entity.entityType)
 			if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
 				return nil, err
 			}
@@ -468,116 +470,145 @@ func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
 	return nil
 }
 
-func (c *Class) findSequence(buf string) (string, int, string) {
+func (c *Class) findSequence(lineNum int) (string, int, string, error) {
 	var result []string
 
-	var leadingText string
-	var lineCount int
-	var openParenCount int
-	var openBraceCount int
-	var openCurlyCount int
-	for i := 0; i < len(buf); i++ {
-		if openParenCount > 0 {
-			for ; i < len(buf); i++ {
-				switch buf[i] {
-				case '(':
-					openParenCount++
-					break
-				case ')':
-					openParenCount--
-					break
-				case '\n':
-					lineCount++
-					break
-				}
-				if openParenCount == 0 {
-					result = append(result, string(buf[i]))
-					break
-				}
-			}
-		} else if openBraceCount > 0 {
-			for ; i < len(buf); i++ {
-				switch buf[i] {
-				case '[':
-					openBraceCount++
-					break
-				case ']':
-					openBraceCount--
-					break
-				case '\n':
-					lineCount++
-					break
-				}
-				if openBraceCount == 0 {
-					result = append(result, string(buf[i]))
-					return strings.Join(result, ""), lineCount, leadingText
-				}
-			}
-		} else if openCurlyCount > 0 {
-			for ; i < len(buf); i++ {
-				switch buf[i] {
-				case '{':
-					openCurlyCount++
-					break
-				case '}':
-					openCurlyCount--
-					break
-				case '\n':
-					lineCount++
-					break
-				}
-				if openCurlyCount == 0 {
-					result = append(result, string(buf[i]))
-					return strings.Join(result, ""), lineCount, leadingText
-				}
-			}
-		} else {
-			switch buf[i] {
-			case '(':
-				openParenCount++
-				result = append(result, string(buf[i]))
-				if leadingText == "" {
-					leadingText = strings.TrimSpace(buf[0:i])
-				}
-				break
-			case '[':
-				openBraceCount++
-				result = append(result, string(buf[i]))
-				if leadingText == "" {
-					leadingText = strings.TrimSpace(buf[0:i])
-				}
-				break
-			case '{':
-				openCurlyCount++
-				result = append(result, string(buf[i]))
-				if leadingText == "" {
-					leadingText = strings.TrimSpace(buf[0:i])
-				}
-				break
-			case ';':
-				result = append(result, string(buf[i]))
-				if leadingText == "" {
-					leadingText = strings.TrimSpace(buf[0:i])
-				}
-				return strings.Join(result, ""), lineCount, leadingText
-			case '=':
-				if i < len(buf)-1 && buf[i+1] == '>' {
-					result = append(result, "=>")
-				} else {
-					result = append(result, string(buf[i]))
-				}
-				if leadingText == "" {
-					leadingText = strings.TrimSpace(buf[0:i])
-				}
-				break
-			case '\n':
-				lineCount++
-				break
+	startLine := c.lines[lineNum]
+	cursor := &Cursor{
+		e:         c.e,
+		absOffset: startLine.startOffset,
+		lineIndex: startLine.originalIndex,
+		relOffset: 0,
+		reader:    strings.NewReader(c.e.lines[startLine.originalIndex].stripped),
+	}
+	c.e.logf("\n\nfindSequence(line=%v): %#v, cursor=%v", lineNum+1, startLine, cursor)
+	features, err := cursor.advanceUntil(";", "}")
+	if err != nil {
+		return "", 0, "", fmt.Errorf("advanceUntil(';', '}'): %v", err)
+	}
+	c.e.logf("cursor=%v", cursor)
+
+	buildLeadingText := true
+	var buildStr []string
+	for _, f := range features {
+		if strings.ContainsAny(f, "(){}=>;") {
+			result = append(result, f)
+			if f != ">" {
+				buildLeadingText = false
 			}
 		}
+		if buildLeadingText {
+			buildStr = append(buildStr, f)
+		}
 	}
+	leadingText := strings.TrimSpace(strings.Join(buildStr, ""))
+	lineCount := cursor.lineIndex - startLine.originalIndex
 
-	return strings.Join(result, ""), lineCount, leadingText
+	// var openParenCount int
+	// var openBraceCount int
+	// var openCurlyCount int
+	// for i := 0; i < len(buf); i++ {
+	// 	if openParenCount > 0 {
+	// 		for ; i < len(buf); i++ {
+	// 			switch buf[i] {
+	// 			case '(':
+	// 				openParenCount++
+	// 				break
+	// 			case ')':
+	// 				openParenCount--
+	// 				break
+	// 			case '\n':
+	// 				lineCount++
+	// 				break
+	// 			}
+	// 			if openParenCount == 0 {
+	// 				result = append(result, string(buf[i]))
+	// 				break
+	// 			}
+	// 		}
+	// 	} else if openBraceCount > 0 {
+	// 		for ; i < len(buf); i++ {
+	// 			switch buf[i] {
+	// 			case '[':
+	// 				openBraceCount++
+	// 				break
+	// 			case ']':
+	// 				openBraceCount--
+	// 				break
+	// 			case '\n':
+	// 				lineCount++
+	// 				break
+	// 			}
+	// 			if openBraceCount == 0 {
+	// 				result = append(result, string(buf[i]))
+	// 				return strings.Join(result, ""), lineCount, leadingText
+	// 			}
+	// 		}
+	// 	} else if openCurlyCount > 0 {
+	// 		for ; i < len(buf); i++ {
+	// 			switch buf[i] {
+	// 			case '{':
+	// 				openCurlyCount++
+	// 				break
+	// 			case '}':
+	// 				openCurlyCount--
+	// 				break
+	// 			case '\n':
+	// 				lineCount++
+	// 				break
+	// 			}
+	// 			if openCurlyCount == 0 {
+	// 				result = append(result, string(buf[i]))
+	// 				return strings.Join(result, ""), lineCount, leadingText
+	// 			}
+	// 		}
+	// 	} else {
+	// 		switch buf[i] {
+	// 		case '(':
+	// 			openParenCount++
+	// 			result = append(result, string(buf[i]))
+	// 			if leadingText == "" {
+	// 				leadingText = strings.TrimSpace(buf[0:i])
+	// 			}
+	// 			break
+	// 		case '[':
+	// 			openBraceCount++
+	// 			result = append(result, string(buf[i]))
+	// 			if leadingText == "" {
+	// 				leadingText = strings.TrimSpace(buf[0:i])
+	// 			}
+	// 			break
+	// 		case '{':
+	// 			openCurlyCount++
+	// 			result = append(result, string(buf[i]))
+	// 			if leadingText == "" {
+	// 				leadingText = strings.TrimSpace(buf[0:i])
+	// 			}
+	// 			break
+	// 		case ';':
+	// 			result = append(result, string(buf[i]))
+	// 			if leadingText == "" {
+	// 				leadingText = strings.TrimSpace(buf[0:i])
+	// 			}
+	// 			return strings.Join(result, ""), lineCount, leadingText
+	// 		case '=':
+	// 			if i < len(buf)-1 && buf[i+1] == '>' {
+	// 				result = append(result, "=>")
+	// 			} else {
+	// 				result = append(result, string(buf[i]))
+	// 			}
+	// 			if leadingText == "" {
+	// 				leadingText = strings.TrimSpace(buf[0:i])
+	// 			}
+	// 			break
+	// 		case '\n':
+	// 			lineCount++
+	// 			break
+	// 		}
+	// 	}
+	// }
+
+	return strings.Join(result, ""), lineCount, leadingText, nil
 }
 
 func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType) (*Entity, error) {

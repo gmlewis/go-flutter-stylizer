@@ -18,7 +18,7 @@ func TestFindFeatures_linux_mac(t *testing.T) {
 		PrivateInstanceVariable, // line #8:   // _pvi is a private instance variable.
 		PrivateInstanceVariable, // line #9:   List<String> _pvi = ['one', 'two'];
 		BuildMethod,             // line #10:   @override
-		BuildMethod,             // line #11:   build() {}  // build method
+		BuildMethod,             // line #11:   build() {} // build method
 		BlankLine,               // line #12:
 		StaticPrivateVariable,   // line #13:   // This is a random single-line comment somewhere in the class.
 		StaticPrivateVariable,   // line #14:
@@ -32,10 +32,10 @@ func TestFindFeatures_linux_mac(t *testing.T) {
 		StaticPrivateVariable,   // line #22:    * of the class */
 		StaticPrivateVariable,   // line #23:
 		StaticPrivateVariable,   // line #24:   // _spvni is a static private variable with no initializer.
-		StaticPrivateVariable,   // line #25:   static double _spvni;
-		PrivateInstanceVariable, // line #26:   int _pvini;
-		StaticVariable,          // line #27:   static int sv;
-		InstanceVariable,        // line #28:   int v;
+		StaticPrivateVariable,   // line #25:   static double _spvni = 0;
+		PrivateInstanceVariable, // line #26:   int _pvini = 1;
+		StaticVariable,          // line #27:   static int sv = 0;
+		InstanceVariable,        // line #28:   int v = 2;
 		InstanceVariable,        // line #29:   final double fv = 42.0;
 		MainConstructor,         // line #30:   Class1();
 		NamedConstructor,        // line #31:   Class1.fromNum();
@@ -47,20 +47,20 @@ func TestFindFeatures_linux_mac(t *testing.T) {
 		OverrideMethod,          // line #37:     return '';
 		OverrideMethod,          // line #38:   }
 		BlankLine,               // line #39:
-		InstanceVariable,        // line #40:   // "Here is 'where we add ${ text to "trip 'up' ''' the ${dart parser}.
-		InstanceVariable,        // line #41:   /*
-		InstanceVariable,        // line #42:     '''
-		InstanceVariable,        // line #43:     """
-		InstanceVariable,        // line #44:     //
-		InstanceVariable,        // line #45:   */
-		InstanceVariable,        // line #46:   const a = """
-		InstanceVariable,        // line #47:    '${b}
-		InstanceVariable,        // line #48:    '''
-		InstanceVariable,        // line #49:   """
-		InstanceVariable,        // line #50:   const b = '''
-		InstanceVariable,        // line #51:     {  (  ))) """ {{{} ))))
-		InstanceVariable,        // line #52:   '''
-		InstanceVariable,        // line #53:   const c = { '{{{((... """ ${'((('}' }
+		StaticVariable,          // line #40:   // "Here is 'where we add ${ text to "trip 'up' ''' the ${dart parser}.
+		StaticVariable,          // line #41:   /*
+		StaticVariable,          // line #42:     '''
+		StaticVariable,          // line #43:     """
+		StaticVariable,          // line #44:     //
+		StaticVariable,          // line #45:   */
+		StaticVariable,          // line #46:   static const a = """;
+		StaticVariable,          // line #47:    '${b};
+		StaticVariable,          // line #48:    ''' ;
+		StaticVariable,          // line #49:   """;
+		StaticVariable,          // line #50:   static const b = ''';
+		StaticVariable,          // line #51:     {  (  ))) """ {{{} ))));
+		StaticVariable,          // line #52:   ''';
+		StaticVariable,          // line #53:   static const c = { '{{{((... """ ${'((('};'};
 		BlankLine,               // line #54: }
 	}
 
@@ -96,7 +96,7 @@ func TestFindFeatures_windoze(t *testing.T) {
 		PrivateInstanceVariable, // line #8:   // _pvi is a private instance variable.
 		PrivateInstanceVariable, // line #9:   List<String> _pvi = ['one', 'two'];
 		BuildMethod,             // line #10:   @override
-		BuildMethod,             // line #11:   build() {}  // build method
+		BuildMethod,             // line #11:   build() {} // build method
 		BlankLine,               // line #12:
 		StaticPrivateVariable,   // line #13:   // This is a random single-line comment somewhere in the class.
 		StaticPrivateVariable,   // line #14:
@@ -110,10 +110,10 @@ func TestFindFeatures_windoze(t *testing.T) {
 		StaticPrivateVariable,   // line #22:    * of the class */
 		StaticPrivateVariable,   // line #23:
 		StaticPrivateVariable,   // line #24:   // _spvni is a static private variable with no initializer.
-		StaticPrivateVariable,   // line #25:   static double _spvni;
-		PrivateInstanceVariable, // line #26:   int _pvini;
-		StaticVariable,          // line #27:   static int sv;
-		InstanceVariable,        // line #28:   int v;
+		StaticPrivateVariable,   // line #25:   static double _spvni = 0;
+		PrivateInstanceVariable, // line #26:   int _pvini = 1;
+		StaticVariable,          // line #27:   static int sv = 0;
+		InstanceVariable,        // line #28:   int v = 2;
 		InstanceVariable,        // line #29:   final double fv = 42.0;
 		MainConstructor,         // line #30:   Class1();
 		NamedConstructor,        // line #31:   Class1.fromNum();
@@ -125,20 +125,20 @@ func TestFindFeatures_windoze(t *testing.T) {
 		OverrideMethod,          // line #37:     return '';
 		OverrideMethod,          // line #38:   }
 		BlankLine,               // line #39:
-		InstanceVariable,        // line #40:   // "Here is 'where we add ${ text to "trip 'up' ''' the ${dart parser}.
-		InstanceVariable,        // line #41:   /*
-		InstanceVariable,        // line #42:     '''
-		InstanceVariable,        // line #43:     """
-		InstanceVariable,        // line #44:     //
-		InstanceVariable,        // line #45:   */
-		InstanceVariable,        // line #46:   const a = """
-		InstanceVariable,        // line #47:    '${b}
-		InstanceVariable,        // line #48:    '''
-		InstanceVariable,        // line #49:   """
-		InstanceVariable,        // line #50:   const b = '''
-		InstanceVariable,        // line #51:     {  (  ))) """ {{{} ))))
-		InstanceVariable,        // line #52:   '''
-		InstanceVariable,        // line #53:   const c = { '{{{((... """ ${'((('}' }
+		StaticVariable,          // line #40:   // "Here is 'where we add ${ text to "trip 'up' ''' the ${dart parser}.
+		StaticVariable,          // line #41:   /*
+		StaticVariable,          // line #42:     '''
+		StaticVariable,          // line #43:     """
+		StaticVariable,          // line #44:     //
+		StaticVariable,          // line #45:   */
+		StaticVariable,          // line #46:   static const a = """;
+		StaticVariable,          // line #47:    '${b};
+		StaticVariable,          // line #48:    ''' ;
+		StaticVariable,          // line #49:   """;
+		StaticVariable,          // line #50:   static const b = ''';
+		StaticVariable,          // line #51:     {  (  ))) """ {{{} ))));
+		StaticVariable,          // line #52:   ''';
+		StaticVariable,          // line #53:   static const c = { '{{{((... """ ${'((('};'};
 		BlankLine,               // line #54: }
 	}
 

@@ -39,8 +39,8 @@ func NewEditor(buf string) *Editor {
 	e.fullBuf = buf
 	lines := strings.Split(e.fullBuf, "\n")
 	var lineOffset int
-	for _, line := range lines {
-		e.lines = append(e.lines, NewLine(line, lineOffset))
+	for i, line := range lines {
+		e.lines = append(e.lines, NewLine(line, lineOffset, i))
 		lineOffset += len(line)
 		// Change a blank line following a comment to a SingleLineComment in
 		// order to keep it with the following entity.
@@ -75,12 +75,12 @@ func (e *Editor) findMatchingBracket(openOffset int) (int, error) {
 
 	cursor := &Cursor{
 		e:         e,
-		absOffset: openOffset,
+		absOffset: openOffset + 1,
 		lineIndex: lineIndex,
-		relOffset: relOffset,
-		reader:    strings.NewReader(e.lines[lineIndex].stripped[relOffset:]),
+		relOffset: relOffset + 1,
+		reader:    strings.NewReader(e.lines[lineIndex].stripped[relOffset+1:]),
 	}
-	if err := cursor.advanceUntil(searchFor); err != nil {
+	if _, err := cursor.advanceUntil(searchFor); err != nil {
 		return 0, fmt.Errorf("advanceUntil(%q): %v", searchFor, err)
 	}
 

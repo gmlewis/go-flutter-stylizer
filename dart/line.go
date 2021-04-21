@@ -83,13 +83,15 @@ type Line struct {
 	stripped       string
 	strippedOffset int
 
+	originalIndex int
+
 	startOffset int
 	endOffset   int
 	entityType  EntityType
 }
 
 // NewLine returns a new Line.
-func NewLine(line string, startOffset int) *Line {
+func NewLine(line string, startOffset, originalIndex int) *Line {
 	stripped := strings.TrimSpace(line)
 	entityType := Unknown
 	if len(stripped) == 0 {
@@ -101,6 +103,8 @@ func NewLine(line string, startOffset int) *Line {
 		line:           line,
 		stripped:       stripped,
 		strippedOffset: strippedOffset,
+
+		originalIndex: originalIndex,
 
 		startOffset: startOffset,
 		endOffset:   startOffset + len(line) - 1,
