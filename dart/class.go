@@ -25,7 +25,6 @@ type Class struct {
 	e *Editor
 
 	className                 string
-	classOffset               int
 	openCurlyOffset           int
 	closeCurlyOffset          int
 	groupAndSortGetterMethods bool
@@ -45,11 +44,10 @@ type Class struct {
 
 // NewClass returns a new Dart Class.
 //
-// classOffset is the byte offset of the beginning of the line with "class ...".
 // openCurlyOffset is the position of the "{" for that class.
 // closeCurlyOffset is the position of the "}" for that class.
 // groupAndSortGetterMethods determines how getter methods are processed.
-func NewClass(editor *Editor, className string, classOffset int, openCurlyOffset int,
+func NewClass(editor *Editor, className string, openCurlyOffset int,
 	closeCurlyOffset int, groupAndSortGetterMethods bool) *Class {
 	lessThanOffset := strings.Index(className, "<")
 	if lessThanOffset >= 0 { // Strip off <T>.
@@ -59,7 +57,6 @@ func NewClass(editor *Editor, className string, classOffset int, openCurlyOffset
 	return &Class{
 		e:                editor,
 		className:        className,
-		classOffset:      classOffset,
 		openCurlyOffset:  openCurlyOffset,
 		closeCurlyOffset: closeCurlyOffset,
 
