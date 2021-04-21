@@ -37,7 +37,8 @@ const (
 // Cursor represents an editor cursor and is used to advance through
 // the Dart source code.
 type Cursor struct {
-	c         *Class
+	d *DartEditor
+
 	absOffset int
 	lineIndex int
 	relOffset int
@@ -222,12 +223,12 @@ func (c *Cursor) advanceToNextFeature() string {
 
 // advanceToNextLine advances the cursor to the next line.
 func (c *Cursor) advanceToNextLine() {
-	lineLengthDiff := len(c.c.lines[c.lineIndex].line) - len(c.c.lines[c.lineIndex].stripped)
+	lineLengthDiff := len(c.d.lines[c.lineIndex].line) - len(c.d.lines[c.lineIndex].stripped)
 	c.lineIndex++
-	if c.lineIndex >= len(c.c.lines) {
+	if c.lineIndex >= len(c.d.lines) {
 		log.Fatalf("ERROR: advanceToNextLine went past EOF: cursor=%#v", c)
 	}
 	c.relOffset = 0
 	c.absOffset += lineLengthDiff
-	c.reader = strings.NewReader(c.c.lines[c.lineIndex].stripped)
+	c.reader = strings.NewReader(c.d.lines[c.lineIndex].stripped)
 }

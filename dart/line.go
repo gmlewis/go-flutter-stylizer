@@ -98,9 +98,13 @@ func NewLine(line string, startOffset int) *Line {
 	if len(m) == 2 {
 		stripped = strings.TrimSpace(m[1])
 	}
-	entityType := BlankLine
-	if len(stripped) == 0 && strings.Index(line, "//") >= 0 {
-		entityType = SingleLineComment
+	entityType := Unknown
+	if len(stripped) == 0 {
+		if strings.Index(line, "//") >= 0 {
+			entityType = SingleLineComment
+		} else {
+			entityType = BlankLine
+		}
 	}
 
 	return &Line{

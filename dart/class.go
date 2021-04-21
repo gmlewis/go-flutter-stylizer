@@ -89,7 +89,6 @@ func (c *Class) FindFeatures(buf string) {
 	c.identifyOverrideMethodsAndVars()
 	c.identifyOthers()
 
-	// c.lines.forEach((line, index) => console.log());
 	for i := 0; i < len(c.lines); i++ {
 		line := c.lines[i]
 		log.Printf("line #%v type=%v: %v", i, line.entityType, line.line)

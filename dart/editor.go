@@ -21,10 +21,46 @@ import (
 	"strings"
 )
 
+// DartEditor represents a text editor that understands Dart syntax.
+type DartEditor struct {
+	fullBuf string
+	lines   []*Line
+}
+
+// NewEditor returns a new DartEditor.
+func NewEditor(buf string) *DartEditor {
+	d := &DartEditor{
+		fullBuf: buf,
+	}
+
+	d.fullBuf = buf
+	lines := strings.Split(d.fullBuf, "\n")
+	var lineOffset int
+	for _, line := range lines {
+		d.lines = append(d.lines, NewLine(line, lineOffset))
+		lineOffset += len(line)
+		// Change a blank line following a comment to a SingleLineComment in
+		// order to keep it with the following entity.
+		numLines := len(d.lines)
+		if numLines > 1 &&
+			d.lines[numLines-1].entityType == BlankLine &&
+			isComment(d.lines[numLines-2]) {
+			d.lines[numLines-1].entityType = SingleLineComment
+		}
+	}
+
+	for i := 0; i < len(d.lines); i++ {
+		line := d.lines[i]
+		log.Printf("line #%v type=%v: %v", i, line.entityType, line.line)
+	}
+
+	return d
+}
+
 // findMatchingBracket finds the matching closing "}" (for "{") or ")" (for "(")
 // given the offset of the opening rune.
-func (c *Class) findMatchingBracket(openOffset int) int {
-	open := c.fullBuf[openOffset : openOffset+1]
+func (d *DartEditor) findMatchingBracket(openOffset int) int {
+	open := d.fullBuf[openOffset : openOffset+1]
 	if open != "{" && open != "(" {
 		log.Fatalf("ERROR: findMatchingBracket(%v) called on non-bracket %q. Please file a bug report on the GitHub issue tracker.", openOffset, open)
 	}
@@ -33,19 +69,19 @@ func (c *Class) findMatchingBracket(openOffset int) int {
 		searchFor = ")"
 	}
 
-	return c.findClosing(openOffset, searchFor)
+	return d.findClosing(openOffset, searchFor)
 }
 
 // findClosing finds searchFor and returns its absolute offset.
-func (c *Class) findClosing(openOffset int, searchFor string) int {
-	lineIndex, relOffset := c.findLineIndexAtOffset(openOffset)
+func (d *DartEditor) findClosing(openOffset int, searchFor string) int {
+	lineIndex, relOffset := d.findLineIndexAtOffset(openOffset)
 	log.Printf("lineIndex=%v, relOffset=%v", lineIndex, relOffset)
 	cursor := &Cursor{
-		c:         c,
+		d:         d,
 		absOffset: openOffset,
 		lineIndex: lineIndex,
 		relOffset: relOffset,
-		reader:    strings.NewReader(c.lines[lineIndex].stripped[relOffset:]),
+		reader:    strings.NewReader(d.lines[lineIndex].stripped[relOffset:]),
 	}
 	cursor.advanceUntil(searchFor)
 	return cursor.absOffset
@@ -53,12 +89,12 @@ func (c *Class) findClosing(openOffset int, searchFor string) int {
 
 // findLineIndexAtOffset finds the line index and relative offset for the
 // absolute offset within the text buffer.
-func (c *Class) findLineIndexAtOffset(openOffset int) (int, int) {
-	for i, line := range c.lines {
+func (d *DartEditor) findLineIndexAtOffset(openOffset int) (int, int) {
+	for i, line := range d.lines {
 		if len(line.line) > openOffset {
 			return i, openOffset
 		}
 		openOffset -= len(line.line) + 1
 	}
-	return len(c.lines), openOffset
+	return len(d.lines), openOffset
 }
