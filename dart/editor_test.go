@@ -9,17 +9,23 @@ import (
 //go:embed basic_classes.dart.txt
 var basicClasses string
 
+//go:embed basic_classes.dart.windz.txt
+var bcWindoze string
+
 func setupEditor(t *testing.T, searchFor, buf string) (*DartEditor, int, int) {
 	t.Helper()
 	classOffset := strings.Index(buf, searchFor)
 	openCurlyOffset := classOffset + len(searchFor) - 1
 	closeCurlyOffset := len(buf) - 2
+	if buf[closeCurlyOffset] == '\r' {
+		closeCurlyOffset-- // bcWindoze
+	}
 
 	if got, want := buf[classOffset:openCurlyOffset+1], searchFor; got != want {
-		t.Errorf("offset error: buf[%v:%v] = %q, want %q", classOffset, openCurlyOffset+1, got, want)
+		t.Errorf("open offset error: buf[%v:%v] = %q, want %q", classOffset, openCurlyOffset+1, got, want)
 	}
 	if got, want := buf[closeCurlyOffset:closeCurlyOffset+1], "}"; got != want {
-		t.Errorf("offset error: buf[%v:%v] = %q, want %q", closeCurlyOffset, closeCurlyOffset+1, got, want)
+		t.Errorf("close offset error: buf[%v:%v] = %q, want %q", closeCurlyOffset, closeCurlyOffset+1, got, want)
 	}
 
 	d := NewEditor(buf)
@@ -28,6 +34,7 @@ func setupEditor(t *testing.T, searchFor, buf string) (*DartEditor, int, int) {
 
 func TestFindMatchingBracket(t *testing.T) {
 	bc, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
+	wz, wzOCO, wzCCO := setupEditor(t, "class Class1 {", bcWindoze)
 
 	tests := []struct {
 		name       string
@@ -36,6 +43,7 @@ func TestFindMatchingBracket(t *testing.T) {
 		openOffset int
 		want       int
 	}{
+		// *nix file
 		{
 			name:       "top-level",
 			editor:     bc,
@@ -102,6 +110,74 @@ func TestFindMatchingBracket(t *testing.T) {
 			openOffset: strings.Index(basicClasses, "sqrt(2)") + 4,
 			want:       strings.Index(basicClasses, "sqrt(2)") + 6,
 		},
+
+		// Windoze file
+		{
+			name:       "windoze top-level",
+			editor:     wz,
+			openOffset: wzOCO,
+			want:       wzCCO,
+		},
+		{
+			name:       "windoze build()",
+			editor:     wz,
+			openOffset: strings.Index(bcWindoze, "build()") + 5,
+			want:       strings.Index(bcWindoze, "build()") + 6,
+		},
+		{
+			name:       "windoze build() {}",
+			editor:     wz,
+			openOffset: strings.Index(bcWindoze, "build() {}") + 8,
+			want:       strings.Index(bcWindoze, "build() {}") + 9,
+		},
+		{
+			name:       "windoze Class1();",
+			editor:     wz,
+			openOffset: strings.Index(bcWindoze, "Class1();") + 6,
+			want:       strings.Index(bcWindoze, "Class1();") + 7,
+		},
+		{
+			name:       "windoze Class1.fromNum();",
+			editor:     wz,
+			openOffset: strings.Index(bcWindoze, "Class1.fromNum();") + 14,
+			want:       strings.Index(bcWindoze, "Class1.fromNum();") + 15,
+		},
+		{
+			name:       "windoze var myfunc = (int n) => n;",
+			editor:     wz,
+			openOffset: strings.Index(bcWindoze, "var myfunc = (int n) => n;") + 13,
+			want:       strings.Index(bcWindoze, "var myfunc = (int n) => n;") + 19,
+		},
+		{
+			name:       "windoze toString()",
+			editor:     wz,
+			openOffset: strings.Index(bcWindoze, "toString()") + 8,
+			want:       strings.Index(bcWindoze, "toString()") + 9,
+		},
+		{
+			name:       "windoze toString() {",
+			editor:     wz,
+			openOffset: strings.Index(bcWindoze, "toString() {") + 11,
+			want:       strings.Index(bcWindoze, "toString() {") + 90,
+		},
+		{
+			name:       "windoze print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');",
+			editor:     wz,
+			openOffset: strings.Index(bcWindoze, "print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');") + 5,
+			want:       strings.Index(bcWindoze, "print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');") + 50,
+		},
+		{
+			name:       "windoze ${sqrt(2)}",
+			editor:     wz,
+			openOffset: strings.Index(bcWindoze, "${sqrt(2)}") + 1,
+			want:       strings.Index(bcWindoze, "${sqrt(2)}") + 9,
+		},
+		{
+			name:       "windoze sqrt(2)",
+			editor:     wz,
+			openOffset: strings.Index(bcWindoze, "sqrt(2)") + 4,
+			want:       strings.Index(bcWindoze, "sqrt(2)") + 6,
+		},
 	}
 
 	for _, tt := range tests {
@@ -121,6 +197,7 @@ func TestFindMatchingBracket(t *testing.T) {
 
 func TestFindLineIndexAtOffset(t *testing.T) {
 	bc, bcOCO, _ := setupEditor(t, "class Class1 {", basicClasses)
+	wz, wzOCO, _ := setupEditor(t, "class Class1 {", bcWindoze)
 
 	tests := []struct {
 		name          string
@@ -129,6 +206,7 @@ func TestFindLineIndexAtOffset(t *testing.T) {
 		wantLineIndex int
 		wantRelOffset int
 	}{
+		// *nix file
 		{
 			name:          "top-level",
 			editor:        bc,
@@ -203,6 +281,85 @@ func TestFindLineIndexAtOffset(t *testing.T) {
 			name:          "sqrt(2)",
 			editor:        bc,
 			openOffset:    strings.Index(basicClasses, "sqrt(2)") + 4,
+			wantLineIndex: 35,
+			wantRelOffset: 45,
+		},
+
+		// Windoze file
+		{
+			name:          "windoze top-level",
+			editor:        wz,
+			openOffset:    wzOCO,
+			wantLineIndex: 6,
+			wantRelOffset: 13,
+		},
+		{
+			name:          "windoze build()",
+			editor:        wz,
+			openOffset:    strings.Index(bcWindoze, "build()") + 5,
+			wantLineIndex: 10,
+			wantRelOffset: 5,
+		},
+		{
+			name:          "windoze build() {}",
+			editor:        wz,
+			openOffset:    strings.Index(bcWindoze, "build() {}") + 8,
+			wantLineIndex: 10,
+			wantRelOffset: 8,
+		},
+		{
+			name:          "windoze Class1();",
+			editor:        wz,
+			openOffset:    strings.Index(bcWindoze, "Class1();") + 6,
+			wantLineIndex: 29,
+			wantRelOffset: 6,
+		},
+		{
+			name:          "windoze Class1.fromNum();",
+			editor:        wz,
+			openOffset:    strings.Index(bcWindoze, "Class1.fromNum();") + 14,
+			wantLineIndex: 30,
+			wantRelOffset: 14,
+		},
+		{
+			name:          "windoze var myfunc = (int n) => n;",
+			editor:        wz,
+			openOffset:    strings.Index(bcWindoze, "var myfunc = (int n) => n;") + 13,
+			wantLineIndex: 31,
+			wantRelOffset: 13,
+		},
+		{
+			name:          "windoze toString()",
+			editor:        wz,
+			openOffset:    strings.Index(bcWindoze, "toString()") + 8,
+			wantLineIndex: 34,
+			wantRelOffset: 8,
+		},
+		{
+			name:          "windoze toString() {",
+			editor:        wz,
+			openOffset:    strings.Index(bcWindoze, "toString() {") + 11,
+			wantLineIndex: 34,
+			wantRelOffset: 11,
+		},
+		{
+			name:          "windoze print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');",
+			editor:        wz,
+			openOffset:    strings.Index(bcWindoze, "print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');") + 5,
+			wantLineIndex: 35,
+			wantRelOffset: 5,
+		},
+		{
+			name:          "windoze ${sqrt(2)}",
+			editor:        wz,
+			openOffset:    strings.Index(bcWindoze, "${sqrt(2)}") + 1,
+			wantLineIndex: 35,
+			wantRelOffset: 40,
+		},
+		{
+			name:          "windoze sqrt(2)",
+			editor:        wz,
+			openOffset:    strings.Index(bcWindoze, "sqrt(2)") + 4,
 			wantLineIndex: 35,
 			wantRelOffset: 45,
 		},
