@@ -44,7 +44,7 @@ func TestFindFeatures_linux_mac(t *testing.T) {
 		Unknown,           // line #28:   int v;
 		Unknown,           // line #29:   final double fv = 42.0;
 		MainConstructor,   // line #30:   Class1();
-		Unknown,           // line #31:   Class1.fromNum();
+		NamedConstructor,  // line #31:   Class1.fromNum();
 		Unknown,           // line #32:   var myfunc = (int n) => n;
 		Unknown,           // line #33:   get vv => v; // getter
 		Unknown,           // line #34:   @override
@@ -129,7 +129,7 @@ func TestFindFeatures_windoze(t *testing.T) {
 		Unknown,           // line #28:   int v;
 		Unknown,           // line #29:   final double fv = 42.0;
 		MainConstructor,   // line #30:   Class1();
-		Unknown,           // line #31:   Class1.fromNum();
+		NamedConstructor,  // line #31:   Class1.fromNum();
 		Unknown,           // line #32:   var myfunc = (int n) => n;
 		Unknown,           // line #33:   get vv => v; // getter
 		Unknown,           // line #34:   @override
