@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-//go:embed basic_classes.dart.txt
+//go:embed testfiles/basic_classes.dart.txt
 var basicClasses string
 
-//go:embed basic_classes.dart.windz.txt
+//go:embed testfiles/basic_classes.dart.windz.txt
 var bcWindoze string
 
 func setupEditor(t *testing.T, searchFor, buf string) (*Editor, int, int) {
