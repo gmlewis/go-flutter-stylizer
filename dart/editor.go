@@ -17,6 +17,7 @@ limitations under the License.
 package dart
 
 import (
+	"fmt"
 	"log"
 	"strings"
 )
@@ -25,6 +26,8 @@ import (
 type DartEditor struct {
 	fullBuf string
 	lines   []*Line
+
+	Verbose bool
 }
 
 // NewEditor returns a new DartEditor.
@@ -51,7 +54,7 @@ func NewEditor(buf string) *DartEditor {
 
 	for i := 0; i < len(d.lines); i++ {
 		line := d.lines[i]
-		log.Printf("line #%v type=%v: %v", i, line.entityType, line.line)
+		d.logf("line #%v type=%v: %v", i, line.entityType, line.line)
 	}
 
 	return d
@@ -59,24 +62,24 @@ func NewEditor(buf string) *DartEditor {
 
 // findMatchingBracket finds the matching closing "}" (for "{") or ")" (for "(")
 // given the offset of the opening rune.
-func (d *DartEditor) findMatchingBracket(openOffset int) int {
+func (d *DartEditor) findMatchingBracket(openOffset int) (int, error) {
 	open := d.fullBuf[openOffset : openOffset+1]
 	if open != "{" && open != "(" {
-		log.Fatalf("ERROR: findMatchingBracket(%v) called on non-bracket %q. Please file a bug report on the GitHub issue tracker.", openOffset, open)
+		return 0, fmt.Errorf("findMatchingBracket(%v) called on non-bracket %q. Please file a bug report on the GitHub issue tracker", openOffset, open)
 	}
 	searchFor := "}"
 	if open == "(" {
 		searchFor = ")"
 	}
 
-	log.Printf("findClosing(openOffset=%v, searchFor=%q), open=%q", openOffset, searchFor, open)
-	return d.findClosing(openOffset, searchFor)
-}
+	d.logf("findClosing(openOffset=%v, searchFor=%q), open=%q", openOffset, searchFor, open)
 
-// findClosing finds searchFor and returns its absolute offset.
-func (d *DartEditor) findClosing(openOffset int, searchFor string) int {
 	lineIndex, relOffset := d.findLineIndexAtOffset(openOffset)
-	log.Printf("lineIndex=%v, relOffset=%v, stripped=%q(%v), line=%q(%v)", lineIndex, relOffset, d.lines[lineIndex].stripped, len(d.lines[lineIndex].stripped), d.lines[lineIndex].line, len(d.lines[lineIndex].line))
+	d.logf("lineIndex=%v, relOffset=%v, stripped=%q(%v), line=%q(%v)", lineIndex, relOffset, d.lines[lineIndex].stripped, len(d.lines[lineIndex].stripped), d.lines[lineIndex].line, len(d.lines[lineIndex].line))
+	if d.lines[lineIndex].stripped[relOffset:relOffset+1] != open {
+		return 0, fmt.Errorf("stripped[%v]=%q != open[%v]=%q", relOffset, d.lines[lineIndex].stripped[relOffset:relOffset+1], openOffset, open)
+	}
+
 	cursor := &Cursor{
 		d:         d,
 		absOffset: openOffset,
@@ -84,8 +87,10 @@ func (d *DartEditor) findClosing(openOffset int, searchFor string) int {
 		relOffset: relOffset,
 		reader:    strings.NewReader(d.lines[lineIndex].stripped[relOffset:]),
 	}
-	cursor.advanceUntil(searchFor)
-	return cursor.absOffset
+	if err := cursor.advanceUntil(searchFor); err != nil {
+		return 0, fmt.Errorf("advanceUntil(%q): %v", searchFor, err)
+	}
+	return cursor.absOffset - 1 - len(cursor.runeBuf), nil
 }
 
 // findLineIndexAtOffset finds the line index and relative offset for the
@@ -93,9 +98,16 @@ func (d *DartEditor) findClosing(openOffset int, searchFor string) int {
 func (d *DartEditor) findLineIndexAtOffset(openOffset int) (int, int) {
 	for i, line := range d.lines {
 		if len(line.line) > openOffset {
-			return i, openOffset
+			return i, openOffset - line.strippedOffset
 		}
 		openOffset -= len(line.line) + 1
 	}
 	return len(d.lines), openOffset
+}
+
+// logf logs the line if verbose is true.
+func (d *DartEditor) logf(fmtStr string, args ...interface{}) {
+	if d.Verbose {
+		log.Printf(fmtStr, args...)
+	}
 }

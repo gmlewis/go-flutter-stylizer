@@ -18,12 +18,7 @@ limitations under the License.
 package dart
 
 import (
-	"regexp"
 	"strings"
-)
-
-var (
-	commentRE = regexp.MustCompile(`^(.*?)\s*\/\/.*$`)
 )
 
 // EntityType represents a type of Dart Line.
@@ -84,8 +79,10 @@ func (e EntityType) String() string {
 
 // Line represents a line of Dart code.
 type Line struct {
-	line        string
-	stripped    string
+	line           string
+	stripped       string
+	strippedOffset int
+
 	startOffset int
 	endOffset   int
 	entityType  EntityType
@@ -93,23 +90,18 @@ type Line struct {
 
 // NewLine returns a new Line.
 func NewLine(line string, startOffset int) *Line {
-	m := commentRE.FindStringSubmatch(line)
 	stripped := strings.TrimSpace(line)
-	if len(m) == 2 {
-		stripped = strings.TrimSpace(m[1])
-	}
 	entityType := Unknown
 	if len(stripped) == 0 {
-		if strings.Index(line, "//") >= 0 {
-			entityType = SingleLineComment
-		} else {
-			entityType = BlankLine
-		}
+		entityType = BlankLine
 	}
+	strippedOffset := strings.Index(line, stripped)
 
 	return &Line{
-		line:        line,
-		stripped:    stripped,
+		line:           line,
+		stripped:       stripped,
+		strippedOffset: strippedOffset,
+
 		startOffset: startOffset,
 		endOffset:   startOffset + len(line) - 1,
 		entityType:  entityType,

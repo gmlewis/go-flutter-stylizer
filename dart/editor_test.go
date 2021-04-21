@@ -32,6 +32,7 @@ func TestFindMatchingBracket(t *testing.T) {
 	tests := []struct {
 		name       string
 		editor     *DartEditor
+		verbose    bool
 		openOffset int
 		want       int
 	}{
@@ -80,8 +81,9 @@ func TestFindMatchingBracket(t *testing.T) {
 		{
 			name:       "toString() {",
 			editor:     bc,
+			verbose:    true,
 			openOffset: strings.Index(basicClasses, "toString() {") + 11,
-			want:       strings.Index(basicClasses, "toString() {") + 85,
+			want:       strings.Index(basicClasses, "toString() {") + 87,
 		},
 		{
 			name:       "print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');",
@@ -105,7 +107,12 @@ func TestFindMatchingBracket(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.editor.findMatchingBracket(tt.openOffset)
+			tt.editor.Verbose = tt.verbose
+			got, err := tt.editor.findMatchingBracket(tt.openOffset)
+			if err != nil {
+				t.Fatalf("findMatchingBracket(%v) = %v, want nil", tt.openOffset, err)
+			}
+
 			if got != tt.want {
 				t.Errorf("findMatchingBracket(%v) = %v, want %v", tt.openOffset, got, tt.want)
 			}
