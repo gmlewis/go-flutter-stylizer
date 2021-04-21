@@ -93,8 +93,15 @@ func (c *Cursor) advanceUntil(searchFor string) error {
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
 				continue
 			}
-			c.d.lines[c.lineIndex].stripped = c.d.lines[c.lineIndex].stripped[0:c.relOffset]
-			c.d.logf("singleLineComment=true: stripped=%q(%v), cursor=%v", c.d.lines[c.lineIndex].stripped, len(c.d.lines[c.lineIndex].stripped), c)
+			c.relOffset -= 2
+			c.absOffset -= 2
+			beforeLen := c.relOffset
+			c.d.lines[c.lineIndex].stripped = strings.TrimSpace(c.d.lines[c.lineIndex].stripped[0:c.relOffset])
+			afterLen := len(c.d.lines[c.lineIndex].stripped)
+			c.absOffset -= beforeLen - afterLen
+			// Reset the reader because we chopped off the stripped line.
+			c.reader = strings.NewReader("")
+			c.d.logf("STRIPPED MODIFIED! singleLineComment=true: stripped=%q(%v), beforeLen=%v, afterLen=%v, cursor=%v", c.d.lines[c.lineIndex].stripped, len(c.d.lines[c.lineIndex].stripped), beforeLen, afterLen, c)
 		case "/*":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
 				continue
