@@ -43,7 +43,7 @@ func TestFindFeatures_linux_mac(t *testing.T) {
 		Unknown,           // line #27:   static int sv;
 		Unknown,           // line #28:   int v;
 		Unknown,           // line #29:   final double fv = 42.0;
-		Unknown,           // line #30:   Class1();
+		MainConstructor,   // line #30:   Class1();
 		Unknown,           // line #31:   Class1.fromNum();
 		Unknown,           // line #32:   var myfunc = (int n) => n;
 		Unknown,           // line #33:   get vv => v; // getter
@@ -72,7 +72,9 @@ func TestFindFeatures_linux_mac(t *testing.T) {
 	}
 
 	t.Run("*nix file", func(t *testing.T) {
-		uc.FindFeatures()
+		if err := uc.FindFeatures(); err != nil {
+			t.Fatalf("FindFeatures: %v", err)
+		}
 
 		if len(bc.lines) != len(want) {
 			t.Fatalf("lines mismatch: got = %v, want %v", len(bc.lines), len(want))
@@ -94,7 +96,7 @@ func TestFindFeatures_windoze(t *testing.T) {
 	if err != nil {
 		t.Fatalf("findMatchingBracket(%v) = %v, want nil", wzOCO, err)
 	}
-	uc := NewClass(wz, "Class1", wzOCO, wzCCO, false)
+	wc := NewClass(wz, "Class1", wzOCO, wzCCO, false)
 
 	want := []EntityType{
 		Unknown,           // line #1: // This is a test file. After running this through `Flutter Stylizer`,
@@ -126,7 +128,7 @@ func TestFindFeatures_windoze(t *testing.T) {
 		Unknown,           // line #27:   static int sv;
 		Unknown,           // line #28:   int v;
 		Unknown,           // line #29:   final double fv = 42.0;
-		Unknown,           // line #30:   Class1();
+		MainConstructor,   // line #30:   Class1();
 		Unknown,           // line #31:   Class1.fromNum();
 		Unknown,           // line #32:   var myfunc = (int n) => n;
 		Unknown,           // line #33:   get vv => v; // getter
@@ -155,7 +157,9 @@ func TestFindFeatures_windoze(t *testing.T) {
 	}
 
 	t.Run("windoze file", func(t *testing.T) {
-		uc.FindFeatures()
+		if err := wc.FindFeatures(); err != nil {
+			t.Fatalf("FindFeatures: %v", err)
+		}
 
 		if len(wz.lines) != len(want) {
 			t.Fatalf("lines mismatch: got = %v, want %v", len(wz.lines), len(want))

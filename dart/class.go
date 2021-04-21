@@ -17,6 +17,7 @@ limitations under the License.
 package dart
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -64,7 +65,7 @@ func NewClass(editor *Editor, className string, openCurlyOffset int,
 	}
 }
 
-func (c *Class) FindFeatures() {
+func (c *Class) FindFeatures() error {
 	for i, line := range c.e.lines {
 		// Change a blank line following a comment to a SingleLineComment in
 		// order to keep it with the following entity.
@@ -76,11 +77,19 @@ func (c *Class) FindFeatures() {
 		}
 	}
 
-	c.identifyMultiLineComments()
-	c.identifyMainConstructor()
-	c.identifyNamedConstructors()
-	c.identifyOverrideMethodsAndVars()
-	c.identifyOthers()
+	// c.identifyMultiLineComments()  // This step is not needed, as the editor marked these already.
+	if err := c.identifyMainConstructor(); err != nil {
+		return err
+	}
+	if err := c.identifyNamedConstructors(); err != nil {
+		return err
+	}
+	if err := c.identifyOverrideMethodsAndVars(); err != nil {
+		return err
+	}
+	if err := c.identifyOthers(); err != nil {
+		return err
+	}
 
 	if c.e.Verbose {
 		for i := 0; i < len(c.e.lines); i++ {
@@ -88,6 +97,8 @@ func (c *Class) FindFeatures() {
 			c.e.logf("line #%v type=%v: %v", i, line.entityType, line.line)
 		}
 	}
+
+	return nil
 }
 
 func (c *Class) genStripped(startLine int) string {
@@ -98,93 +109,69 @@ func (c *Class) genStripped(startLine int) string {
 	return strings.Join(strippedLines, "\n")
 }
 
-func (c *Class) identifyMultiLineComments() {
-	var inComment bool
+func (c *Class) identifyMainConstructor() error {
+	className := c.className + "("
 	for i := 1; i < len(c.e.lines); i++ {
 		line := c.e.lines[i]
 		if line.entityType != Unknown {
 			continue
 		}
-		if inComment {
-			c.e.lines[i].entityType = MultiLineComment
-			// Note: a multiline comment followed by code on the same
-			// line is not supported.
-			endComment := strings.Index(line.stripped, "*/")
-			if endComment >= 0 {
-				inComment = false
-				if strings.LastIndex(line.stripped, "/*") > endComment+1 {
-					inComment = true
+		offset := strings.Index(line.stripped, className)
+		if offset >= 0 {
+			if offset > 0 {
+				char := line.stripped[offset-1 : offset]
+				if char != " " && char != "\t" {
+					continue
 				}
 			}
-			continue
-		}
-		startComment := strings.Index(line.stripped, "/*")
-		if startComment >= 0 {
-			inComment = true
-			c.e.lines[i].entityType = MultiLineComment
-			if strings.LastIndex(line.stripped, "*/") > startComment+1 {
-				inComment = false
+			if c.e.lines[i].entityType > MainConstructor {
+				c.repairIncorrectlyLabeledLine(i)
 			}
+			c.e.lines[i].entityType = MainConstructor
+			var err error
+			c.theConstructor, err = c.markMethod(i, className, MainConstructor)
+			if err != nil {
+				return err
+			}
+			break
 		}
 	}
+
+	return nil
 }
 
-func (c *Class) identifyMainConstructor() {
-	//     const className = c.className + '('
-	//     for (let i = 1; i < c.e.lines.length; i++) {
-	//       const line = c.e.lines[i]
-	//       if (line.entityType !== Unknown) {
-	//         continue
-	//       }
-	//       const offset = line.stripped.indexOf(className)
-	//       if (offset >= 0) {
-	//         if (offset > 0) {
-	//           const char = line.stripped.substring(offset - 1, offset)
-	//           if (char !== ' ' && char !== '\t') {
-	//             continue
-	//           }
-	//         }
-	//         if (c.e.lines[i].entityType > MainConstructor) {
-	//           c.repairIncorrectlyLabeledLine(i)
-	//         }
-	//         c.e.lines[i].entityType = MainConstructor
-	//         c.theConstructor = await c.markMethod(i, className, MainConstructor)
-	//         break
-	//       }
-	//     }
-}
-
-func (c *Class) identifyNamedConstructors() {
+func (c *Class) identifyNamedConstructors() error {
 	//     const className = c.className + '.'
 	//     for (let i = 1; i < c.e.lines.length; i++) {
 	//       const line = c.e.lines[i]
-	//       if (line.entityType !== Unknown) {
+	//       if (line.entityType != Unknown) {
 	//         continue
 	//       }
 	//       const offset = line.stripped.indexOf(className)
 	//       if (offset >= 0) {
 	//         if (offset > 0) {
 	//           const char = line.stripped.substring(offset - 1, offset)
-	//           if (line.stripped[0] === '?' || line.stripped[0] === ':' || (char !== ' ' && char !== '\t')) {
+	//           if (line.stripped[0] === '?' || line.stripped[0] === ':' || (char != ' ' && char != '\t')) {
 	//             continue
 	//           }
 	//         }
 	//         const openParenOffset = offset + line.stripped.substring(offset).indexOf('(')
 	//         const namedConstructor = line.stripped.substring(offset, openParenOffset + 1)  // Include open parenthesis.
-	//         if (c.e.lines[i].entityType >= MainConstructor && c.e.lines[i].entityType !== NamedConstructor) {
+	//         if (c.e.lines[i].entityType >= MainConstructor && c.e.lines[i].entityType != NamedConstructor) {
 	//           c.repairIncorrectlyLabeledLine(i)
 	//         }
 	//         c.e.lines[i].entityType = NamedConstructor
-	//         const entity = await c.markMethod(i, namedConstructor, NamedConstructor)
+	//         const entity = c.markMethod(i, namedConstructor, NamedConstructor)
 	//         c.namedConstructors.push(entity)
 	//       }
 	//     }
+	return nil
 }
 
-func (c *Class) identifyOverrideMethodsAndVars() {
+func (c *Class) identifyOverrideMethodsAndVars() error {
 	//     for (let i = 1; i < c.e.lines.length; i++) {
 	//       const line = c.e.lines[i]
-	//       if (line.entityType !== Unknown) {
+	//       if (line.entityType != Unknown) {
 	//         continue
 	//       }
 
@@ -197,11 +184,11 @@ func (c *Class) identifyOverrideMethodsAndVars() {
 	//           const nameOffset = ss.lastIndexOf(' ') + 1
 	//           const name = ss.substring(nameOffset)
 	//           const entityType = (name === 'build(') ? BuildMethod : OverrideMethod
-	//           if (c.e.lines[i].entityType >= MainConstructor && c.e.lines[i].entityType !== entityType) {
+	//           if (c.e.lines[i].entityType >= MainConstructor && c.e.lines[i].entityType != entityType) {
 	//             c.repairIncorrectlyLabeledLine(i)
 	//           }
 	//           c.e.lines[i].entityType = entityType
-	//           const entity = await c.markMethod(i + 1, name, entityType)
+	//           const entity = c.markMethod(i + 1, name, entityType)
 	//           if (name === 'build(') {
 	//             c.buildMethod = entity
 	//           } else {
@@ -218,14 +205,14 @@ func (c *Class) identifyOverrideMethodsAndVars() {
 	//             const relOpenCurlyOffset = lineOffset + inLineOffset
 	//             assert.strictEqual(c.fullBuf[relOpenCurlyOffset], '{', 'Expected open curly bracket at relative offset')
 	//             const absOpenCurlyOffset = c.openCurlyOffset + relOpenCurlyOffset
-	//             const absCloseCurlyOffset = await findMatchingBracket(c.editor, absOpenCurlyOffset)
+	//             const absCloseCurlyOffset = findMatchingBracket(c.editor, absOpenCurlyOffset)
 	//             const relCloseCurlyOffset = absCloseCurlyOffset - c.openCurlyOffset
 	//             assert.strictEqual(c.fullBuf[relCloseCurlyOffset], '}', 'Expected close curly bracket at relative offset')
 	//             const nextOffset = absCloseCurlyOffset - c.openCurlyOffset
 	//             const bodyBuf = c.fullBuf.substring(lineOffset, nextOffset + 1)
 	//             const numLines = bodyBuf.split('\n').length
 	//             for (let j = 0; j < numLines; j++) {
-	//               if (c.e.lines[lineNum + j].entityType >= MainConstructor && c.e.lines[lineNum + j].entityType !== entity.entityType) {
+	//               if (c.e.lines[lineNum + j].entityType >= MainConstructor && c.e.lines[lineNum + j].entityType != entity.entityType) {
 	//                 c.repairIncorrectlyLabeledLine(lineNum + j)
 	//               }
 	//               c.e.lines[lineNum + j].entityType = entity.entityType
@@ -238,7 +225,7 @@ func (c *Class) identifyOverrideMethodsAndVars() {
 	//             }
 	//             // Find next ';', marking entityType forward.
 	//             for (let j = i + 1; j < c.e.lines.length; j++) {
-	//               if (c.e.lines[j].entityType >= MainConstructor && c.e.lines[j].entityType !== entity.entityType) {
+	//               if (c.e.lines[j].entityType >= MainConstructor && c.e.lines[j].entityType != entity.entityType) {
 	//                 c.repairIncorrectlyLabeledLine(j)
 	//               }
 	//               c.e.lines[j].entityType = entity.entityType
@@ -266,16 +253,17 @@ func (c *Class) identifyOverrideMethodsAndVars() {
 	//         }
 	//       }
 	//     }
+	return nil
 }
 
-func (c *Class) identifyOthers() {
+func (c *Class) identifyOthers() error {
 	//     for (let i = 1; i < c.e.lines.length; i++) {
 	//       const line = c.e.lines[i]
-	//       if (line.entityType !== Unknown) {
+	//       if (line.entityType != Unknown) {
 	//         continue
 	//       }
 
-	//       const entity = await c.scanMethod(i)
+	//       const entity = c.scanMethod(i)
 	//       if (entity.entityType === Unknown) {
 	//         continue
 	//       }
@@ -317,6 +305,7 @@ func (c *Class) identifyOthers() {
 	//           break
 	//       }
 	//     }
+	return nil
 }
 
 func (c *Class) scanMethod(lineNum int) *Entity {
@@ -385,7 +374,7 @@ func (c *Class) scanMethod(lineNum int) *Entity {
 	//     }
 
 	//     for (let i = 0; i <= lineCount; i++) {
-	//       if (c.e.lines[lineNum + i].entityType >= MainConstructor && c.e.lines[lineNum + i].entityType !== entity.entityType) {
+	//       if (c.e.lines[lineNum + i].entityType >= MainConstructor && c.e.lines[lineNum + i].entityType != entity.entityType) {
 	//         c.repairIncorrectlyLabeledLine(lineNum + i)
 	//       }
 	//       c.e.lines[lineNum + i].entityType = entity.entityType
@@ -403,7 +392,7 @@ func (c *Class) repairIncorrectlyLabeledLine(lineNum int) {
 	//           const el = c.namedConstructors[i]
 	//           for (let j = 0; j < el.lines.length; j++) {
 	//             const line = el.lines[j]
-	//             if (line !== c.e.lines[lineNum]) { continue }
+	//             if (line != c.e.lines[lineNum]) { continue }
 	//             c.namedConstructors[i].lines.splice(j, 1)
 	//             if (c.namedConstructors[i].lines.length === 0) {
 	//               c.namedConstructors.splice(i)
@@ -529,52 +518,55 @@ func (c *Class) findSequence(buf string) (string, int, string) {
 	return strings.Join(result, ""), lineCount, leadingText
 }
 
-//   func (c *Class) markMethod(lineNum int, methodName string, entityType: EntityType): Promise<DartEntity> {
-//     assert.strictEqual(true, methodName.endsWith('('), 'markMethod: ' + methodName + ' must end with the open parenthesis.')
-//     const entity = new DartEntity
-//     entity.entityType = entityType
-//     entity.lines = []
-//     entity.name = methodName
+func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType) (*Entity, error) {
+	if !strings.HasSuffix(methodName, "(") {
+		return nil, fmt.Errorf("markMethod: %q must end with the open parenthesis '('", methodName)
+	}
 
-//     // Identify all lines within the main (or factory) constructor.
-//     const lineOffset = c.fullBuf.indexOf(c.e.lines[lineNum].line)
-//     const inLineOffset = c.e.lines[lineNum].line.indexOf(methodName)
-//     const relOpenParenOffset = lineOffset + inLineOffset + methodName.length - 1
-//     assert.strictEqual(c.fullBuf[relOpenParenOffset], '(', 'Expected open parenthesis at relative offset')
+	entity := &Entity{
+		name:       methodName,
+		entityType: entityType,
+	}
 
-//     const absOpenParenOffset = c.openCurlyOffset + relOpenParenOffset
-//     const absCloseParenOffset = await findMatchingBracket(c.editor, absOpenParenOffset)
-//     const relCloseParenOffset = absCloseParenOffset - c.openCurlyOffset
-//     assert.strictEqual(c.fullBuf[relCloseParenOffset], ')', 'Expected close parenthesis at relative offset')
+	//     // Identify all lines within the main (or factory) constructor.
+	//     lineOffset := c.fullBuf.indexOf(c.e.lines[lineNum].line)
+	//     inLineOffset := c.e.lines[lineNum].line.indexOf(methodName)
+	//     relOpenParenOffset := lineOffset + inLineOffset + methodName.length - 1
+	//     assert.strictEqual(c.fullBuf[relOpenParenOffset], '(', 'Expected open parenthesis at relative offset')
 
-//     const curlyDeltaOffset = c.fullBuf.substring(relCloseParenOffset).indexOf('{')
-//     const semicolonOffset = c.fullBuf.substring(relCloseParenOffset).indexOf(';')
-//     let nextOffset = 0
-//     if (curlyDeltaOffset < 0 || (curlyDeltaOffset >= 0 && semicolonOffset >= 0 && semicolonOffset < curlyDeltaOffset)) { // no body.
-//       nextOffset = relCloseParenOffset + semicolonOffset
-//     } else {
-//       const absOpenCurlyOffset = absCloseParenOffset + curlyDeltaOffset
-//       const absCloseCurlyOffset = await findMatchingBracket(c.editor, absOpenCurlyOffset)
-//       nextOffset = absCloseCurlyOffset - c.openCurlyOffset
-//     }
-//     const constructorBuf = c.fullBuf.substring(lineOffset, nextOffset + 1)
-//     const numLines = constructorBuf.split('\n').length
-//     for (let i = 0; i < numLines; i++) {
-//       if (c.e.lines[lineNum + i].entityType >= MainConstructor && c.e.lines[lineNum + i].entityType !== entityType) {
-//         c.repairIncorrectlyLabeledLine(lineNum + i)
-//       }
-//       c.e.lines[lineNum + i].entityType = entityType
-//       entity.lines.push(c.e.lines[lineNum + i])
-//     }
+	//     absOpenParenOffset := c.openCurlyOffset + relOpenParenOffset
+	//     absCloseParenOffset := findMatchingBracket(c.editor, absOpenParenOffset)
+	//     relCloseParenOffset := absCloseParenOffset - c.openCurlyOffset
+	//     assert.strictEqual(c.fullBuf[relCloseParenOffset], ')', 'Expected close parenthesis at relative offset')
 
-//     // Preserve the comment lines leading up to the method.
-//     for (lineNum--; lineNum > 0; lineNum--) {
-//       if (isComment(c.e.lines[lineNum]) || c.e.lines[lineNum].stripped.startsWith('@')) {
-//         c.e.lines[lineNum].entityType = entityType
-//         entity.lines.unshift(c.e.lines[lineNum])
-//         continue
-//       }
-//       break
-//     }
-//     return entity
-//   }
+	//     curlyDeltaOffset := c.fullBuf.substring(relCloseParenOffset).indexOf('{')
+	//     semicolonOffset := c.fullBuf.substring(relCloseParenOffset).indexOf(';')
+	//     let nextOffset = 0
+	//     if (curlyDeltaOffset < 0 || (curlyDeltaOffset >= 0 && semicolonOffset >= 0 && semicolonOffset < curlyDeltaOffset)) { // no body.
+	//       nextOffset = relCloseParenOffset + semicolonOffset
+	//     } else {
+	//       absOpenCurlyOffset := absCloseParenOffset + curlyDeltaOffset
+	//       absCloseCurlyOffset := findMatchingBracket(c.editor, absOpenCurlyOffset)
+	//       nextOffset = absCloseCurlyOffset - c.openCurlyOffset
+	//     }
+	//     constructorBuf := c.fullBuf.substring(lineOffset, nextOffset + 1)
+	//     numLines := constructorBuf.split('\n').length
+	//     for (let i = 0; i < numLines; i++) {
+	//       if (c.e.lines[lineNum + i].entityType >= MainConstructor && c.e.lines[lineNum + i].entityType != entityType) {
+	//         c.repairIncorrectlyLabeledLine(lineNum + i)
+	//       }
+	//       c.e.lines[lineNum + i].entityType = entityType
+	//       entity.lines.push(c.e.lines[lineNum + i])
+	//     }
+
+	//     // Preserve the comment lines leading up to the method.
+	//     for (lineNum--; lineNum > 0; lineNum--) {
+	//       if (isComment(c.e.lines[lineNum]) || c.e.lines[lineNum].stripped.startsWith('@')) {
+	//         c.e.lines[lineNum].entityType = entityType
+	//         entity.lines.unshift(c.e.lines[lineNum])
+	//         continue
+	//       }
+	//       break
+	//     }
+	return entity, nil
+}
