@@ -17,19 +17,18 @@ limitations under the License.
 package dart
 
 import (
-	"log"
 	"strings"
 )
 
 // Class represents a Dart class.
 type Class struct {
+	e *Editor
+
 	className                 string
 	classOffset               int
 	openCurlyOffset           int
 	closeCurlyOffset          int
 	groupAndSortGetterMethods bool
-	fullBuf                   string
-	lines                     []*Line // Line 0 is always the open curly brace.
 
 	theConstructor         *Entity
 	namedConstructors      []*Entity
@@ -50,7 +49,7 @@ type Class struct {
 // openCurlyOffset is the position of the "{" for that class.
 // closeCurlyOffset is the position of the "}" for that class.
 // groupAndSortGetterMethods determines how getter methods are processed.
-func NewClass(className string, classOffset int, openCurlyOffset int,
+func NewClass(editor *Editor, className string, classOffset int, openCurlyOffset int,
 	closeCurlyOffset int, groupAndSortGetterMethods bool) *Class {
 	lessThanOffset := strings.Index(className, "<")
 	if lessThanOffset >= 0 { // Strip off <T>.
@@ -58,28 +57,25 @@ func NewClass(className string, classOffset int, openCurlyOffset int,
 	}
 
 	return &Class{
-		className:                 className,
-		classOffset:               classOffset,
-		openCurlyOffset:           openCurlyOffset,
-		closeCurlyOffset:          closeCurlyOffset,
+		e:                editor,
+		className:        className,
+		classOffset:      classOffset,
+		openCurlyOffset:  openCurlyOffset,
+		closeCurlyOffset: closeCurlyOffset,
+
 		groupAndSortGetterMethods: groupAndSortGetterMethods,
 	}
 }
 
-func (c *Class) FindFeatures(buf string) {
-	c.fullBuf = buf
-	lines := strings.Split(c.fullBuf, "\n")
-	var lineOffset int
-	for _, line := range lines {
-		c.lines = append(c.lines, NewLine(line, lineOffset))
-		lineOffset += len(line)
+func (c *Class) FindFeatures() {
+	for i, line := range c.e.lines {
 		// Change a blank line following a comment to a SingleLineComment in
 		// order to keep it with the following entity.
-		numLines := len(c.lines)
-		if numLines > 1 &&
-			c.lines[numLines-1].entityType == BlankLine &&
-			isComment(c.lines[numLines-2]) {
-			c.lines[numLines-1].entityType = SingleLineComment
+		if line.entityType == Unknown && len(line.stripped) == 0 {
+			line.entityType = BlankLine
+		}
+		if i > 1 && c.e.lines[i-1].entityType == BlankLine && isComment(c.e.lines[i-2]) {
+			c.e.lines[i-1].entityType = SingleLineComment
 		}
 	}
 
@@ -89,29 +85,31 @@ func (c *Class) FindFeatures(buf string) {
 	c.identifyOverrideMethodsAndVars()
 	c.identifyOthers()
 
-	for i := 0; i < len(c.lines); i++ {
-		line := c.lines[i]
-		log.Printf("line #%v type=%v: %v", i, line.entityType, line.line)
+	if c.e.Verbose {
+		for i := 0; i < len(c.e.lines); i++ {
+			line := c.e.lines[i]
+			c.e.logf("line #%v type=%v: %v", i, line.entityType, line.line)
+		}
 	}
 }
 
 func (c *Class) genStripped(startLine int) string {
 	var strippedLines []string
-	for i := startLine; i < len(c.lines); i++ {
-		strippedLines = append(strippedLines, c.lines[i].stripped)
+	for i := startLine; i < len(c.e.lines); i++ {
+		strippedLines = append(strippedLines, c.e.lines[i].stripped)
 	}
 	return strings.Join(strippedLines, "\n")
 }
 
 func (c *Class) identifyMultiLineComments() {
 	var inComment bool
-	for i := 1; i < len(c.lines); i++ {
-		line := c.lines[i]
+	for i := 1; i < len(c.e.lines); i++ {
+		line := c.e.lines[i]
 		if line.entityType != Unknown {
 			continue
 		}
 		if inComment {
-			c.lines[i].entityType = MultiLineComment
+			c.e.lines[i].entityType = MultiLineComment
 			// Note: a multiline comment followed by code on the same
 			// line is not supported.
 			endComment := strings.Index(line.stripped, "*/")
@@ -126,7 +124,7 @@ func (c *Class) identifyMultiLineComments() {
 		startComment := strings.Index(line.stripped, "/*")
 		if startComment >= 0 {
 			inComment = true
-			c.lines[i].entityType = MultiLineComment
+			c.e.lines[i].entityType = MultiLineComment
 			if strings.LastIndex(line.stripped, "*/") > startComment+1 {
 				inComment = false
 			}
@@ -136,8 +134,8 @@ func (c *Class) identifyMultiLineComments() {
 
 func (c *Class) identifyMainConstructor() {
 	//     const className = c.className + '('
-	//     for (let i = 1; i < c.lines.length; i++) {
-	//       const line = c.lines[i]
+	//     for (let i = 1; i < c.e.lines.length; i++) {
+	//       const line = c.e.lines[i]
 	//       if (line.entityType !== Unknown) {
 	//         continue
 	//       }
@@ -149,10 +147,10 @@ func (c *Class) identifyMainConstructor() {
 	//             continue
 	//           }
 	//         }
-	//         if (c.lines[i].entityType > MainConstructor) {
+	//         if (c.e.lines[i].entityType > MainConstructor) {
 	//           c.repairIncorrectlyLabeledLine(i)
 	//         }
-	//         c.lines[i].entityType = MainConstructor
+	//         c.e.lines[i].entityType = MainConstructor
 	//         c.theConstructor = await c.markMethod(i, className, MainConstructor)
 	//         break
 	//       }
@@ -161,8 +159,8 @@ func (c *Class) identifyMainConstructor() {
 
 func (c *Class) identifyNamedConstructors() {
 	//     const className = c.className + '.'
-	//     for (let i = 1; i < c.lines.length; i++) {
-	//       const line = c.lines[i]
+	//     for (let i = 1; i < c.e.lines.length; i++) {
+	//       const line = c.e.lines[i]
 	//       if (line.entityType !== Unknown) {
 	//         continue
 	//       }
@@ -176,10 +174,10 @@ func (c *Class) identifyNamedConstructors() {
 	//         }
 	//         const openParenOffset = offset + line.stripped.substring(offset).indexOf('(')
 	//         const namedConstructor = line.stripped.substring(offset, openParenOffset + 1)  // Include open parenthesis.
-	//         if (c.lines[i].entityType >= MainConstructor && c.lines[i].entityType !== NamedConstructor) {
+	//         if (c.e.lines[i].entityType >= MainConstructor && c.e.lines[i].entityType !== NamedConstructor) {
 	//           c.repairIncorrectlyLabeledLine(i)
 	//         }
-	//         c.lines[i].entityType = NamedConstructor
+	//         c.e.lines[i].entityType = NamedConstructor
 	//         const entity = await c.markMethod(i, namedConstructor, NamedConstructor)
 	//         c.namedConstructors.push(entity)
 	//       }
@@ -187,25 +185,25 @@ func (c *Class) identifyNamedConstructors() {
 }
 
 func (c *Class) identifyOverrideMethodsAndVars() {
-	//     for (let i = 1; i < c.lines.length; i++) {
-	//       const line = c.lines[i]
+	//     for (let i = 1; i < c.e.lines.length; i++) {
+	//       const line = c.e.lines[i]
 	//       if (line.entityType !== Unknown) {
 	//         continue
 	//       }
 
-	//       if (line.stripped.startsWith('@override') && i < c.lines.length - 1) {
-	//         const offset = c.lines[i + 1].stripped.indexOf('(')
+	//       if (line.stripped.startsWith('@override') && i < c.e.lines.length - 1) {
+	//         const offset = c.e.lines[i + 1].stripped.indexOf('(')
 	//         if (offset >= 0) {
 	//           // Include open paren in name.
-	//           const ss = c.lines[i + 1].stripped.substring(0, offset + 1)
+	//           const ss = c.e.lines[i + 1].stripped.substring(0, offset + 1)
 	//           // Search for beginning of method name.
 	//           const nameOffset = ss.lastIndexOf(' ') + 1
 	//           const name = ss.substring(nameOffset)
 	//           const entityType = (name === 'build(') ? BuildMethod : OverrideMethod
-	//           if (c.lines[i].entityType >= MainConstructor && c.lines[i].entityType !== entityType) {
+	//           if (c.e.lines[i].entityType >= MainConstructor && c.e.lines[i].entityType !== entityType) {
 	//             c.repairIncorrectlyLabeledLine(i)
 	//           }
-	//           c.lines[i].entityType = entityType
+	//           c.e.lines[i].entityType = entityType
 	//           const entity = await c.markMethod(i + 1, name, entityType)
 	//           if (name === 'build(') {
 	//             c.buildMethod = entity
@@ -217,9 +215,9 @@ func (c *Class) identifyOverrideMethodsAndVars() {
 	//           entity.entityType = OverrideMethod
 	//           let lineNum = i + 1
 	//           // No open paren - could be a getter. See if it has a body.
-	//           if (c.lines[i + 1].stripped.indexOf('{') >= 0) {
-	//             const lineOffset = c.fullBuf.indexOf(c.lines[i + 1].line)
-	//             const inLineOffset = c.lines[i + 1].line.indexOf('{')
+	//           if (c.e.lines[i + 1].stripped.indexOf('{') >= 0) {
+	//             const lineOffset = c.fullBuf.indexOf(c.e.lines[i + 1].line)
+	//             const inLineOffset = c.e.lines[i + 1].line.indexOf('{')
 	//             const relOpenCurlyOffset = lineOffset + inLineOffset
 	//             assert.strictEqual(c.fullBuf[relOpenCurlyOffset], '{', 'Expected open curly bracket at relative offset')
 	//             const absOpenCurlyOffset = c.openCurlyOffset + relOpenCurlyOffset
@@ -230,25 +228,25 @@ func (c *Class) identifyOverrideMethodsAndVars() {
 	//             const bodyBuf = c.fullBuf.substring(lineOffset, nextOffset + 1)
 	//             const numLines = bodyBuf.split('\n').length
 	//             for (let j = 0; j < numLines; j++) {
-	//               if (c.lines[lineNum + j].entityType >= MainConstructor && c.lines[lineNum + j].entityType !== entity.entityType) {
+	//               if (c.e.lines[lineNum + j].entityType >= MainConstructor && c.e.lines[lineNum + j].entityType !== entity.entityType) {
 	//                 c.repairIncorrectlyLabeledLine(lineNum + j)
 	//               }
-	//               c.lines[lineNum + j].entityType = entity.entityType
-	//               entity.lines.push(c.lines[lineNum + j])
+	//               c.e.lines[lineNum + j].entityType = entity.entityType
+	//               entity.lines.push(c.e.lines[lineNum + j])
 	//             }
 	//           } else {
 	//             // Does not have a body - if it has no fat arrow, it is a variable.
-	//             if (c.lines[i + 1].stripped.indexOf('=>') < 0) {
+	//             if (c.e.lines[i + 1].stripped.indexOf('=>') < 0) {
 	//               entity.entityType = OverrideVariable
 	//             }
 	//             // Find next ';', marking entityType forward.
-	//             for (let j = i + 1; j < c.lines.length; j++) {
-	//               if (c.lines[j].entityType >= MainConstructor && c.lines[j].entityType !== entity.entityType) {
+	//             for (let j = i + 1; j < c.e.lines.length; j++) {
+	//               if (c.e.lines[j].entityType >= MainConstructor && c.e.lines[j].entityType !== entity.entityType) {
 	//                 c.repairIncorrectlyLabeledLine(j)
 	//               }
-	//               c.lines[j].entityType = entity.entityType
-	//               entity.lines.push(c.lines[j])
-	//               const semicolonOffset = c.lines[j].stripped.indexOf(';')
+	//               c.e.lines[j].entityType = entity.entityType
+	//               entity.lines.push(c.e.lines[j])
+	//               const semicolonOffset = c.e.lines[j].stripped.indexOf(';')
 	//               if (semicolonOffset >= 0) {
 	//                 break
 	//               }
@@ -256,9 +254,9 @@ func (c *Class) identifyOverrideMethodsAndVars() {
 	//           }
 	//           // Preserve the comment lines leading up to the method.
 	//           for (lineNum--; lineNum > 0; lineNum--) {
-	//             if (isComment(c.lines[lineNum]) || c.lines[lineNum].stripped.startsWith('@')) {
-	//               c.lines[lineNum].entityType = entity.entityType
-	//               entity.lines.unshift(c.lines[lineNum])
+	//             if (isComment(c.e.lines[lineNum]) || c.e.lines[lineNum].stripped.startsWith('@')) {
+	//               c.e.lines[lineNum].entityType = entity.entityType
+	//               entity.lines.unshift(c.e.lines[lineNum])
 	//               continue
 	//             }
 	//             break
@@ -274,8 +272,8 @@ func (c *Class) identifyOverrideMethodsAndVars() {
 }
 
 func (c *Class) identifyOthers() {
-	//     for (let i = 1; i < c.lines.length; i++) {
-	//       const line = c.lines[i]
+	//     for (let i = 1; i < c.e.lines.length; i++) {
+	//       const line = c.e.lines[i]
 	//       if (line.entityType !== Unknown) {
 	//         continue
 	//       }
@@ -287,9 +285,9 @@ func (c *Class) identifyOthers() {
 
 	//       // Preserve the comment lines leading up to the entity.
 	//       for (let lineNum = i - 1; lineNum > 0; lineNum--) {
-	//         if (isComment(c.lines[lineNum])) {
-	//           c.lines[lineNum].entityType = entity.entityType
-	//           entity.lines.unshift(c.lines[lineNum])
+	//         if (isComment(c.e.lines[lineNum])) {
+	//           c.e.lines[lineNum].entityType = entity.entityType
+	//           entity.lines.unshift(c.e.lines[lineNum])
 	//           continue
 	//         }
 	//         break
@@ -390,25 +388,25 @@ func (c *Class) scanMethod(lineNum int) *Entity {
 	//     }
 
 	//     for (let i = 0; i <= lineCount; i++) {
-	//       if (c.lines[lineNum + i].entityType >= MainConstructor && c.lines[lineNum + i].entityType !== entity.entityType) {
+	//       if (c.e.lines[lineNum + i].entityType >= MainConstructor && c.e.lines[lineNum + i].entityType !== entity.entityType) {
 	//         c.repairIncorrectlyLabeledLine(lineNum + i)
 	//       }
-	//       c.lines[lineNum + i].entityType = entity.entityType
-	//       entity.lines.push(c.lines[lineNum + i])
+	//       c.e.lines[lineNum + i].entityType = entity.entityType
+	//       entity.lines.push(c.e.lines[lineNum + i])
 	//     }
 
 	return entity
 }
 
 func (c *Class) repairIncorrectlyLabeledLine(lineNum int) {
-	//     const incorrectLabel = c.lines[lineNum].entityType
+	//     const incorrectLabel = c.e.lines[lineNum].entityType
 	//     switch (incorrectLabel) {
 	//       case NamedConstructor:
 	//         for (let i = 0; i < c.namedConstructors.length; i++) {
 	//           const el = c.namedConstructors[i]
 	//           for (let j = 0; j < el.lines.length; j++) {
 	//             const line = el.lines[j]
-	//             if (line !== c.lines[lineNum]) { continue }
+	//             if (line !== c.e.lines[lineNum]) { continue }
 	//             c.namedConstructors[i].lines.splice(j, 1)
 	//             if (c.namedConstructors[i].lines.length === 0) {
 	//               c.namedConstructors.splice(i)
@@ -542,8 +540,8 @@ func (c *Class) findSequence(buf string) (string, int, string) {
 //     entity.name = methodName
 
 //     // Identify all lines within the main (or factory) constructor.
-//     const lineOffset = c.fullBuf.indexOf(c.lines[lineNum].line)
-//     const inLineOffset = c.lines[lineNum].line.indexOf(methodName)
+//     const lineOffset = c.fullBuf.indexOf(c.e.lines[lineNum].line)
+//     const inLineOffset = c.e.lines[lineNum].line.indexOf(methodName)
 //     const relOpenParenOffset = lineOffset + inLineOffset + methodName.length - 1
 //     assert.strictEqual(c.fullBuf[relOpenParenOffset], '(', 'Expected open parenthesis at relative offset')
 
@@ -565,18 +563,18 @@ func (c *Class) findSequence(buf string) (string, int, string) {
 //     const constructorBuf = c.fullBuf.substring(lineOffset, nextOffset + 1)
 //     const numLines = constructorBuf.split('\n').length
 //     for (let i = 0; i < numLines; i++) {
-//       if (c.lines[lineNum + i].entityType >= MainConstructor && c.lines[lineNum + i].entityType !== entityType) {
+//       if (c.e.lines[lineNum + i].entityType >= MainConstructor && c.e.lines[lineNum + i].entityType !== entityType) {
 //         c.repairIncorrectlyLabeledLine(lineNum + i)
 //       }
-//       c.lines[lineNum + i].entityType = entityType
-//       entity.lines.push(c.lines[lineNum + i])
+//       c.e.lines[lineNum + i].entityType = entityType
+//       entity.lines.push(c.e.lines[lineNum + i])
 //     }
 
 //     // Preserve the comment lines leading up to the method.
 //     for (lineNum--; lineNum > 0; lineNum--) {
-//       if (isComment(c.lines[lineNum]) || c.lines[lineNum].stripped.startsWith('@')) {
-//         c.lines[lineNum].entityType = entityType
-//         entity.lines.unshift(c.lines[lineNum])
+//       if (isComment(c.e.lines[lineNum]) || c.e.lines[lineNum].stripped.startsWith('@')) {
+//         c.e.lines[lineNum].entityType = entityType
+//         entity.lines.unshift(c.e.lines[lineNum])
 //         continue
 //       }
 //       break
