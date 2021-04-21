@@ -23,7 +23,7 @@ func setupClass(t *testing.T, searchFor, buf string) (*Class, int, int) {
 	}
 
 	c := NewClass("Class1", classOffset, openCurlyOffset, closeCurlyOffset, false)
-	c.FindFeatures(buf)
+	c.FindFeatures(buf[openCurlyOffset:closeCurlyOffset])
 	return c, openCurlyOffset, closeCurlyOffset
 }
 

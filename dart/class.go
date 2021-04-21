@@ -16,7 +16,10 @@ limitations under the License.
 
 package dart
 
-import "strings"
+import (
+	"log"
+	"strings"
+)
 
 // Class represents a Dart class.
 type Class struct {
@@ -86,7 +89,11 @@ func (c *Class) FindFeatures(buf string) {
 	c.identifyOverrideMethodsAndVars()
 	c.identifyOthers()
 
-	// c.lines.forEach((line, index) => console.log(`line #${index} type=${EntityType[line.entityType]}: ${line.line}`));
+	// c.lines.forEach((line, index) => console.log());
+	for i := 0; i < len(c.lines); i++ {
+		line := c.lines[i]
+		log.Printf("line #%v type=%v: %v", i, line.entityType, line.line)
+	}
 }
 
 func (c *Class) genStripped(startLine int) string {
@@ -98,34 +105,34 @@ func (c *Class) genStripped(startLine int) string {
 }
 
 func (c *Class) identifyMultiLineComments() {
-	//     let inComment = false
-	//     for (let i = 1; i < c.lines.length; i++) {
-	//       const line = c.lines[i]
-	//       if (line.entityType !== Unknown) {
-	//         continue
-	//       }
-	//       if (inComment) {
-	//         c.lines[i].entityType = MultiLineComment
-	//         // Note: a multiline comment followed by code on the same
-	//         // line is not supported.
-	//         const endComment = line.stripped.indexOf("*/")
-	//         if (endComment >= 0) {
-	//           inComment = false
-	//           if (line.stripped.lastIndexOf("/*") > endComment + 1) {
-	//             inComment = true
-	//           }
-	//         }
-	//         continue
-	//       }
-	//       const startComment = line.stripped.indexOf("/*")
-	//       if (startComment >= 0) {
-	//         inComment = true
-	//         c.lines[i].entityType = MultiLineComment
-	//         if (line.stripped.lastIndexOf("*/") > startComment + 1) {
-	//           inComment = false
-	//         }
-	//       }
-	//     }
+	var inComment bool
+	for i := 1; i < len(c.lines); i++ {
+		line := c.lines[i]
+		if line.entityType != Unknown {
+			continue
+		}
+		if inComment {
+			c.lines[i].entityType = MultiLineComment
+			// Note: a multiline comment followed by code on the same
+			// line is not supported.
+			endComment := strings.Index(line.stripped, "*/")
+			if endComment >= 0 {
+				inComment = false
+				if strings.LastIndex(line.stripped, "/*") > endComment+1 {
+					inComment = true
+				}
+			}
+			continue
+		}
+		startComment := strings.Index(line.stripped, "/*")
+		if startComment >= 0 {
+			inComment = true
+			c.lines[i].entityType = MultiLineComment
+			if strings.LastIndex(line.stripped, "*/") > startComment+1 {
+				inComment = false
+			}
+		}
+	}
 }
 
 func (c *Class) identifyMainConstructor() {

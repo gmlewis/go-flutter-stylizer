@@ -47,6 +47,41 @@ const (
 	GetterMethod
 )
 
+func (e EntityType) String() string {
+	switch e {
+	default:
+		return "Unknown"
+	case BlankLine:
+		return "BlankLine"
+	case SingleLineComment:
+		return "SingleLineComment"
+	case MultiLineComment:
+		return "MultiLineComment"
+	case MainConstructor:
+		return "MainConstructor"
+	case NamedConstructor:
+		return "NamedConstructor"
+	case StaticVariable:
+		return "StaticVariable"
+	case InstanceVariable:
+		return "InstanceVariable"
+	case OverrideVariable:
+		return "OverrideVariable"
+	case StaticPrivateVariable:
+		return "StaticPrivateVariable"
+	case PrivateInstanceVariable:
+		return "PrivateInstanceVariable"
+	case OverrideMethod:
+		return "OverrideMethod"
+	case OtherMethod:
+		return "OtherMethod"
+	case BuildMethod:
+		return "BuildMethod"
+	case GetterMethod:
+		return "GetterMethod"
+	}
+}
+
 // Line represents a line of Dart code.
 type Line struct {
 	line        string
