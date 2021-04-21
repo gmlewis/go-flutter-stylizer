@@ -25,19 +25,26 @@ func (c *Class) findMatchingBracket(openOffset int) int {
 	if open != "{" && open != "(" {
 		log.Fatalf("ERROR: findMatchingBracket(%v) called on non-bracket %q. Please file a bug report on the GitHub issue tracker.", openOffset, open)
 	}
-	searchFor := "}"
+	searchFor := '}'
 	if open == "(" {
-		searchFor = ")"
+		searchFor = ')'
 	}
 
 	return c.findClosing(openOffset, searchFor)
 }
 
 // findClosing finds searchFor and returns its absolute offset.
-func (c *Class) findClosing(openOffset int, searchFor string) int {
+func (c *Class) findClosing(openOffset int, searchFor rune) int {
 	lineIndex, relOffset := c.findLineIndexAtOffset(openOffset)
 	log.Printf("lineIndex=%v, relOffset=%v", lineIndex, relOffset)
-	return 0
+	cursor := &Cursor{
+		c:         c,
+		absOffset: openOffset,
+		lineIndex: lineIndex,
+		relOffset: relOffset,
+	}
+	cursor.advanceUntil(searchFor)
+	return cursor.absOffset
 }
 
 // findLineIndexAtOffset finds the line index and relative offset for the
