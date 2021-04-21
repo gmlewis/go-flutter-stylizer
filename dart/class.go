@@ -296,54 +296,51 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 }
 
 func (c *Class) identifyOthers() error {
-	//     for i := 1; i < len(c.e.lines); i++ {
-	//       const line = c.e.lines[i]
-	//       if (line.entityType != Unknown) {
-	//         continue
-	//       }
+	for i := 1; i < len(c.e.lines); i++ {
+		line := c.e.lines[i]
+		if line.entityType != Unknown {
+			continue
+		}
 
-	//       const entity = c.scanMethod(i)
-	//       if (entity.entityType == Unknown) {
-	//         continue
-	//       }
+		entity, err := c.scanMethod(i)
+		if err != nil {
+			return err
+		}
 
-	//       // Preserve the comment lines leading up to the entity.
-	//       for (let lineNum = i - 1; lineNum > 0; lineNum--) {
-	//         if (isComment(c.e.lines[lineNum])) {
-	//           c.e.lines[lineNum].entityType = entity.entityType
-	//           entity.lines.unshift(c.e.lines[lineNum])
-	//           continue
-	//         }
-	//         break
-	//       }
+		if entity.entityType == Unknown {
+			continue
+		}
 
-	//       switch (entity.entityType) {
-	//         case OtherMethod:
-	//           c.otherMethods.push(entity)
-	//           break
-	//         case GetterMethod:
-	//           c.getterMethods.push(entity)
-	//           break
-	//         case StaticVariable:
-	//           c.staticVariables.push(entity)
-	//           break
-	//         case StaticPrivateVariable:
-	//           c.staticPrivateVariables.push(entity)
-	//           break
-	//         case InstanceVariable:
-	//           c.instanceVariables.push(entity)
-	//           break
-	//         case OverrideVariable:
-	//           c.overrideVariables.push(entity)
-	//           break
-	//         case PrivateInstanceVariable:
-	//           c.privateVariables.push(entity)
-	//           break
-	//         default:
-	//           console.log("UNEXPECTED EntityType=", entity.entityType)
-	//           break
-	//       }
-	//     }
+		// Preserve the comment lines leading up to the entity.
+		for lineNum := i - 1; lineNum > 0; lineNum-- {
+			if isComment(c.e.lines[lineNum]) {
+				c.e.lines[lineNum].entityType = entity.entityType
+				entity.lines = append([]*Line{c.e.lines[lineNum]}, entity.lines...)
+				continue
+			}
+			break
+		}
+
+		switch entity.entityType {
+		case OtherMethod:
+			c.otherMethods = append(c.otherMethods, entity)
+		case GetterMethod:
+			c.getterMethods = append(c.getterMethods, entity)
+		case StaticVariable:
+			c.staticVariables = append(c.staticVariables, entity)
+		case StaticPrivateVariable:
+			c.staticPrivateVariables = append(c.staticPrivateVariables, entity)
+		case InstanceVariable:
+			c.instanceVariables = append(c.instanceVariables, entity)
+		case OverrideVariable:
+			c.overrideVariables = append(c.overrideVariables, entity)
+		case PrivateInstanceVariable:
+			c.privateVariables = append(c.privateVariables, entity)
+		default:
+			return fmt.Errorf("unexpected EntityType=%v", entity.entityType)
+		}
+	}
+
 	return nil
 }
 
@@ -441,7 +438,7 @@ func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
 			}
 		}
 	default:
-		return fmt.Errorf("repairIncorrectlyLabeledLine: Unhandled case %v. Please report on GitHub Issue Tracker with example test case.", incorrectLabel)
+		return fmt.Errorf("repairIncorrectlyLabeledLine: line #%v, unhandled case %v. Please report on GitHub Issue Tracker with example test case.", lineNum+1, incorrectLabel)
 	}
 
 	return nil
