@@ -128,7 +128,9 @@ func (c *Class) identifyMainConstructor() error {
 				}
 			}
 			if c.e.lines[i].entityType > MainConstructor {
-				c.repairIncorrectlyLabeledLine(i)
+				if err := c.repairIncorrectlyLabeledLine(i); err != nil {
+					return err
+				}
 			}
 			c.e.lines[i].entityType = MainConstructor
 			var err error
@@ -161,7 +163,9 @@ func (c *Class) identifyNamedConstructors() error {
 			openParenOffset := offset + strings.Index(line.stripped[offset:], "(")
 			namedConstructor := line.stripped[offset : openParenOffset+1] // Include open parenthesis.
 			if c.e.lines[i].entityType >= MainConstructor && c.e.lines[i].entityType != NamedConstructor {
-				c.repairIncorrectlyLabeledLine(i)
+				if err := c.repairIncorrectlyLabeledLine(i); err != nil {
+					return err
+				}
 			}
 			c.e.lines[i].entityType = NamedConstructor
 			entity, err := c.markMethod(i, namedConstructor, NamedConstructor)
@@ -195,7 +199,9 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 					entityType = BuildMethod
 				}
 				if c.e.lines[i].entityType >= MainConstructor && c.e.lines[i].entityType != entityType {
-					c.repairIncorrectlyLabeledLine(i)
+					if err := c.repairIncorrectlyLabeledLine(i); err != nil {
+						return err
+					}
 				}
 				c.e.lines[i].entityType = entityType
 				entity, err := c.markMethod(i+1, name, entityType)
@@ -239,7 +245,9 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 					numLines := len(strings.Split(bodyBuf, "\n"))
 					for j := 0; j < numLines; j++ {
 						if c.e.lines[lineNum+j].entityType >= MainConstructor && c.e.lines[lineNum+j].entityType != entity.entityType {
-							c.repairIncorrectlyLabeledLine(lineNum + j)
+							if err := c.repairIncorrectlyLabeledLine(lineNum + j); err != nil {
+								return err
+							}
 						}
 						c.e.lines[lineNum+j].entityType = entity.entityType
 						entity.lines = append(entity.lines, c.e.lines[lineNum+j])
@@ -252,7 +260,9 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 					// Find next ";", marking entityType forward.
 					for j := i + 1; j < len(c.e.lines); j++ {
 						if c.e.lines[j].entityType >= MainConstructor && c.e.lines[j].entityType != entity.entityType {
-							c.repairIncorrectlyLabeledLine(j)
+							if err := c.repairIncorrectlyLabeledLine(j); err != nil {
+								return err
+							}
 						}
 						c.e.lines[j].entityType = entity.entityType
 						entity.lines = append(entity.lines, c.e.lines[j])
@@ -404,7 +414,9 @@ func (c *Class) scanMethod(lineNum int) *Entity {
 
 	//     for i := 0; i <= lineCount; i++ {
 	//       if (c.e.lines[lineNum + i].entityType >= MainConstructor && c.e.lines[lineNum + i].entityType != entity.entityType) {
-	//         c.repairIncorrectlyLabeledLine(lineNum + i)
+	//         if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
+	// return err
+	// }
 	//       }
 	//       c.e.lines[lineNum + i].entityType = entity.entityType
 	//       entity.lines = append(entity.lines, c.e.lines[lineNum + i])
@@ -413,27 +425,29 @@ func (c *Class) scanMethod(lineNum int) *Entity {
 	return entity
 }
 
-func (c *Class) repairIncorrectlyLabeledLine(lineNum int) {
-	//     const incorrectLabel = c.e.lines[lineNum].entityType
-	//     switch (incorrectLabel) {
-	//       case NamedConstructor:
-	//         for i := 0; i < c.namedConstructors.length; i++ {
-	//           const el = c.namedConstructors[i]
-	//           for j := 0; j < el.lines.length; j++ {
-	//             const line = el.lines[j]
-	//             if (line != c.e.lines[lineNum]) { continue }
-	//             c.namedConstructors[i].lines.splice(j, 1)
-	//             if (c.namedConstructors[i].lines.length == 0) {
-	//               c.namedConstructors.splice(i)
-	//             }
-	//             return
-	//           }
-	//         }
-	//         break
-	//       default:
-	//         console.log(`repairIncorrectlyLabeledLine: Unhandled case ${incorrectLabel}. Please report on GitHub Issue Tracker with example test case.`)
-	//         break
-	//     }
+func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
+	incorrectLabel := c.e.lines[lineNum].entityType
+	switch incorrectLabel {
+	case NamedConstructor:
+		for i := 0; i < len(c.namedConstructors); i++ {
+			el := c.namedConstructors[i]
+			for j := 0; j < len(el.lines); j++ {
+				line := el.lines[j]
+				if line != c.e.lines[lineNum] {
+					continue
+				}
+				c.namedConstructors[i].lines = append(c.namedConstructors[i].lines[:j], c.namedConstructors[i].lines[j+1:]...)
+				if len(c.namedConstructors[i].lines) == 0 {
+					c.namedConstructors = append(c.namedConstructors[:i], c.namedConstructors[i+1:]...)
+				}
+				return nil
+			}
+		}
+	default:
+		return fmt.Errorf("repairIncorrectlyLabeledLine: Unhandled case %v. Please report on GitHub Issue Tracker with example test case.", incorrectLabel)
+	}
+
+	return nil
 }
 
 func (c *Class) findSequence(buf string) (string, int, string) {
@@ -595,7 +609,9 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 	numLines := len(strings.Split(constructorBuf, "\n"))
 	for i := 0; i < numLines; i++ {
 		if c.e.lines[lineNum+i].entityType >= MainConstructor && c.e.lines[lineNum+i].entityType != entityType {
-			c.repairIncorrectlyLabeledLine(lineNum + i)
+			if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
+				return nil, err
+			}
 		}
 		c.e.lines[lineNum+i].entityType = entityType
 		entity.lines = append(entity.lines, c.e.lines[lineNum+i])
