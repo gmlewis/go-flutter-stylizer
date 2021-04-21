@@ -81,7 +81,6 @@ func TestFindMatchingBracket(t *testing.T) {
 		{
 			name:       "toString() {",
 			editor:     bc,
-			verbose:    true,
 			openOffset: strings.Index(basicClasses, "toString() {") + 11,
 			want:       strings.Index(basicClasses, "toString() {") + 87,
 		},

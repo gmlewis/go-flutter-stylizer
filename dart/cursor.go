@@ -336,9 +336,12 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 // advanceToNextLine advances the cursor to the next line.
 func (c *Cursor) advanceToNextLine() error {
 	lineLengthDiff := len(c.d.lines[c.lineIndex].line) - len(c.d.lines[c.lineIndex].stripped)
-	c.absOffset += lineLengthDiff
+	lineLengthDiff++ // newline
+	c.absOffset += lineLengthDiff - c.d.lines[c.lineIndex].strippedOffset
+	c.d.logf("lineLengthDiff=%v, BEFORE absOffset=%v", lineLengthDiff, c.absOffset)
 	c.lineIndex++
 	c.absOffset += c.d.lines[c.lineIndex].strippedOffset
+	c.d.logf("AFTER absOffset=%v", c.absOffset)
 	c.relOffset = 0
 	if c.lineIndex >= len(c.d.lines) {
 		return fmt.Errorf("advanceToNextLine went past EOF: cursor=%v", c)
