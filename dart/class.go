@@ -347,82 +347,79 @@ func (c *Class) identifyOthers() error {
 	return nil
 }
 
-func (c *Class) scanMethod(lineNum int) *Entity {
+func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 	entity := &Entity{}
 
-	//     const buf = c.genStripped(lineNum)
-	//     const result = c.findSequence(buf)
-	//     const sequence = result[0]
-	//     const lineCount = result[1]
-	//     const leadingText = result[2]
+	buf := c.genStripped(lineNum)
+	sequence, lineCount, leadingText := c.findSequence(buf)
 
-	//     const nameParts = leadingText.split(" ")
-	//     let staticKeyword = false
-	//     let privateVar = false
-	//     if (nameParts.length > 0) {
-	//       entity.name = nameParts[nameParts.length - 1]
-	//       if (entity.name.startsWith("_")) {
-	//         privateVar = true
-	//       }
-	//       if (nameParts[0] == "static") {
-	//         staticKeyword = true
-	//       }
-	//     }
-	//     entity.entityType = InstanceVariable
-	//     switch (true) {
-	//       case privateVar && staticKeyword:
-	//         entity.entityType = StaticPrivateVariable
-	//         break
-	//       case staticKeyword:
-	//         entity.entityType = StaticVariable
-	//         break
-	//       case privateVar:
-	//         entity.entityType = PrivateInstanceVariable
-	//         break
-	//     }
+	nameParts := strings.Split(leadingText, " ")
+	var staticKeyword bool
+	var privateVar bool
+	if len(nameParts) > 0 {
+		entity.name = nameParts[len(nameParts)-1]
+		if strings.HasPrefix(entity.name, "_") {
+			privateVar = true
+		}
+		if nameParts[0] == "static" {
+			staticKeyword = true
+		}
+	}
+	entity.entityType = InstanceVariable
+	switch true {
+	case privateVar && staticKeyword:
+		entity.entityType = StaticPrivateVariable
+		break
+	case staticKeyword:
+		entity.entityType = StaticVariable
+		break
+	case privateVar:
+		entity.entityType = PrivateInstanceVariable
+		break
+	}
 
-	//     switch (sequence) {
-	//       case "(){}":
-	//         entity.entityType = OtherMethod
-	//         break
+	switch sequence {
+	case "(){}":
+		entity.entityType = OtherMethod
+		break
 
-	//       case "();":  // instance variable or abstract method.
-	//         if (!leadingText.endsWith(" Function")) {
-	//           entity.entityType = OtherMethod
-	//         }
-	//         break
+	case "();": // instance variable or abstract method.
+		if !strings.HasSuffix(leadingText, " Function") {
+			entity.entityType = OtherMethod
+		}
+		break
 
-	//       case "=(){}":
-	//         entity.entityType = OtherMethod
-	//         break
+	case "=(){}":
+		entity.entityType = OtherMethod
+		break
 
-	//       default:
-	//         if (sequence.indexOf("=>") >= 0) {
-	//           entity.entityType = OtherMethod
-	//         }
-	//         break
-	//     }
+	default:
+		if strings.Index(sequence, "=>") >= 0 {
+			entity.entityType = OtherMethod
+		}
+		break
+	}
 
-	//     // Force getters to be methods.
-	//     if (leadingText.indexOf(" get ") >= 0) {
-	//       if (c.groupAndSortGetterMethods) {
-	//         entity.entityType = GetterMethod
-	//       } else {
-	//         entity.entityType = OtherMethod
-	//       }
-	//     }
+	// Force getters to be methods.
+	if strings.Index(leadingText, " get ") >= 0 {
+		if c.groupAndSortGetterMethods {
+			entity.entityType = GetterMethod
+		} else {
+			entity.entityType = OtherMethod
+		}
+	}
 
-	//     for i := 0; i <= lineCount; i++ {
-	//       if (c.e.lines[lineNum + i].entityType >= MainConstructor && c.e.lines[lineNum + i].entityType != entity.entityType) {
-	//         if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
-	// return err
-	// }
-	//       }
-	//       c.e.lines[lineNum + i].entityType = entity.entityType
-	//       entity.lines = append(entity.lines, c.e.lines[lineNum + i])
-	//     }
+	for i := 0; i <= lineCount; i++ {
+		if c.e.lines[lineNum+i].entityType >= MainConstructor && c.e.lines[lineNum+i].entityType != entity.entityType {
+			if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
+				return nil, err
+			}
+		}
+		c.e.lines[lineNum+i].entityType = entity.entityType
+		entity.lines = append(entity.lines, c.e.lines[lineNum+i])
+	}
 
-	return entity
+	return entity, nil
 }
 
 func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
