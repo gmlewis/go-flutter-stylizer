@@ -18,6 +18,7 @@ package dart
 
 import (
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -25,6 +26,7 @@ import (
 type Class struct {
 	e         *Editor
 	classBody string
+	lines     []*Line
 
 	className                 string
 	openCurlyOffset           int
@@ -46,20 +48,25 @@ type Class struct {
 
 // NewClass returns a new Dart Class.
 //
+// className is the name of the class.
+// lineOffset is the offset of the starting line of the class (0-based).
 // openCurlyOffset is the position of the "{" for that class.
 // closeCurlyOffset is the position of the "}" for that class.
 // groupAndSortGetterMethods determines how getter methods are processed.
-func NewClass(editor *Editor, className string, openCurlyOffset int,
-	closeCurlyOffset int, groupAndSortGetterMethods bool) *Class {
+func NewClass(editor *Editor, className string,
+	lineOffset, openCurlyOffset, closeCurlyOffset int,
+	groupAndSortGetterMethods bool) *Class {
 	lessThanOffset := strings.Index(className, "<")
 	if lessThanOffset >= 0 { // Strip off <T>.
 		className = className[0:lessThanOffset]
 	}
-	classBody := editor.fullBuf[openCurlyOffset:]
+	classBody := editor.fullBuf[openCurlyOffset:closeCurlyOffset]
+	numClassLines := len(strings.Split(classBody, "\n"))
 
 	return &Class{
 		e:                editor,
 		classBody:        classBody,
+		lines:            editor.lines[lineOffset : lineOffset+numClassLines],
 		className:        className,
 		openCurlyOffset:  openCurlyOffset,
 		closeCurlyOffset: closeCurlyOffset,
@@ -69,14 +76,14 @@ func NewClass(editor *Editor, className string, openCurlyOffset int,
 }
 
 func (c *Class) FindFeatures() error {
-	for i, line := range c.e.lines {
+	for i, line := range c.lines {
 		// Change a blank line following a comment to a SingleLineComment in
 		// order to keep it with the following entity.
 		if line.entityType == Unknown && len(line.stripped) == 0 {
 			line.entityType = BlankLine
 		}
-		if i > 1 && c.e.lines[i-1].entityType == BlankLine && isComment(c.e.lines[i-2]) {
-			c.e.lines[i-1].entityType = SingleLineComment
+		if i > 1 && c.lines[i-1].entityType == BlankLine && isComment(c.lines[i-2]) {
+			c.lines[i-1].entityType = SingleLineComment
 		}
 	}
 
@@ -95,8 +102,8 @@ func (c *Class) FindFeatures() error {
 	}
 
 	if c.e.Verbose {
-		for i := 0; i < len(c.e.lines); i++ {
-			line := c.e.lines[i]
+		for i := 0; i < len(c.lines); i++ {
+			line := c.lines[i]
 			c.e.logf("line #%v type=%v: %v", i, line.entityType, line.line)
 		}
 	}
@@ -106,16 +113,16 @@ func (c *Class) FindFeatures() error {
 
 func (c *Class) genStripped(startLine int) string {
 	var strippedLines []string
-	for i := startLine; i < len(c.e.lines); i++ {
-		strippedLines = append(strippedLines, c.e.lines[i].stripped)
+	for i := startLine; i < len(c.lines); i++ {
+		strippedLines = append(strippedLines, c.lines[i].stripped)
 	}
 	return strings.Join(strippedLines, "\n")
 }
 
 func (c *Class) identifyMainConstructor() error {
 	className := c.className + "("
-	for i := 1; i < len(c.e.lines); i++ {
-		line := c.e.lines[i]
+	for i := 1; i < len(c.lines); i++ {
+		line := c.lines[i]
 		if line.entityType != Unknown {
 			continue
 		}
@@ -127,12 +134,12 @@ func (c *Class) identifyMainConstructor() error {
 					continue
 				}
 			}
-			if c.e.lines[i].entityType > MainConstructor {
+			if c.lines[i].entityType > MainConstructor {
 				if err := c.repairIncorrectlyLabeledLine(i); err != nil {
 					return err
 				}
 			}
-			c.e.lines[i].entityType = MainConstructor
+			c.lines[i].entityType = MainConstructor
 			var err error
 			c.theConstructor, err = c.markMethod(i, className, MainConstructor)
 			if err != nil {
@@ -147,8 +154,8 @@ func (c *Class) identifyMainConstructor() error {
 
 func (c *Class) identifyNamedConstructors() error {
 	className := c.className + "."
-	for i := 1; i < len(c.e.lines); i++ {
-		line := c.e.lines[i]
+	for i := 1; i < len(c.lines); i++ {
+		line := c.lines[i]
 		if line.entityType != Unknown {
 			continue
 		}
@@ -162,12 +169,12 @@ func (c *Class) identifyNamedConstructors() error {
 			}
 			openParenOffset := offset + strings.Index(line.stripped[offset:], "(")
 			namedConstructor := line.stripped[offset : openParenOffset+1] // Include open parenthesis.
-			if c.e.lines[i].entityType >= MainConstructor && c.e.lines[i].entityType != NamedConstructor {
+			if c.lines[i].entityType >= MainConstructor && c.lines[i].entityType != NamedConstructor {
 				if err := c.repairIncorrectlyLabeledLine(i); err != nil {
 					return err
 				}
 			}
-			c.e.lines[i].entityType = NamedConstructor
+			c.lines[i].entityType = NamedConstructor
 			entity, err := c.markMethod(i, namedConstructor, NamedConstructor)
 			if err != nil {
 				return err
@@ -180,17 +187,17 @@ func (c *Class) identifyNamedConstructors() error {
 }
 
 func (c *Class) identifyOverrideMethodsAndVars() error {
-	for i := 1; i < len(c.e.lines); i++ {
-		line := c.e.lines[i]
+	for i := 1; i < len(c.lines); i++ {
+		line := c.lines[i]
 		if line.entityType != Unknown {
 			continue
 		}
 
-		if strings.HasPrefix(line.stripped, "@override") && i < len(c.e.lines)-1 {
-			offset := strings.Index(c.e.lines[i+1].stripped, "(")
+		if strings.HasPrefix(line.stripped, "@override") && i < len(c.lines)-1 {
+			offset := strings.Index(c.lines[i+1].stripped, "(")
 			if offset >= 0 {
 				// Include open paren in name.
-				ss := c.e.lines[i+1].stripped[0 : offset+1]
+				ss := c.lines[i+1].stripped[0 : offset+1]
 				// Search for beginning of method name.
 				nameOffset := strings.LastIndex(ss, " ") + 1
 				name := ss[nameOffset:]
@@ -198,12 +205,12 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 				if name == "build(" {
 					entityType = BuildMethod
 				}
-				if c.e.lines[i].entityType >= MainConstructor && c.e.lines[i].entityType != entityType {
+				if c.lines[i].entityType >= MainConstructor && c.lines[i].entityType != entityType {
 					if err := c.repairIncorrectlyLabeledLine(i); err != nil {
 						return err
 					}
 				}
-				c.e.lines[i].entityType = entityType
+				c.lines[i].entityType = entityType
 				entity, err := c.markMethod(i+1, name, entityType)
 				if err != nil {
 					return err
@@ -219,9 +226,9 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 				}
 				lineNum := i + 1
 				// No open paren - could be a getter. See if it has a body.
-				if strings.Index(c.e.lines[i+1].stripped, "{") >= 0 {
-					lineOffset := strings.Index(c.classBody, c.e.lines[i+1].line)
-					inLineOffset := strings.Index(c.e.lines[i+1].line, "{")
+				if strings.Index(c.lines[i+1].stripped, "{") >= 0 {
+					lineOffset := strings.Index(c.classBody, c.lines[i+1].line)
+					inLineOffset := strings.Index(c.lines[i+1].line, "{")
 					relOpenCurlyOffset := lineOffset + inLineOffset
 
 					if c.classBody[relOpenCurlyOffset] != '{' {
@@ -244,29 +251,29 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 					bodyBuf := c.classBody[lineOffset : nextOffset+1]
 					numLines := len(strings.Split(bodyBuf, "\n"))
 					for j := 0; j < numLines; j++ {
-						if c.e.lines[lineNum+j].entityType >= MainConstructor && c.e.lines[lineNum+j].entityType != entity.entityType {
+						if c.lines[lineNum+j].entityType >= MainConstructor && c.lines[lineNum+j].entityType != entity.entityType {
 							if err := c.repairIncorrectlyLabeledLine(lineNum + j); err != nil {
 								return err
 							}
 						}
-						c.e.lines[lineNum+j].entityType = entity.entityType
-						entity.lines = append(entity.lines, c.e.lines[lineNum+j])
+						c.lines[lineNum+j].entityType = entity.entityType
+						entity.lines = append(entity.lines, c.lines[lineNum+j])
 					}
 				} else {
 					// Does not have a body - if it has no fat arrow, it is a variable.
-					if strings.Index(c.e.lines[i+1].stripped, "=>") < 0 {
+					if strings.Index(c.lines[i+1].stripped, "=>") < 0 {
 						entity.entityType = OverrideVariable
 					}
 					// Find next ";", marking entityType forward.
-					for j := i + 1; j < len(c.e.lines); j++ {
-						if c.e.lines[j].entityType >= MainConstructor && c.e.lines[j].entityType != entity.entityType {
+					for j := i + 1; j < len(c.lines); j++ {
+						if c.lines[j].entityType >= MainConstructor && c.lines[j].entityType != entity.entityType {
 							if err := c.repairIncorrectlyLabeledLine(j); err != nil {
 								return err
 							}
 						}
-						c.e.lines[j].entityType = entity.entityType
-						entity.lines = append(entity.lines, c.e.lines[j])
-						semicolonOffset := strings.Index(c.e.lines[j].stripped, ";")
+						c.lines[j].entityType = entity.entityType
+						entity.lines = append(entity.lines, c.lines[j])
+						semicolonOffset := strings.Index(c.lines[j].stripped, ";")
 						if semicolonOffset >= 0 {
 							break
 						}
@@ -275,9 +282,9 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 
 				// Preserve the comment lines leading up to the method.
 				for lineNum--; lineNum > 0; lineNum-- {
-					if isComment(c.e.lines[lineNum]) || strings.HasPrefix(c.e.lines[lineNum].stripped, "@") {
-						c.e.lines[lineNum].entityType = entity.entityType
-						entity.lines = append([]*Line{c.e.lines[lineNum]}, entity.lines...)
+					if isComment(c.lines[lineNum]) || strings.HasPrefix(c.lines[lineNum].stripped, "@") {
+						c.lines[lineNum].entityType = entity.entityType
+						entity.lines = append([]*Line{c.lines[lineNum]}, entity.lines...)
 						continue
 					}
 					break
@@ -296,8 +303,8 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 }
 
 func (c *Class) identifyOthers() error {
-	for i := 1; i < len(c.e.lines); i++ {
-		line := c.e.lines[i]
+	for i := 1; i < len(c.lines); i++ {
+		line := c.lines[i]
 		if line.entityType != Unknown {
 			continue
 		}
@@ -313,9 +320,9 @@ func (c *Class) identifyOthers() error {
 
 		// Preserve the comment lines leading up to the entity.
 		for lineNum := i - 1; lineNum > 0; lineNum-- {
-			if isComment(c.e.lines[lineNum]) {
-				c.e.lines[lineNum].entityType = entity.entityType
-				entity.lines = append([]*Line{c.e.lines[lineNum]}, entity.lines...)
+			if isComment(c.lines[lineNum]) {
+				c.lines[lineNum].entityType = entity.entityType
+				entity.lines = append([]*Line{c.lines[lineNum]}, entity.lines...)
 				continue
 			}
 			break
@@ -362,6 +369,7 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 			staticKeyword = true
 		}
 	}
+
 	entity.entityType = InstanceVariable
 	switch true {
 	case privateVar && staticKeyword:
@@ -407,27 +415,28 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 	}
 
 	for i := 0; i <= lineCount; i++ {
-		if c.e.lines[lineNum+i].entityType >= MainConstructor && c.e.lines[lineNum+i].entityType != entity.entityType {
+		if c.lines[lineNum+i].entityType >= MainConstructor && c.lines[lineNum+i].entityType != entity.entityType {
+			log.Printf("scanMethod: Changing line #%v from type %v to type %v", lineNum+i+1, c.lines[lineNum+i].entityType, entity.entityType)
 			if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
 				return nil, err
 			}
 		}
-		c.e.lines[lineNum+i].entityType = entity.entityType
-		entity.lines = append(entity.lines, c.e.lines[lineNum+i])
+		c.lines[lineNum+i].entityType = entity.entityType
+		entity.lines = append(entity.lines, c.lines[lineNum+i])
 	}
 
 	return entity, nil
 }
 
 func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
-	incorrectLabel := c.e.lines[lineNum].entityType
+	incorrectLabel := c.lines[lineNum].entityType
 	switch incorrectLabel {
 	case NamedConstructor:
 		for i := 0; i < len(c.namedConstructors); i++ {
 			el := c.namedConstructors[i]
 			for j := 0; j < len(el.lines); j++ {
 				line := el.lines[j]
-				if line != c.e.lines[lineNum] {
+				if line != c.lines[lineNum] {
 					continue
 				}
 				c.namedConstructors[i].lines = append(c.namedConstructors[i].lines[:j], c.namedConstructors[i].lines[j+1:]...)
@@ -567,8 +576,8 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 	}
 
 	// Identify all lines within the main (or factory) constructor.
-	lineOffset := strings.Index(c.classBody, c.e.lines[lineNum].line)
-	inLineOffset := strings.Index(c.e.lines[lineNum].line, methodName)
+	lineOffset := strings.Index(c.classBody, c.lines[lineNum].line)
+	inLineOffset := strings.Index(c.lines[lineNum].line, methodName)
 	relOpenParenOffset := lineOffset + inLineOffset + len(methodName) - 1
 	if c.classBody[relOpenParenOffset] != '(' {
 		return nil, fmt.Errorf("expected open parenthesis at relative offset %v but got %v", relOpenParenOffset, c.classBody[relOpenParenOffset:])
@@ -602,20 +611,20 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 	constructorBuf := c.classBody[lineOffset : nextOffset+1]
 	numLines := len(strings.Split(constructorBuf, "\n"))
 	for i := 0; i < numLines; i++ {
-		if c.e.lines[lineNum+i].entityType >= MainConstructor && c.e.lines[lineNum+i].entityType != entityType {
+		if c.lines[lineNum+i].entityType >= MainConstructor && c.lines[lineNum+i].entityType != entityType {
 			if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
 				return nil, err
 			}
 		}
-		c.e.lines[lineNum+i].entityType = entityType
-		entity.lines = append(entity.lines, c.e.lines[lineNum+i])
+		c.lines[lineNum+i].entityType = entityType
+		entity.lines = append(entity.lines, c.lines[lineNum+i])
 	}
 
 	// Preserve the comment lines leading up to the method.
 	for lineNum--; lineNum > 0; lineNum-- {
-		if isComment(c.e.lines[lineNum]) || strings.HasPrefix(c.e.lines[lineNum].stripped, "@") {
-			c.e.lines[lineNum].entityType = entityType
-			entity.lines = append([]*Line{c.e.lines[lineNum]}, entity.lines...)
+		if isComment(c.lines[lineNum]) || strings.HasPrefix(c.lines[lineNum].stripped, "@") {
+			c.lines[lineNum].entityType = entityType
+			entity.lines = append([]*Line{c.lines[lineNum]}, entity.lines...)
 			continue
 		}
 		break

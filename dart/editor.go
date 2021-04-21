@@ -45,16 +45,9 @@ func NewEditor(buf string) *Editor {
 		// Change a blank line following a comment to a SingleLineComment in
 		// order to keep it with the following entity.
 		numLines := len(e.lines)
-		if numLines > 1 &&
-			e.lines[numLines-1].entityType == BlankLine &&
-			isComment(e.lines[numLines-2]) {
+		if numLines > 1 && e.lines[numLines-1].entityType == BlankLine && isComment(e.lines[numLines-2]) {
 			e.lines[numLines-1].entityType = SingleLineComment
 		}
-	}
-
-	for i := 0; i < len(e.lines); i++ {
-		line := e.lines[i]
-		e.logf("line #%v type=%v: %v", i, line.entityType, line.line)
 	}
 
 	return e
@@ -90,6 +83,7 @@ func (e *Editor) findMatchingBracket(openOffset int) (int, error) {
 	if err := cursor.advanceUntil(searchFor); err != nil {
 		return 0, fmt.Errorf("advanceUntil(%q): %v", searchFor, err)
 	}
+
 	return cursor.absOffset - 1 - len(cursor.runeBuf), nil
 }
 

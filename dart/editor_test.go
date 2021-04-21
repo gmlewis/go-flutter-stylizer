@@ -12,7 +12,7 @@ var basicClasses string
 //go:embed testfiles/basic_classes.dart.windz.txt
 var bcWindoze string
 
-func setupEditor(t *testing.T, searchFor, buf string) (*Editor, int, int) {
+func setupEditor(t *testing.T, searchFor, buf string) (*Editor, int, int, int) {
 	t.Helper()
 	classOffset := strings.Index(buf, searchFor)
 	openCurlyOffset := classOffset + len(searchFor) - 1
@@ -22,19 +22,25 @@ func setupEditor(t *testing.T, searchFor, buf string) (*Editor, int, int) {
 	}
 
 	if got, want := buf[classOffset:openCurlyOffset+1], searchFor; got != want {
-		t.Errorf("open offset error: buf[%v:%v] = %q, want %q", classOffset, openCurlyOffset+1, got, want)
+		t.Fatalf("open offset error: buf[%v:%v] = %q, want %q", classOffset, openCurlyOffset+1, got, want)
 	}
 	if got, want := buf[closeCurlyOffset:closeCurlyOffset+1], "}"; got != want {
-		t.Errorf("close offset error: buf[%v:%v] = %q, want %q", closeCurlyOffset, closeCurlyOffset+1, got, want)
+		t.Fatalf("close offset error: buf[%v:%v] = %q, want %q", closeCurlyOffset, closeCurlyOffset+1, got, want)
+	}
+
+	p := strings.Split(buf[0:openCurlyOffset+1], "\n")
+	lineOffset := len(p) - 1
+	if p[lineOffset] != searchFor {
+		t.Fatalf("expected %q but got %q", p[lineOffset], searchFor)
 	}
 
 	e := NewEditor(buf)
-	return e, openCurlyOffset, closeCurlyOffset
+	return e, lineOffset, openCurlyOffset, closeCurlyOffset
 }
 
 func TestFindMatchingBracket(t *testing.T) {
-	bc, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
-	wz, wzOCO, wzCCO := setupEditor(t, "class Class1 {", bcWindoze)
+	bc, _, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
+	wz, _, wzOCO, wzCCO := setupEditor(t, "class Class1 {", bcWindoze)
 
 	tests := []struct {
 		name       string
@@ -196,8 +202,8 @@ func TestFindMatchingBracket(t *testing.T) {
 }
 
 func TestFindLineIndexAtOffset(t *testing.T) {
-	bc, bcOCO, _ := setupEditor(t, "class Class1 {", basicClasses)
-	wz, wzOCO, _ := setupEditor(t, "class Class1 {", bcWindoze)
+	bc, _, bcOCO, _ := setupEditor(t, "class Class1 {", basicClasses)
+	wz, _, wzOCO, _ := setupEditor(t, "class Class1 {", bcWindoze)
 
 	tests := []struct {
 		name          string
