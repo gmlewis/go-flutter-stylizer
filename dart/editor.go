@@ -69,6 +69,7 @@ func (d *DartEditor) findMatchingBracket(openOffset int) int {
 		searchFor = ")"
 	}
 
+	log.Printf("findClosing(openOffset=%v, searchFor=%q), open=%q", openOffset, searchFor, open)
 	return d.findClosing(openOffset, searchFor)
 }
 

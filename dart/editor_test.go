@@ -206,10 +206,10 @@ func TestFindLineIndexAtOffset(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gotLineIndex, gotRelOffset := tt.editor.findLineIndexAtOffset(tt.openOffset)
 			if gotLineIndex != tt.wantLineIndex {
-				t.Errorf("findMatchingBracket(%v) lineIndex = %v, want %v", tt.openOffset, gotLineIndex, tt.wantLineIndex)
+				t.Errorf("findLineIndexAtOffset(%v) lineIndex = %v, want %v", tt.openOffset, gotLineIndex, tt.wantLineIndex)
 			}
 			if gotRelOffset != tt.wantRelOffset {
-				t.Errorf("findMatchingBracket(%v) relOffset = %v, want %v", tt.openOffset, gotRelOffset, tt.wantRelOffset)
+				t.Errorf("findLineIndexAtOffset(%v) relOffset = %v, want %v", tt.openOffset, gotRelOffset, tt.wantRelOffset)
 			}
 		})
 	}

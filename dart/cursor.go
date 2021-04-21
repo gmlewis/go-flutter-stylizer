@@ -17,6 +17,7 @@ limitations under the License.
 package dart
 
 import (
+	"fmt"
 	"log"
 	"strings"
 )
@@ -51,13 +52,30 @@ type Cursor struct {
 	inTripleSingle     bool
 	inTripleDouble     bool
 	inMultiLineComment bool
+
+	// UnreadRune can not be called twice in succession, so we need to keep track
+	// of our lookahead stack ourselves.
+	runeBuf []rune
+}
+
+func (c *Cursor) String() string {
+	var line, stripped string
+	if c.lineIndex < len(c.d.lines) {
+		line = c.d.lines[c.lineIndex].line
+		stripped = c.d.lines[c.lineIndex].stripped
+	}
+	return fmt.Sprintf(`{absOffet=%v, lineIndex=%v, relOffset=%v, stripped=%q(%v), line=%q(%v), '=%v, "=%v, '''=%v, """=%v, /*=%v, (=%v, braceLevels=%#v}`,
+		c.absOffset, c.lineIndex, c.relOffset, stripped, len(stripped), line, len(line),
+		c.inSingleQuote, c.inDoubleQuote, c.inTripleSingle, c.inTripleDouble, c.inMultiLineComment, c.parenLevels, c.braceLevels)
 }
 
 // advanceUntil searches for the provided string, stepping through
 // the Dart source code (and obeying its grammatical nuances) until found.
 func (c *Cursor) advanceUntil(searchFor string) {
+	c.advanceToNextFeature() // Advance past the opening bracket to not count it.
 	for {
 		nf := c.advanceToNextFeature()
+		log.Printf("nf=%q searchFor=%q, abs=%v, ind=%v, rel=%v", nf, searchFor, c.absOffset, c.lineIndex, c.relOffset)
 		if nf == searchFor &&
 			!c.inSingleQuote && !c.inDoubleQuote && !c.inTripleSingle && !c.inTripleDouble &&
 			c.parenLevels == 0 && len(c.braceLevels) == 0 {
@@ -69,85 +87,98 @@ func (c *Cursor) advanceUntil(searchFor string) {
 				continue
 			}
 			c.inMultiLineComment = true
+			log.Printf("inMultiLineComment=true: cursor=%v", c)
 		case "*/":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble {
 				continue
 			}
 			if !c.inMultiLineComment {
-				log.Fatalf("ERROR: Found */ before /*: cursor=%#v", c)
+				log.Fatalf("ERROR: Found */ before /*: cursor=%v", c)
 			}
 			c.inMultiLineComment = false
+			log.Printf("inMultiLineComment=false: cursor=%v", c)
 		case "'''":
 			if c.inMultiLineComment {
 				continue
 			}
 			if c.inSingleQuote {
-				log.Fatalf("ERROR: Found ''' after ': cursor=%#v", c)
+				log.Fatalf("ERROR: Found ''' after ': cursor=%v", c)
 			}
 			if c.inDoubleQuote || c.inTripleDouble {
 				continue
 			}
 			c.inTripleSingle = !c.inTripleSingle
+			log.Printf("inTripleSingle: cursor=%v", c)
 		case `"""`:
 			if c.inMultiLineComment {
 				continue
 			}
 			if c.inDoubleQuote {
-				log.Fatalf(`ERROR: Found """ after ": cursor=%#v`, c)
+				log.Fatalf(`ERROR: Found """ after ": cursor=%v`, c)
 			}
 			if c.inSingleQuote || c.inTripleSingle {
 				continue
 			}
 			c.inTripleDouble = !c.inTripleDouble
+			log.Printf("inTripleDouble: cursor=%v", c)
 		case "${":
 			switch {
 			case c.inMultiLineComment:
 			case c.inSingleQuote:
 				c.inSingleQuote = false
 				c.braceLevels = append(c.braceLevels, BraceSingle)
+				log.Printf("${: inSingleQuote: cursor=%v", c)
 			case c.inDoubleQuote:
 				c.inDoubleQuote = false
 				c.braceLevels = append(c.braceLevels, BraceDouble)
+				log.Printf("${: inDoubleQuote: cursor=%v", c)
 			case c.inTripleSingle:
 				c.inTripleSingle = false
 				c.braceLevels = append(c.braceLevels, BraceTripleSingle)
+				log.Printf("${: inTripleSingle: cursor=%v", c)
 			case c.inTripleDouble:
 				c.inTripleDouble = false
 				c.braceLevels = append(c.braceLevels, BraceTripleDouble)
+				log.Printf("${: inTripleDouble: cursor=%v", c)
 			default:
-				log.Fatalf("ERROR: Found ${ outside of a string: cursor=%#v", c)
+				log.Fatalf("ERROR: Found ${ outside of a string: cursor=%v", c)
 			}
 		case "'":
 			if c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
 				continue
 			}
 			c.inSingleQuote = !c.inSingleQuote
+			log.Printf("inSingleQuote: cursor=%v", c)
 		case `"`:
 			if c.inSingleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
 				continue
 			}
 			c.inDoubleQuote = !c.inDoubleQuote
+			log.Printf("inDoubleQuote: cursor=%v", c)
 		case "(":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
 				continue
 			}
 			c.parenLevels++
+			log.Printf("parenLevels++: cursor=%v", c)
 		case ")":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
 				continue
 			}
 			c.parenLevels--
+			log.Printf("parenLevels--: cursor=%v", c)
 		case "{":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
 				continue
 			}
 			c.braceLevels = append(c.braceLevels, BraceNormal)
+			log.Printf("{: cursor=%v", c)
 		case "}":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
 				continue
 			}
 			if len(c.braceLevels) == 0 {
-				log.Fatalf("ERROR: Found } before {: cursor=%#v", c)
+				log.Fatalf("ERROR: Found } before {: cursor=%v", c)
 			}
 			braceLevel := c.braceLevels[len(c.braceLevels)-1]
 			c.braceLevels = c.braceLevels[:len(c.braceLevels)-1]
@@ -162,8 +193,9 @@ func (c *Cursor) advanceUntil(searchFor string) {
 			case BraceTripleDouble:
 				c.inTripleDouble = true
 			default:
-				log.Fatalf("ERROR: Unknown braceLevel %v: cursor=%#v", braceLevel, c)
+				log.Fatalf("ERROR: Unknown braceLevel %v: cursor=%v", braceLevel, c)
 			}
+			log.Printf("}: cursor=%v", c)
 		}
 	}
 }
@@ -173,10 +205,20 @@ func (c *Cursor) advanceUntil(searchFor string) {
 // If it encounters a triple single- or triple double-quote or a "${" while
 // within a string, it returns it as a whole string.
 func (c *Cursor) advanceToNextFeature() string {
-	r, size, err := c.reader.ReadRune()
-	if err != nil {
-		c.advanceToNextLine()
-		return c.advanceToNextFeature()
+	var r rune
+	var size int
+	var err error
+
+	if len(c.runeBuf) > 0 {
+		r = c.runeBuf[len(c.runeBuf)-1]
+		size = len(string(r))
+		c.runeBuf = c.runeBuf[0 : len(c.runeBuf)-1]
+	} else {
+		r, size, err = c.reader.ReadRune()
+		if err != nil {
+			c.advanceToNextLine()
+			return c.advanceToNextFeature()
+		}
 	}
 
 	c.absOffset += size
@@ -193,17 +235,17 @@ func (c *Cursor) advanceToNextFeature() string {
 			return "'"
 		}
 		if nsize != 1 || nr != '\'' {
-			c.reader.UnreadRune()
+			c.runeBuf = append(c.runeBuf, nr)
 			return "'"
 		}
 		nr, nsize, err = c.reader.ReadRune()
 		if err != nil {
-			c.reader.UnreadRune()
+			c.runeBuf = append(c.runeBuf, nr)
 			return "'"
 		}
 		if nsize != 1 || nr != '\'' {
-			c.reader.UnreadRune()
-			c.reader.UnreadRune()
+			c.runeBuf = append(c.runeBuf, r)
+			c.runeBuf = append(c.runeBuf, nr)
 			return "'"
 		}
 		c.absOffset += 2
@@ -215,17 +257,17 @@ func (c *Cursor) advanceToNextFeature() string {
 			return `"`
 		}
 		if nsize != 1 || nr != '"' {
-			c.reader.UnreadRune()
+			c.runeBuf = append(c.runeBuf, nr)
 			return `"`
 		}
 		nr, nsize, err = c.reader.ReadRune()
 		if err != nil {
-			c.reader.UnreadRune()
+			c.runeBuf = append(c.runeBuf, nr)
 			return `"`
 		}
 		if nsize != 1 || nr != '"' {
-			c.reader.UnreadRune()
-			c.reader.UnreadRune()
+			c.runeBuf = append(c.runeBuf, r)
+			c.runeBuf = append(c.runeBuf, nr)
 			return `"`
 		}
 		c.absOffset += 2
@@ -237,7 +279,7 @@ func (c *Cursor) advanceToNextFeature() string {
 			return "$"
 		}
 		if nsize != 1 || nr != '{' {
-			c.reader.UnreadRune()
+			c.runeBuf = append(c.runeBuf, nr)
 			return "$"
 		}
 		c.absOffset++
@@ -249,7 +291,7 @@ func (c *Cursor) advanceToNextFeature() string {
 			return "/"
 		}
 		if nsize != 1 || nr != '*' {
-			c.reader.UnreadRune()
+			c.runeBuf = append(c.runeBuf, nr)
 			return "/"
 		}
 		c.absOffset++
@@ -261,7 +303,7 @@ func (c *Cursor) advanceToNextFeature() string {
 			return "*"
 		}
 		if nsize != 1 || nr != '/' {
-			c.reader.UnreadRune()
+			c.runeBuf = append(c.runeBuf, nr)
 			return "*"
 		}
 		c.absOffset++
@@ -275,11 +317,11 @@ func (c *Cursor) advanceToNextFeature() string {
 // advanceToNextLine advances the cursor to the next line.
 func (c *Cursor) advanceToNextLine() {
 	lineLengthDiff := len(c.d.lines[c.lineIndex].line) - len(c.d.lines[c.lineIndex].stripped)
-	c.lineIndex++
-	if c.lineIndex >= len(c.d.lines) {
-		log.Fatalf("ERROR: advanceToNextLine went past EOF: cursor=%#v", c)
-	}
-	c.relOffset = 0
 	c.absOffset += lineLengthDiff
+	c.lineIndex++
+	c.relOffset = 0
+	if c.lineIndex >= len(c.d.lines) {
+		log.Fatalf("ERROR: advanceToNextLine went past EOF: cursor=%v", c)
+	}
 	c.reader = strings.NewReader(c.d.lines[c.lineIndex].stripped)
 }
