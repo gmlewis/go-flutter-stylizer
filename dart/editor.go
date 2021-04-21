@@ -75,7 +75,7 @@ func (d *DartEditor) findMatchingBracket(openOffset int) int {
 // findClosing finds searchFor and returns its absolute offset.
 func (d *DartEditor) findClosing(openOffset int, searchFor string) int {
 	lineIndex, relOffset := d.findLineIndexAtOffset(openOffset)
-	log.Printf("lineIndex=%v, relOffset=%v", lineIndex, relOffset)
+	log.Printf("lineIndex=%v, relOffset=%v, stripped=%q(%v), line=%q(%v)", lineIndex, relOffset, d.lines[lineIndex].stripped, len(d.lines[lineIndex].stripped), d.lines[lineIndex].line, len(d.lines[lineIndex].line))
 	cursor := &Cursor{
 		d:         d,
 		absOffset: openOffset,

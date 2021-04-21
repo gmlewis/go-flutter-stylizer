@@ -44,12 +44,13 @@ type Cursor struct {
 	relOffset int
 	reader    *strings.Reader
 
-	braceLevels    []BraceLevel
-	parenLevels    int
-	inSingleQuote  bool
-	inDoubleQuote  bool
-	inTripleSingle bool
-	inTripleDouble bool
+	braceLevels        []BraceLevel
+	parenLevels        int
+	inSingleQuote      bool
+	inDoubleQuote      bool
+	inTripleSingle     bool
+	inTripleDouble     bool
+	inMultiLineComment bool
 }
 
 // advanceUntil searches for the provided string, stepping through
@@ -63,7 +64,23 @@ func (c *Cursor) advanceUntil(searchFor string) {
 			return
 		}
 		switch nf {
+		case "/*":
+			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
+				continue
+			}
+			c.inMultiLineComment = true
+		case "*/":
+			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble {
+				continue
+			}
+			if !c.inMultiLineComment {
+				log.Fatalf("ERROR: Found */ before /*: cursor=%#v", c)
+			}
+			c.inMultiLineComment = false
 		case "'''":
+			if c.inMultiLineComment {
+				continue
+			}
 			if c.inSingleQuote {
 				log.Fatalf("ERROR: Found ''' after ': cursor=%#v", c)
 			}
@@ -72,6 +89,9 @@ func (c *Cursor) advanceUntil(searchFor string) {
 			}
 			c.inTripleSingle = !c.inTripleSingle
 		case `"""`:
+			if c.inMultiLineComment {
+				continue
+			}
 			if c.inDoubleQuote {
 				log.Fatalf(`ERROR: Found """ after ": cursor=%#v`, c)
 			}
@@ -81,6 +101,7 @@ func (c *Cursor) advanceUntil(searchFor string) {
 			c.inTripleDouble = !c.inTripleDouble
 		case "${":
 			switch {
+			case c.inMultiLineComment:
 			case c.inSingleQuote:
 				c.inSingleQuote = false
 				c.braceLevels = append(c.braceLevels, BraceSingle)
@@ -97,26 +118,32 @@ func (c *Cursor) advanceUntil(searchFor string) {
 				log.Fatalf("ERROR: Found ${ outside of a string: cursor=%#v", c)
 			}
 		case "'":
-			if c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle {
+			if c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
 				continue
 			}
 			c.inSingleQuote = !c.inSingleQuote
 		case `"`:
-			if c.inSingleQuote || c.inTripleDouble || c.inTripleSingle {
+			if c.inSingleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
 				continue
 			}
 			c.inDoubleQuote = !c.inDoubleQuote
 		case "(":
+			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
+				continue
+			}
 			c.parenLevels++
 		case ")":
+			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
+				continue
+			}
 			c.parenLevels--
 		case "{":
-			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble {
+			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
 				continue
 			}
 			c.braceLevels = append(c.braceLevels, BraceNormal)
 		case "}":
-			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble {
+			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
 				continue
 			}
 			if len(c.braceLevels) == 0 {
@@ -207,15 +234,39 @@ func (c *Cursor) advanceToNextFeature() string {
 	case '$':
 		nr, nsize, err := c.reader.ReadRune()
 		if err != nil {
-			return `$`
+			return "$"
 		}
 		if nsize != 1 || nr != '{' {
 			c.reader.UnreadRune()
-			return `$`
+			return "$"
 		}
 		c.absOffset++
 		c.relOffset++
 		return "${"
+	case '/':
+		nr, nsize, err := c.reader.ReadRune()
+		if err != nil {
+			return "/"
+		}
+		if nsize != 1 || nr != '*' {
+			c.reader.UnreadRune()
+			return "/"
+		}
+		c.absOffset++
+		c.relOffset++
+		return "/*"
+	case '*':
+		nr, nsize, err := c.reader.ReadRune()
+		if err != nil {
+			return "*"
+		}
+		if nsize != 1 || nr != '/' {
+			c.reader.UnreadRune()
+			return "*"
+		}
+		c.absOffset++
+		c.relOffset++
+		return "*/"
 	}
 
 	return string(r)
