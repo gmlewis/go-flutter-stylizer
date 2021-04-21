@@ -101,12 +101,16 @@ func (c *Cursor) advanceUntil(searchFor string) error {
 			c.absOffset -= beforeLen - afterLen
 			// Reset the reader because we chopped off the stripped line.
 			c.reader = strings.NewReader("")
+			if afterLen == 0 {
+				c.d.lines[c.lineIndex].entityType = SingleLineComment
+			}
 			c.d.logf("STRIPPED MODIFIED! singleLineComment=true: stripped=%q(%v), beforeLen=%v, afterLen=%v, cursor=%v", c.d.lines[c.lineIndex].stripped, len(c.d.lines[c.lineIndex].stripped), beforeLen, afterLen, c)
 		case "/*":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
 				continue
 			}
 			c.inMultiLineComment = true
+			c.d.lines[c.lineIndex].entityType = MultiLineComment
 			c.d.logf("inMultiLineComment=true: cursor=%v", c)
 		case "*/":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble {
@@ -115,6 +119,7 @@ func (c *Cursor) advanceUntil(searchFor string) error {
 			if !c.inMultiLineComment {
 				return fmt.Errorf("ERROR: Found */ before /*: cursor=%v", c)
 			}
+			c.d.lines[c.lineIndex].entityType = MultiLineComment
 			c.inMultiLineComment = false
 			c.d.logf("inMultiLineComment=false: cursor=%v", c)
 		case "'''":
@@ -354,5 +359,8 @@ func (c *Cursor) advanceToNextLine() error {
 		return fmt.Errorf("advanceToNextLine went past EOF: cursor=%v", c)
 	}
 	c.reader = strings.NewReader(c.d.lines[c.lineIndex].stripped)
+	if c.inMultiLineComment {
+		c.d.lines[c.lineIndex].entityType = MultiLineComment
+	}
 	return nil
 }
