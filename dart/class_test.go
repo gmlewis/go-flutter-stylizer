@@ -23,8 +23,8 @@ func TestFindFeatures_linux_mac(t *testing.T) {
 		Unknown,           // line #7: class Class1 {
 		SingleLineComment, // line #8:   // _pvi is a private instance variable.
 		Unknown,           // line #9:   List<String> _pvi = ['one', 'two'];
-		Unknown,           // line #10:   @override
-		Unknown,           // line #11:   build() {}  // build method
+		BuildMethod,       // line #10:   @override
+		BuildMethod,       // line #11:   build() {}  // build method
 		BlankLine,         // line #12:
 		SingleLineComment, // line #13:   // This is a random single-line comment somewhere in the class.
 		SingleLineComment, // line #14:
@@ -47,11 +47,11 @@ func TestFindFeatures_linux_mac(t *testing.T) {
 		NamedConstructor,  // line #31:   Class1.fromNum();
 		Unknown,           // line #32:   var myfunc = (int n) => n;
 		Unknown,           // line #33:   get vv => v; // getter
-		Unknown,           // line #34:   @override
-		Unknown,           // line #35:   toString() {
-		Unknown,           // line #36:     print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');
-		Unknown,           // line #37:     return '';
-		Unknown,           // line #38:   }
+		OverrideMethod,    // line #34:   @override
+		OverrideMethod,    // line #35:   toString() {
+		OverrideMethod,    // line #36:     print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');
+		OverrideMethod,    // line #37:     return '';
+		OverrideMethod,    // line #38:   }
 		BlankLine,         // line #39:
 		SingleLineComment, // line #40:   // "Here is 'where we add ${ text to "trip 'up' ''' the ${dart parser}.
 		MultiLineComment,  // line #41:   /*
@@ -108,8 +108,8 @@ func TestFindFeatures_windoze(t *testing.T) {
 		Unknown,           // line #7: class Class1 {
 		SingleLineComment, // line #8:   // _pvi is a private instance variable.
 		Unknown,           // line #9:   List<String> _pvi = ['one', 'two'];
-		Unknown,           // line #10:   @override
-		Unknown,           // line #11:   build() {}  // build method
+		BuildMethod,       // line #10:   @override
+		BuildMethod,       // line #11:   build() {}  // build method
 		BlankLine,         // line #12:
 		SingleLineComment, // line #13:   // This is a random single-line comment somewhere in the class.
 		SingleLineComment, // line #14:
@@ -132,11 +132,11 @@ func TestFindFeatures_windoze(t *testing.T) {
 		NamedConstructor,  // line #31:   Class1.fromNum();
 		Unknown,           // line #32:   var myfunc = (int n) => n;
 		Unknown,           // line #33:   get vv => v; // getter
-		Unknown,           // line #34:   @override
-		Unknown,           // line #35:   toString() {
-		Unknown,           // line #36:     print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');
-		Unknown,           // line #37:     return '';
-		Unknown,           // line #38:   }
+		OverrideMethod,    // line #34:   @override
+		OverrideMethod,    // line #35:   toString() {
+		OverrideMethod,    // line #36:     print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');
+		OverrideMethod,    // line #37:     return '';
+		OverrideMethod,    // line #38:   }
 		BlankLine,         // line #39:
 		SingleLineComment, // line #40:   // "Here is 'where we add ${ text to "trip 'up' ''' the ${dart parser}.
 		MultiLineComment,  // line #41:   /*

@@ -23,7 +23,8 @@ import (
 
 // Class represents a Dart class.
 type Class struct {
-	e *Editor
+	e         *Editor
+	classBody string
 
 	className                 string
 	openCurlyOffset           int
@@ -54,9 +55,11 @@ func NewClass(editor *Editor, className string, openCurlyOffset int,
 	if lessThanOffset >= 0 { // Strip off <T>.
 		className = className[0:lessThanOffset]
 	}
+	classBody := editor.fullBuf[openCurlyOffset:]
 
 	return &Class{
 		e:                editor,
+		classBody:        classBody,
 		className:        className,
 		openCurlyOffset:  openCurlyOffset,
 		closeCurlyOffset: closeCurlyOffset,
@@ -173,90 +176,112 @@ func (c *Class) identifyNamedConstructors() error {
 }
 
 func (c *Class) identifyOverrideMethodsAndVars() error {
-	//     for i := 1; i < len(c.e.lines); i++ {
-	//       const line = c.e.lines[i]
-	//       if (line.entityType != Unknown) {
-	//         continue
-	//       }
+	for i := 1; i < len(c.e.lines); i++ {
+		line := c.e.lines[i]
+		if line.entityType != Unknown {
+			continue
+		}
 
-	//       if (line.stripped.startsWith('@override') && i len(< c.e.lines) - 1) {
-	//         const offset = c.e.lines[i + 1].stripped.indexOf('(')
-	//         if (offset >= 0) {
-	//           // Include open paren in name.
-	//           const ss = c.e.lines[i + 1].stripped.substring(0, offset + 1)
-	//           // Search for beginning of method name.
-	//           const nameOffset = ss.lastIndexOf(' ') + 1
-	//           const name = ss.substring(nameOffset)
-	//           const entityType = (name == 'build(') ? BuildMethod : OverrideMethod
-	//           if (c.e.lines[i].entityType >= MainConstructor && c.e.lines[i].entityType != entityType) {
-	//             c.repairIncorrectlyLabeledLine(i)
-	//           }
-	//           c.e.lines[i].entityType = entityType
-	//           const entity = c.markMethod(i + 1, name, entityType)
-	//           if (name == 'build(') {
-	//             c.buildMethod = entity
-	//           } else {
-	//             c.overrideMethods.push(entity)
-	//           }
-	//         } else {
-	//           const entity = new DartEntity()
-	//           entity.entityType = OverrideMethod
-	//           let lineNum = i + 1
-	//           // No open paren - could be a getter. See if it has a body.
-	//           if (c.e.lines[i + 1].stripped.indexOf('{') >= 0) {
-	//             const lineOffset = c.fullBuf.indexOf(c.e.lines[i + 1].line)
-	//             const inLineOffset = c.e.lines[i + 1].line.indexOf('{')
-	//             const relOpenCurlyOffset = lineOffset + inLineOffset
-	//             assert.strictEqual(c.fullBuf[relOpenCurlyOffset], '{', 'Expected open curly bracket at relative offset')
-	//             const absOpenCurlyOffset = c.openCurlyOffset + relOpenCurlyOffset
-	//             const absCloseCurlyOffset = findMatchingBracket(c.editor, absOpenCurlyOffset)
-	//             const relCloseCurlyOffset = absCloseCurlyOffset - c.openCurlyOffset
-	//             assert.strictEqual(c.fullBuf[relCloseCurlyOffset], '}', 'Expected close curly bracket at relative offset')
-	//             const nextOffset = absCloseCurlyOffset - c.openCurlyOffset
-	//             const bodyBuf = c.fullBuf.substring(lineOffset, nextOffset + 1)
-	//             const numLines = bodyBuf.split('\n').length
-	//             for (let j = 0; j < numLines; j++) {
-	//               if (c.e.lines[lineNum + j].entityType >= MainConstructor && c.e.lines[lineNum + j].entityType != entity.entityType) {
-	//                 c.repairIncorrectlyLabeledLine(lineNum + j)
-	//               }
-	//               c.e.lines[lineNum + j].entityType = entity.entityType
-	//               entity.lines.push(c.e.lines[lineNum + j])
-	//             }
-	//           } else {
-	//             // Does not have a body - if it has no fat arrow, it is a variable.
-	//             if (c.e.lines[i + 1].stripped.indexOf('=>') < 0) {
-	//               entity.entityType = OverrideVariable
-	//             }
-	//             // Find next ';', marking entityType forward.
-	//             for (let j = i + 1; j < len(c.e.lines); j++) {
-	//               if (c.e.lines[j].entityType >= MainConstructor && c.e.lines[j].entityType != entity.entityType) {
-	//                 c.repairIncorrectlyLabeledLine(j)
-	//               }
-	//               c.e.lines[j].entityType = entity.entityType
-	//               entity.lines.push(c.e.lines[j])
-	//               const semicolonOffset = c.e.lines[j].stripped.indexOf(';')
-	//               if (semicolonOffset >= 0) {
-	//                 break
-	//               }
-	//             }
-	//           }
-	//           // Preserve the comment lines leading up to the method.
-	//           for (lineNum--; lineNum > 0; lineNum--) {
-	//             if (isComment(c.e.lines[lineNum]) || c.e.lines[lineNum].stripped.startsWith('@')) {
-	//               c.e.lines[lineNum].entityType = entity.entityType
-	//               entity.lines.unshift(c.e.lines[lineNum])
-	//               continue
-	//             }
-	//             break
-	//           }
-	//           if (entity.entityType == OverrideVariable) {
-	//             c.overrideVariables.push(entity)
-	//           } else {
-	//             c.overrideMethods.push(entity)
-	//           }
-	//         }
-	//       }
-	//     }
+		if strings.HasPrefix(line.stripped, "@override") && i < len(c.e.lines)-1 {
+			offset := strings.Index(c.e.lines[i+1].stripped, "(")
+			if offset >= 0 {
+				// Include open paren in name.
+				ss := c.e.lines[i+1].stripped[0 : offset+1]
+				// Search for beginning of method name.
+				nameOffset := strings.LastIndex(ss, " ") + 1
+				name := ss[nameOffset:]
+				entityType := OverrideMethod
+				if name == "build(" {
+					entityType = BuildMethod
+				}
+				if c.e.lines[i].entityType >= MainConstructor && c.e.lines[i].entityType != entityType {
+					c.repairIncorrectlyLabeledLine(i)
+				}
+				c.e.lines[i].entityType = entityType
+				entity, err := c.markMethod(i+1, name, entityType)
+				if err != nil {
+					return err
+				}
+				if name == "build(" {
+					c.buildMethod = entity
+				} else {
+					c.overrideMethods = append(c.overrideMethods, entity)
+				}
+			} else {
+				entity := &Entity{
+					entityType: OverrideMethod,
+				}
+				lineNum := i + 1
+				// No open paren - could be a getter. See if it has a body.
+				if strings.Index(c.e.lines[i+1].stripped, "{") >= 0 {
+					lineOffset := strings.Index(c.classBody, c.e.lines[i+1].line)
+					inLineOffset := strings.Index(c.e.lines[i+1].line, "{")
+					relOpenCurlyOffset := lineOffset + inLineOffset
+
+					if c.classBody[relOpenCurlyOffset] != '{' {
+						return fmt.Errorf("expected open curly bracket at relative offset %v but got %q", relOpenCurlyOffset, c.classBody[relOpenCurlyOffset:])
+					}
+
+					absOpenCurlyOffset := c.openCurlyOffset + relOpenCurlyOffset
+					absCloseCurlyOffset, err := c.e.findMatchingBracket(absOpenCurlyOffset)
+					if err != nil {
+						return err
+					}
+
+					relCloseCurlyOffset := absCloseCurlyOffset - c.openCurlyOffset
+
+					if c.classBody[relOpenCurlyOffset] != '}' {
+						return fmt.Errorf("expected close curly bracket at relative offset %v but got %q", relCloseCurlyOffset, c.classBody[relCloseCurlyOffset:])
+					}
+
+					nextOffset := absCloseCurlyOffset - c.openCurlyOffset
+					bodyBuf := c.classBody[lineOffset : nextOffset+1]
+					numLines := len(strings.Split(bodyBuf, "\n"))
+					for j := 0; j < numLines; j++ {
+						if c.e.lines[lineNum+j].entityType >= MainConstructor && c.e.lines[lineNum+j].entityType != entity.entityType {
+							c.repairIncorrectlyLabeledLine(lineNum + j)
+						}
+						c.e.lines[lineNum+j].entityType = entity.entityType
+						entity.lines = append(entity.lines, c.e.lines[lineNum+j])
+					}
+				} else {
+					// Does not have a body - if it has no fat arrow, it is a variable.
+					if strings.Index(c.e.lines[i+1].stripped, "=>") < 0 {
+						entity.entityType = OverrideVariable
+					}
+					// Find next ";", marking entityType forward.
+					for j := i + 1; j < len(c.e.lines); j++ {
+						if c.e.lines[j].entityType >= MainConstructor && c.e.lines[j].entityType != entity.entityType {
+							c.repairIncorrectlyLabeledLine(j)
+						}
+						c.e.lines[j].entityType = entity.entityType
+						entity.lines = append(entity.lines, c.e.lines[j])
+						semicolonOffset := strings.Index(c.e.lines[j].stripped, ";")
+						if semicolonOffset >= 0 {
+							break
+						}
+					}
+				}
+
+				// Preserve the comment lines leading up to the method.
+				for lineNum--; lineNum > 0; lineNum-- {
+					if isComment(c.e.lines[lineNum]) || strings.HasPrefix(c.e.lines[lineNum].stripped, "@") {
+						c.e.lines[lineNum].entityType = entity.entityType
+						entity.lines = append([]*Line{c.e.lines[lineNum]}, entity.lines...)
+						continue
+					}
+					break
+				}
+
+				if entity.entityType == OverrideVariable {
+					c.overrideVariables = append(c.overrideVariables, entity)
+				} else {
+					c.overrideMethods = append(c.overrideMethods, entity)
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -305,7 +330,7 @@ func (c *Class) identifyOthers() error {
 	//           c.privateVariables.push(entity)
 	//           break
 	//         default:
-	//           console.log('UNEXPECTED EntityType=', entity.entityType)
+	//           console.log("UNEXPECTED EntityType=", entity.entityType)
 	//           break
 	//       }
 	//     }
@@ -321,15 +346,15 @@ func (c *Class) scanMethod(lineNum int) *Entity {
 	//     const lineCount = result[1]
 	//     const leadingText = result[2]
 
-	//     const nameParts = leadingText.split(' ')
+	//     const nameParts = leadingText.split(" ")
 	//     let staticKeyword = false
 	//     let privateVar = false
 	//     if (nameParts.length > 0) {
 	//       entity.name = nameParts[nameParts.length - 1]
-	//       if (entity.name.startsWith('_')) {
+	//       if (entity.name.startsWith("_")) {
 	//         privateVar = true
 	//       }
-	//       if (nameParts[0] == 'static') {
+	//       if (nameParts[0] == "static") {
 	//         staticKeyword = true
 	//       }
 	//     }
@@ -347,29 +372,29 @@ func (c *Class) scanMethod(lineNum int) *Entity {
 	//     }
 
 	//     switch (sequence) {
-	//       case '(){}':
+	//       case "(){}":
 	//         entity.entityType = OtherMethod
 	//         break
 
-	//       case '();':  // instance variable or abstract method.
-	//         if (!leadingText.endsWith(' Function')) {
+	//       case "();":  // instance variable or abstract method.
+	//         if (!leadingText.endsWith(" Function")) {
 	//           entity.entityType = OtherMethod
 	//         }
 	//         break
 
-	//       case '=(){}':
+	//       case "=(){}":
 	//         entity.entityType = OtherMethod
 	//         break
 
 	//       default:
-	//         if (sequence.indexOf('=>') >= 0) {
+	//         if (sequence.indexOf("=>") >= 0) {
 	//           entity.entityType = OtherMethod
 	//         }
 	//         break
 	//     }
 
 	//     // Force getters to be methods.
-	//     if (leadingText.indexOf(' get ') >= 0) {
+	//     if (leadingText.indexOf(" get ") >= 0) {
 	//       if (c.groupAndSortGetterMethods) {
 	//         entity.entityType = GetterMethod
 	//       } else {
@@ -382,7 +407,7 @@ func (c *Class) scanMethod(lineNum int) *Entity {
 	//         c.repairIncorrectlyLabeledLine(lineNum + i)
 	//       }
 	//       c.e.lines[lineNum + i].entityType = entity.entityType
-	//       entity.lines.push(c.e.lines[lineNum + i])
+	//       entity.lines = append(entity.lines, c.e.lines[lineNum + i])
 	//     }
 
 	return entity
@@ -394,7 +419,7 @@ func (c *Class) repairIncorrectlyLabeledLine(lineNum int) {
 	//       case NamedConstructor:
 	//         for i := 0; i < c.namedConstructors.length; i++ {
 	//           const el = c.namedConstructors[i]
-	//           for (let j = 0; j < el.lines.length; j++) {
+	//           for j := 0; j < el.lines.length; j++ {
 	//             const line = el.lines[j]
 	//             if (line != c.e.lines[lineNum]) { continue }
 	//             c.namedConstructors[i].lines.splice(j, 1)
@@ -453,7 +478,7 @@ func (c *Class) findSequence(buf string) (string, int, string) {
 	//           }
 	//           if (openBraceCount == 0) {
 	//             result.push(buf[i])
-	//             return [result.join(''), lineCount, leadingText]
+	//             return [result.join(""), lineCount, leadingText]
 	//           }
 	//         }
 	//       } else if (openCurlyCount > 0) {
@@ -471,7 +496,7 @@ func (c *Class) findSequence(buf string) (string, int, string) {
 	//           }
 	//           if (openCurlyCount == 0) {
 	//             result.push(buf[i])
-	//             return [result.join(''), lineCount, leadingText]
+	//             return [result.join(""), lineCount, leadingText]
 	//           }
 	//         }
 	//       } else {
@@ -479,37 +504,37 @@ func (c *Class) findSequence(buf string) (string, int, string) {
 	//           case '(':
 	//             openParenCount++
 	//             result.push(buf[i])
-	//             if (leadingText == '') {
+	//             if (leadingText == "") {
 	//               leadingText = buf.substring(0, i).trim()
 	//             }
 	//             break
 	//           case '[':
 	//             openBraceCount++
 	//             result.push(buf[i])
-	//             if (leadingText == '') {
+	//             if (leadingText == "") {
 	//               leadingText = buf.substring(0, i).trim()
 	//             }
 	//             break
 	//           case '{':
 	//             openCurlyCount++
 	//             result.push(buf[i])
-	//             if (leadingText == '') {
+	//             if (leadingText == "") {
 	//               leadingText = buf.substring(0, i).trim()
 	//             }
 	//             break
 	//           case ';':
 	//             result.push(buf[i])
-	//             if (leadingText == '') {
+	//             if (leadingText == "") {
 	//               leadingText = buf.substring(0, i).trim()
 	//             }
-	//             return [result.join(''), lineCount, leadingText]
+	//             return [result.join(""), lineCount, leadingText]
 	//           case '=':
 	//             if (i < buf.length - 1 && buf[i + 1] == '>') {
-	//               result.push('=>')
+	//               result.push("=>")
 	//             } else {
 	//               result.push(buf[i])
 	//             }
-	//             if (leadingText == '') {
+	//             if (leadingText == "") {
 	//               leadingText = buf.substring(0, i).trim()
 	//             }
 	//             break
@@ -532,45 +557,58 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 		entityType: entityType,
 	}
 
-	//     // Identify all lines within the main (or factory) constructor.
-	//     lineOffset := c.fullBuf.indexOf(c.e.lines[lineNum].line)
-	//     inLineOffset := c.e.lines[lineNum].line.indexOf(methodName)
-	//     relOpenParenOffset := lineOffset + inLineOffset + methodName.length - 1
-	//     assert.strictEqual(c.fullBuf[relOpenParenOffset], '(', 'Expected open parenthesis at relative offset')
+	// Identify all lines within the main (or factory) constructor.
+	lineOffset := strings.Index(c.classBody, c.e.lines[lineNum].line)
+	inLineOffset := strings.Index(c.e.lines[lineNum].line, methodName)
+	relOpenParenOffset := lineOffset + inLineOffset + len(methodName) - 1
+	if c.classBody[relOpenParenOffset] != '(' {
+		return nil, fmt.Errorf("expected open parenthesis at relative offset %v but got %v", relOpenParenOffset, c.classBody[relOpenParenOffset:])
+	}
 
-	//     absOpenParenOffset := c.openCurlyOffset + relOpenParenOffset
-	//     absCloseParenOffset := findMatchingBracket(c.editor, absOpenParenOffset)
-	//     relCloseParenOffset := absCloseParenOffset - c.openCurlyOffset
-	//     assert.strictEqual(c.fullBuf[relCloseParenOffset], ')', 'Expected close parenthesis at relative offset')
+	absOpenParenOffset := c.openCurlyOffset + relOpenParenOffset
+	absCloseParenOffset, err := c.e.findMatchingBracket(absOpenParenOffset)
+	if err != nil {
+		return nil, err
+	}
 
-	//     curlyDeltaOffset := c.fullBuf.substring(relCloseParenOffset).indexOf('{')
-	//     semicolonOffset := c.fullBuf.substring(relCloseParenOffset).indexOf(';')
-	//     let nextOffset = 0
-	//     if (curlyDeltaOffset < 0 || (curlyDeltaOffset >= 0 && semicolonOffset >= 0 && semicolonOffset < curlyDeltaOffset)) { // no body.
-	//       nextOffset = relCloseParenOffset + semicolonOffset
-	//     } else {
-	//       absOpenCurlyOffset := absCloseParenOffset + curlyDeltaOffset
-	//       absCloseCurlyOffset := findMatchingBracket(c.editor, absOpenCurlyOffset)
-	//       nextOffset = absCloseCurlyOffset - c.openCurlyOffset
-	//     }
-	//     constructorBuf := c.fullBuf.substring(lineOffset, nextOffset + 1)
-	//     numLines := constructorBuf.split('\n').length
-	//     for i := 0; i < numLines; i++ {
-	//       if (c.e.lines[lineNum + i].entityType >= MainConstructor && c.e.lines[lineNum + i].entityType != entityType) {
-	//         c.repairIncorrectlyLabeledLine(lineNum + i)
-	//       }
-	//       c.e.lines[lineNum + i].entityType = entityType
-	//       entity.lines.push(c.e.lines[lineNum + i])
-	//     }
+	relCloseParenOffset := absCloseParenOffset - c.openCurlyOffset
+	if c.classBody[relCloseParenOffset] != ')' {
+		return nil, fmt.Errorf("expected close parenthesis at relative offset %v but got %v", relCloseParenOffset, c.classBody[relCloseParenOffset:])
+	}
 
-	//     // Preserve the comment lines leading up to the method.
-	//     for (lineNum--; lineNum > 0; lineNum--) {
-	//       if (isComment(c.e.lines[lineNum]) || c.e.lines[lineNum].stripped.startsWith('@')) {
-	//         c.e.lines[lineNum].entityType = entityType
-	//         entity.lines.unshift(c.e.lines[lineNum])
-	//         continue
-	//       }
-	//       break
-	//     }
+	curlyDeltaOffset := strings.Index(c.classBody[relCloseParenOffset:], "{")
+	semicolonOffset := strings.Index(c.classBody[relCloseParenOffset:], ";")
+	nextOffset := 0
+	if curlyDeltaOffset < 0 || (curlyDeltaOffset >= 0 && semicolonOffset >= 0 && semicolonOffset < curlyDeltaOffset) { // no body.
+		nextOffset = relCloseParenOffset + semicolonOffset
+	} else {
+		absOpenCurlyOffset := absCloseParenOffset + curlyDeltaOffset
+		absCloseCurlyOffset, err := c.e.findMatchingBracket(absOpenCurlyOffset)
+		if err != nil {
+			return nil, err
+		}
+
+		nextOffset = absCloseCurlyOffset - c.openCurlyOffset
+	}
+	constructorBuf := c.classBody[lineOffset : nextOffset+1]
+	numLines := len(strings.Split(constructorBuf, "\n"))
+	for i := 0; i < numLines; i++ {
+		if c.e.lines[lineNum+i].entityType >= MainConstructor && c.e.lines[lineNum+i].entityType != entityType {
+			c.repairIncorrectlyLabeledLine(lineNum + i)
+		}
+		c.e.lines[lineNum+i].entityType = entityType
+		entity.lines = append(entity.lines, c.e.lines[lineNum+i])
+	}
+
+	// Preserve the comment lines leading up to the method.
+	for lineNum--; lineNum > 0; lineNum-- {
+		if isComment(c.e.lines[lineNum]) || strings.HasPrefix(c.e.lines[lineNum].stripped, "@") {
+			c.e.lines[lineNum].entityType = entityType
+			entity.lines = append([]*Line{c.e.lines[lineNum]}, entity.lines...)
+			continue
+		}
+		break
+	}
+
 	return entity, nil
 }
