@@ -16,7 +16,10 @@ limitations under the License.
 
 package dart
 
-import "log"
+import (
+	"log"
+	"strings"
+)
 
 // findMatchingBracket finds the matching closing "}" (for "{") or ")" (for "(")
 // given the offset of the opening rune.
@@ -25,16 +28,16 @@ func (c *Class) findMatchingBracket(openOffset int) int {
 	if open != "{" && open != "(" {
 		log.Fatalf("ERROR: findMatchingBracket(%v) called on non-bracket %q. Please file a bug report on the GitHub issue tracker.", openOffset, open)
 	}
-	searchFor := '}'
+	searchFor := "}"
 	if open == "(" {
-		searchFor = ')'
+		searchFor = ")"
 	}
 
 	return c.findClosing(openOffset, searchFor)
 }
 
 // findClosing finds searchFor and returns its absolute offset.
-func (c *Class) findClosing(openOffset int, searchFor rune) int {
+func (c *Class) findClosing(openOffset int, searchFor string) int {
 	lineIndex, relOffset := c.findLineIndexAtOffset(openOffset)
 	log.Printf("lineIndex=%v, relOffset=%v", lineIndex, relOffset)
 	cursor := &Cursor{
@@ -42,6 +45,7 @@ func (c *Class) findClosing(openOffset int, searchFor rune) int {
 		absOffset: openOffset,
 		lineIndex: lineIndex,
 		relOffset: relOffset,
+		reader:    strings.NewReader(c.lines[lineIndex].stripped[relOffset:]),
 	}
 	cursor.advanceUntil(searchFor)
 	return cursor.absOffset
