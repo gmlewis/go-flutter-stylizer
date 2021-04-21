@@ -37,7 +37,7 @@ const (
 // Cursor represents an editor cursor and is used to advance through
 // the Dart source code.
 type Cursor struct {
-	d *DartEditor
+	e *Editor
 
 	absOffset int
 	lineIndex int
@@ -59,9 +59,9 @@ type Cursor struct {
 
 func (c *Cursor) String() string {
 	var line, stripped string
-	if c.lineIndex < len(c.d.lines) {
-		line = c.d.lines[c.lineIndex].line
-		stripped = c.d.lines[c.lineIndex].stripped
+	if c.lineIndex < len(c.e.lines) {
+		line = c.e.lines[c.lineIndex].line
+		stripped = c.e.lines[c.lineIndex].stripped
 	}
 	return fmt.Sprintf(`{absOffet=%v, lineIndex=%v, relOffset=%v, stripped=%q(%v), line=%q(%v), '=%v, "=%v, '''=%v, """=%v, /*=%v, (=%v, braceLevels=%#v}`,
 		c.absOffset, c.lineIndex, c.relOffset, stripped, len(stripped), line, len(line),
@@ -82,7 +82,7 @@ func (c *Cursor) advanceUntil(searchFor string) error {
 			return err
 		}
 
-		c.d.logf("nf=%q searchFor=%q, abs=%v, ind=%v, rel=%v", nf, searchFor, c.absOffset, c.lineIndex, c.relOffset)
+		c.e.logf("nf=%q searchFor=%q, abs=%v, ind=%v, rel=%v", nf, searchFor, c.absOffset, c.lineIndex, c.relOffset)
 		if nf == searchFor &&
 			!c.inSingleQuote && !c.inDoubleQuote && !c.inTripleSingle && !c.inTripleDouble &&
 			c.parenLevels == 0 && len(c.braceLevels) == 0 {
@@ -96,22 +96,22 @@ func (c *Cursor) advanceUntil(searchFor string) error {
 			c.relOffset -= 2
 			c.absOffset -= 2
 			beforeLen := c.relOffset
-			c.d.lines[c.lineIndex].stripped = strings.TrimSpace(c.d.lines[c.lineIndex].stripped[0:c.relOffset])
-			afterLen := len(c.d.lines[c.lineIndex].stripped)
+			c.e.lines[c.lineIndex].stripped = strings.TrimSpace(c.e.lines[c.lineIndex].stripped[0:c.relOffset])
+			afterLen := len(c.e.lines[c.lineIndex].stripped)
 			c.absOffset -= beforeLen - afterLen
 			// Reset the reader because we chopped off the stripped line.
 			c.reader = strings.NewReader("")
 			if afterLen == 0 {
-				c.d.lines[c.lineIndex].entityType = SingleLineComment
+				c.e.lines[c.lineIndex].entityType = SingleLineComment
 			}
-			c.d.logf("STRIPPED MODIFIED! singleLineComment=true: stripped=%q(%v), beforeLen=%v, afterLen=%v, cursor=%v", c.d.lines[c.lineIndex].stripped, len(c.d.lines[c.lineIndex].stripped), beforeLen, afterLen, c)
+			c.e.logf("STRIPPED MODIFIED! singleLineComment=true: stripped=%q(%v), beforeLen=%v, afterLen=%v, cursor=%v", c.e.lines[c.lineIndex].stripped, len(c.e.lines[c.lineIndex].stripped), beforeLen, afterLen, c)
 		case "/*":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
 				continue
 			}
 			c.inMultiLineComment = true
-			c.d.lines[c.lineIndex].entityType = MultiLineComment
-			c.d.logf("inMultiLineComment=true: cursor=%v", c)
+			c.e.lines[c.lineIndex].entityType = MultiLineComment
+			c.e.logf("inMultiLineComment=true: cursor=%v", c)
 		case "*/":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble {
 				continue
@@ -119,9 +119,9 @@ func (c *Cursor) advanceUntil(searchFor string) error {
 			if !c.inMultiLineComment {
 				return fmt.Errorf("ERROR: Found */ before /*: cursor=%v", c)
 			}
-			c.d.lines[c.lineIndex].entityType = MultiLineComment
+			c.e.lines[c.lineIndex].entityType = MultiLineComment
 			c.inMultiLineComment = false
-			c.d.logf("inMultiLineComment=false: cursor=%v", c)
+			c.e.logf("inMultiLineComment=false: cursor=%v", c)
 		case "'''":
 			if c.inMultiLineComment {
 				continue
@@ -133,7 +133,7 @@ func (c *Cursor) advanceUntil(searchFor string) error {
 				continue
 			}
 			c.inTripleSingle = !c.inTripleSingle
-			c.d.logf("inTripleSingle: cursor=%v", c)
+			c.e.logf("inTripleSingle: cursor=%v", c)
 		case `"""`:
 			if c.inMultiLineComment {
 				continue
@@ -145,26 +145,26 @@ func (c *Cursor) advanceUntil(searchFor string) error {
 				continue
 			}
 			c.inTripleDouble = !c.inTripleDouble
-			c.d.logf("inTripleDouble: cursor=%v", c)
+			c.e.logf("inTripleDouble: cursor=%v", c)
 		case "${":
 			switch {
 			case c.inMultiLineComment:
 			case c.inSingleQuote:
 				c.inSingleQuote = false
 				c.braceLevels = append(c.braceLevels, BraceSingle)
-				c.d.logf("${: inSingleQuote: cursor=%v", c)
+				c.e.logf("${: inSingleQuote: cursor=%v", c)
 			case c.inDoubleQuote:
 				c.inDoubleQuote = false
 				c.braceLevels = append(c.braceLevels, BraceDouble)
-				c.d.logf("${: inDoubleQuote: cursor=%v", c)
+				c.e.logf("${: inDoubleQuote: cursor=%v", c)
 			case c.inTripleSingle:
 				c.inTripleSingle = false
 				c.braceLevels = append(c.braceLevels, BraceTripleSingle)
-				c.d.logf("${: inTripleSingle: cursor=%v", c)
+				c.e.logf("${: inTripleSingle: cursor=%v", c)
 			case c.inTripleDouble:
 				c.inTripleDouble = false
 				c.braceLevels = append(c.braceLevels, BraceTripleDouble)
-				c.d.logf("${: inTripleDouble: cursor=%v", c)
+				c.e.logf("${: inTripleDouble: cursor=%v", c)
 			default:
 				return fmt.Errorf("ERROR: Found ${ outside of a string: cursor=%v", c)
 			}
@@ -173,31 +173,31 @@ func (c *Cursor) advanceUntil(searchFor string) error {
 				continue
 			}
 			c.inSingleQuote = !c.inSingleQuote
-			c.d.logf("inSingleQuote: cursor=%v", c)
+			c.e.logf("inSingleQuote: cursor=%v", c)
 		case `"`:
 			if c.inSingleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
 				continue
 			}
 			c.inDoubleQuote = !c.inDoubleQuote
-			c.d.logf("inDoubleQuote: cursor=%v", c)
+			c.e.logf("inDoubleQuote: cursor=%v", c)
 		case "(":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
 				continue
 			}
 			c.parenLevels++
-			c.d.logf("parenLevels++: cursor=%v", c)
+			c.e.logf("parenLevels++: cursor=%v", c)
 		case ")":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
 				continue
 			}
 			c.parenLevels--
-			c.d.logf("parenLevels--: cursor=%v", c)
+			c.e.logf("parenLevels--: cursor=%v", c)
 		case "{":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
 				continue
 			}
 			c.braceLevels = append(c.braceLevels, BraceNormal)
-			c.d.logf("{: cursor=%v", c)
+			c.e.logf("{: cursor=%v", c)
 		case "}":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
 				continue
@@ -220,7 +220,7 @@ func (c *Cursor) advanceUntil(searchFor string) error {
 			default:
 				return fmt.Errorf("ERROR: Unknown braceLevel %v: cursor=%v", braceLevel, c)
 			}
-			c.d.logf("}: cursor=%v", c)
+			c.e.logf("}: cursor=%v", c)
 		}
 	}
 }
@@ -347,20 +347,20 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 
 // advanceToNextLine advances the cursor to the next line.
 func (c *Cursor) advanceToNextLine() error {
-	lineLengthDiff := len(c.d.lines[c.lineIndex].line) - len(c.d.lines[c.lineIndex].stripped)
+	lineLengthDiff := len(c.e.lines[c.lineIndex].line) - len(c.e.lines[c.lineIndex].stripped)
 	lineLengthDiff++ // newline
-	c.absOffset += lineLengthDiff - c.d.lines[c.lineIndex].strippedOffset
-	c.d.logf("lineLengthDiff=%v, BEFORE absOffset=%v", lineLengthDiff, c.absOffset)
+	c.absOffset += lineLengthDiff - c.e.lines[c.lineIndex].strippedOffset
+	c.e.logf("lineLengthDiff=%v, BEFORE absOffset=%v", lineLengthDiff, c.absOffset)
 	c.lineIndex++
-	c.absOffset += c.d.lines[c.lineIndex].strippedOffset
-	c.d.logf("AFTER absOffset=%v", c.absOffset)
+	c.absOffset += c.e.lines[c.lineIndex].strippedOffset
+	c.e.logf("AFTER absOffset=%v", c.absOffset)
 	c.relOffset = 0
-	if c.lineIndex >= len(c.d.lines) {
+	if c.lineIndex >= len(c.e.lines) {
 		return fmt.Errorf("advanceToNextLine went past EOF: cursor=%v", c)
 	}
-	c.reader = strings.NewReader(c.d.lines[c.lineIndex].stripped)
+	c.reader = strings.NewReader(c.e.lines[c.lineIndex].stripped)
 	if c.inMultiLineComment {
-		c.d.lines[c.lineIndex].entityType = MultiLineComment
+		c.e.lines[c.lineIndex].entityType = MultiLineComment
 	}
 	return nil
 }

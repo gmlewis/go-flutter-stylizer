@@ -9,7 +9,7 @@ You may obtain a copy of the License at
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or impliee.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
@@ -22,48 +22,48 @@ import (
 	"strings"
 )
 
-// DartEditor represents a text editor that understands Dart syntax.
-type DartEditor struct {
+// Editor represents a text editor that understands Dart syntax.
+type Editor struct {
 	fullBuf string
 	lines   []*Line
 
 	Verbose bool
 }
 
-// NewEditor returns a new DartEditor.
-func NewEditor(buf string) *DartEditor {
-	d := &DartEditor{
+// NewEditor returns a new Editor.
+func NewEditor(buf string) *Editor {
+	e := &Editor{
 		fullBuf: buf,
 	}
 
-	d.fullBuf = buf
-	lines := strings.Split(d.fullBuf, "\n")
+	e.fullBuf = buf
+	lines := strings.Split(e.fullBuf, "\n")
 	var lineOffset int
 	for _, line := range lines {
-		d.lines = append(d.lines, NewLine(line, lineOffset))
+		e.lines = append(e.lines, NewLine(line, lineOffset))
 		lineOffset += len(line)
 		// Change a blank line following a comment to a SingleLineComment in
 		// order to keep it with the following entity.
-		numLines := len(d.lines)
+		numLines := len(e.lines)
 		if numLines > 1 &&
-			d.lines[numLines-1].entityType == BlankLine &&
-			isComment(d.lines[numLines-2]) {
-			d.lines[numLines-1].entityType = SingleLineComment
+			e.lines[numLines-1].entityType == BlankLine &&
+			isComment(e.lines[numLines-2]) {
+			e.lines[numLines-1].entityType = SingleLineComment
 		}
 	}
 
-	for i := 0; i < len(d.lines); i++ {
-		line := d.lines[i]
-		d.logf("line #%v type=%v: %v", i, line.entityType, line.line)
+	for i := 0; i < len(e.lines); i++ {
+		line := e.lines[i]
+		e.logf("line #%v type=%v: %v", i, line.entityType, line.line)
 	}
 
-	return d
+	return e
 }
 
 // findMatchingBracket finds the matching closing "}" (for "{") or ")" (for "(")
 // given the offset of the opening rune.
-func (d *DartEditor) findMatchingBracket(openOffset int) (int, error) {
-	open := d.fullBuf[openOffset : openOffset+1]
+func (e *Editor) findMatchingBracket(openOffset int) (int, error) {
+	open := e.fullBuf[openOffset : openOffset+1]
 	if open != "{" && open != "(" {
 		return 0, fmt.Errorf("findMatchingBracket(%v) called on non-bracket %q. Please file a bug report on the GitHub issue tracker", openOffset, open)
 	}
@@ -72,20 +72,20 @@ func (d *DartEditor) findMatchingBracket(openOffset int) (int, error) {
 		searchFor = ")"
 	}
 
-	d.logf("findClosing(openOffset=%v, searchFor=%q), open=%q", openOffset, searchFor, open)
+	e.logf("findClosing(openOffset=%v, searchFor=%q), open=%q", openOffset, searchFor, open)
 
-	lineIndex, relOffset := d.findLineIndexAtOffset(openOffset)
-	d.logf("lineIndex=%v, relOffset=%v, stripped=%q(%v), line=%q(%v)", lineIndex, relOffset, d.lines[lineIndex].stripped, len(d.lines[lineIndex].stripped), d.lines[lineIndex].line, len(d.lines[lineIndex].line))
-	if d.lines[lineIndex].stripped[relOffset:relOffset+1] != open {
-		return 0, fmt.Errorf("stripped[%v]=%q != open[%v]=%q", relOffset, d.lines[lineIndex].stripped[relOffset:relOffset+1], openOffset, open)
+	lineIndex, relOffset := e.findLineIndexAtOffset(openOffset)
+	e.logf("lineIndex=%v, relOffset=%v, stripped=%q(%v), line=%q(%v)", lineIndex, relOffset, e.lines[lineIndex].stripped, len(e.lines[lineIndex].stripped), e.lines[lineIndex].line, len(e.lines[lineIndex].line))
+	if e.lines[lineIndex].stripped[relOffset:relOffset+1] != open {
+		return 0, fmt.Errorf("stripped[%v]=%q != open[%v]=%q", relOffset, e.lines[lineIndex].stripped[relOffset:relOffset+1], openOffset, open)
 	}
 
 	cursor := &Cursor{
-		d:         d,
+		e:         e,
 		absOffset: openOffset,
 		lineIndex: lineIndex,
 		relOffset: relOffset,
-		reader:    strings.NewReader(d.lines[lineIndex].stripped[relOffset:]),
+		reader:    strings.NewReader(e.lines[lineIndex].stripped[relOffset:]),
 	}
 	if err := cursor.advanceUntil(searchFor); err != nil {
 		return 0, fmt.Errorf("advanceUntil(%q): %v", searchFor, err)
@@ -95,19 +95,19 @@ func (d *DartEditor) findMatchingBracket(openOffset int) (int, error) {
 
 // findLineIndexAtOffset finds the line index and relative offset for the
 // absolute offset within the text buffer.
-func (d *DartEditor) findLineIndexAtOffset(openOffset int) (int, int) {
-	for i, line := range d.lines {
+func (e *Editor) findLineIndexAtOffset(openOffset int) (int, int) {
+	for i, line := range e.lines {
 		if len(line.line) > openOffset {
 			return i, openOffset - line.strippedOffset
 		}
 		openOffset -= len(line.line) + 1
 	}
-	return len(d.lines), openOffset
+	return len(e.lines), openOffset
 }
 
 // logf logs the line if verbose is true.
-func (d *DartEditor) logf(fmtStr string, args ...interface{}) {
-	if d.Verbose {
+func (e *Editor) logf(fmtStr string, args ...interface{}) {
+	if e.Verbose {
 		log.Printf(fmtStr, args...)
 	}
 }

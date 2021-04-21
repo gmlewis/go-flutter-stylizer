@@ -12,7 +12,7 @@ var basicClasses string
 //go:embed basic_classes.dart.windz.txt
 var bcWindoze string
 
-func setupEditor(t *testing.T, searchFor, buf string) (*DartEditor, int, int) {
+func setupEditor(t *testing.T, searchFor, buf string) (*Editor, int, int) {
 	t.Helper()
 	classOffset := strings.Index(buf, searchFor)
 	openCurlyOffset := classOffset + len(searchFor) - 1
@@ -28,8 +28,8 @@ func setupEditor(t *testing.T, searchFor, buf string) (*DartEditor, int, int) {
 		t.Errorf("close offset error: buf[%v:%v] = %q, want %q", closeCurlyOffset, closeCurlyOffset+1, got, want)
 	}
 
-	d := NewEditor(buf)
-	return d, openCurlyOffset, closeCurlyOffset
+	e := NewEditor(buf)
+	return e, openCurlyOffset, closeCurlyOffset
 }
 
 func TestFindMatchingBracket(t *testing.T) {
@@ -38,7 +38,7 @@ func TestFindMatchingBracket(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		editor     *DartEditor
+		editor     *Editor
 		verbose    bool
 		openOffset int
 		want       int
@@ -201,7 +201,7 @@ func TestFindLineIndexAtOffset(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		editor        *DartEditor
+		editor        *Editor
 		openOffset    int
 		wantLineIndex int
 		wantRelOffset int
