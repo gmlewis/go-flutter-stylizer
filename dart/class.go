@@ -61,12 +61,26 @@ func NewClass(editor *Editor, className string,
 		className = className[0:lessThanOffset]
 	}
 	classBody := editor.fullBuf[openCurlyOffset:closeCurlyOffset]
-	numClassLines := len(strings.Split(classBody, "\n"))
+	p := strings.Split(classBody, "\n")
+	numClassLines := len(p)
+	classLines := editor.lines[lineOffset : lineOffset+numClassLines]
+	// log.Printf("p[%v]=%q(%v), closeCurlyOffset=%v, len(classBody)=%v, last classLine=%#v", len(p)-1, p[len(p)-1], len(p[len(p)-1]), closeCurlyOffset, len(classBody), classLines[len(classLines)-1])
+
+	// Replace last line for truncated classBody:
+	ll := classLines[len(classLines)-1]
+	classLines[len(classLines)-1] = &Line{
+		line:           p[len(p)-1],
+		stripped:       strings.TrimSpace(p[len(p)-1]),
+		strippedOffset: ll.strippedOffset,
+		startOffset:    ll.startOffset,
+		endOffset:      ll.endOffset,
+		entityType:     BlankLine,
+	}
 
 	return &Class{
 		e:                editor,
 		classBody:        classBody,
-		lines:            editor.lines[lineOffset : lineOffset+numClassLines],
+		lines:            classLines,
 		className:        className,
 		openCurlyOffset:  openCurlyOffset,
 		closeCurlyOffset: closeCurlyOffset,
@@ -356,6 +370,7 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 
 	buf := c.genStripped(lineNum)
 	sequence, lineCount, leadingText := c.findSequence(buf)
+	log.Printf("scanMethod(line=#%v), sequence=%v, lineCount=%v, leadingText=%q", lineNum+1, sequence, lineCount, leadingText)
 
 	nameParts := strings.Split(leadingText, " ")
 	var staticKeyword bool
