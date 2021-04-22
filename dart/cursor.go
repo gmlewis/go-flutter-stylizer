@@ -271,9 +271,11 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 	var err error
 
 	if len(c.runeBuf) > 0 {
+		c.e.logf("Grabbing rune from runeBuf... before=%#v", c.runeBuf)
 		r = c.runeBuf[0]
 		size = len(string(r))
 		c.runeBuf = c.runeBuf[1:]
+		c.e.logf("rune=%c, size=%v, after=%#v", r, size, c.runeBuf)
 	} else {
 		r, size, err = c.reader.ReadRune()
 		if err != nil {
@@ -291,6 +293,11 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 		return string(r), nil
 	}
 
+	pushRune := func(r rune) {
+		c.runeBuf = append(c.runeBuf, r)
+		c.e.logf("Pushing rune=%c, size=%v to runeBuf: after=%#v", r, len(string(r)), c.runeBuf)
+	}
+
 	switch r {
 	case '\\':
 		nr, _, err := c.reader.ReadRune()
@@ -304,17 +311,18 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			return "'", nil
 		}
 		if nsize != 1 || nr != '\'' {
-			c.runeBuf = append(c.runeBuf, nr)
+			pushRune(nr)
 			return "'", nil
 		}
+		// r == nr == '\' at this point.
 		nr, nsize, err = c.reader.ReadRune()
 		if err != nil {
-			c.runeBuf = append(c.runeBuf, nr)
+			pushRune(r)
 			return "'", nil
 		}
 		if nsize != 1 || nr != '\'' {
-			c.runeBuf = append(c.runeBuf, r)
-			c.runeBuf = append(c.runeBuf, nr)
+			pushRune(r)
+			pushRune(nr)
 			return "'", nil
 		}
 		c.absOffset += 2
@@ -326,17 +334,18 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			return `"`, nil
 		}
 		if nsize != 1 || nr != '"' {
-			c.runeBuf = append(c.runeBuf, nr)
+			pushRune(nr)
 			return `"`, nil
 		}
+		// r == nr == '"' at this point.
 		nr, nsize, err = c.reader.ReadRune()
 		if err != nil {
-			c.runeBuf = append(c.runeBuf, nr)
+			pushRune(r)
 			return `"`, nil
 		}
 		if nsize != 1 || nr != '"' {
-			c.runeBuf = append(c.runeBuf, r)
-			c.runeBuf = append(c.runeBuf, nr)
+			pushRune(r)
+			pushRune(nr)
 			return `"`, nil
 		}
 		c.absOffset += 2
@@ -348,7 +357,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			return "$", nil
 		}
 		if nsize != 1 || nr != '{' {
-			c.runeBuf = append(c.runeBuf, nr)
+			pushRune(nr)
 			return "$", nil
 		}
 		c.absOffset++
@@ -360,7 +369,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			return "/", nil
 		}
 		if nsize != 1 || (nr != '*' && nr != '/') {
-			c.runeBuf = append(c.runeBuf, nr)
+			pushRune(nr)
 			return "/", nil
 		}
 		c.absOffset++
@@ -375,7 +384,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			return "*", nil
 		}
 		if nsize != 1 || nr != '/' {
-			c.runeBuf = append(c.runeBuf, nr)
+			pushRune(nr)
 			return "*", nil
 		}
 		c.absOffset++
@@ -388,18 +397,12 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 
 // advanceToNextLine advances the cursor to the next line.
 func (c *Cursor) advanceToNextLine() error {
-	lineLengthDiff := len(c.e.lines[c.lineIndex].line) - len(c.e.lines[c.lineIndex].stripped)
-	lineLengthDiff++ // newline
-	c.absOffset += lineLengthDiff - c.e.lines[c.lineIndex].strippedOffset
-	c.e.logf("advanceToNextLine: lineLengthDiff=%v, BEFORE absOffset=%v", lineLengthDiff, c.absOffset)
 	c.lineIndex++
-
 	if c.lineIndex >= len(c.e.lines) {
 		return fmt.Errorf("advanceToNextLine went past EOF: lineIndex=%v, len(lines)=%v, cursor=%v", c.lineIndex, len(c.e.lines), c)
 	}
 
-	c.absOffset += c.e.lines[c.lineIndex].strippedOffset
-	c.e.logf("AFTER absOffset=%v", c.absOffset)
+	c.absOffset = c.e.lines[c.lineIndex].startOffset + c.e.lines[c.lineIndex].strippedOffset
 	c.relStrippedOffset = 0
 
 	c.reader = strings.NewReader(c.e.lines[c.lineIndex].stripped)

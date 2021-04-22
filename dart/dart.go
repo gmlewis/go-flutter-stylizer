@@ -119,6 +119,7 @@ func (c *Client) getClasses(editor *Editor, groupAndSortGetterMethods bool) ([]*
 			return nil, fmt.Errorf(`expected "{" after "class" at offset %v`, classOffset)
 		}
 
+		editor.logf("\n\nFound new class %q at classOffset=%v, openCurlyOffset=%v", className, classOffset, openCurlyOffset)
 		closeCurlyOffset, err := editor.findMatchingBracket(openCurlyOffset)
 		if err != nil {
 			return nil, err
@@ -127,6 +128,7 @@ func (c *Client) getClasses(editor *Editor, groupAndSortGetterMethods bool) ([]*
 		if closeCurlyOffset <= openCurlyOffset {
 			return nil, fmt.Errorf(`expected "}" after "{" at offset %v`, openCurlyOffset)
 		}
+		editor.logf("\n\nFound end of class %q at closeCurlyOffset=%v", className, closeCurlyOffset)
 
 		dartClass := NewClass(editor, className, i, openCurlyOffset, closeCurlyOffset, groupAndSortGetterMethods)
 		dartClass.FindFeatures()
