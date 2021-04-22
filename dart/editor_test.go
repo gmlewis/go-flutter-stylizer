@@ -18,6 +18,7 @@ package dart
 
 import (
 	_ "embed"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -395,6 +396,45 @@ func TestFindLineIndexAtOffset(t *testing.T) {
 			}
 			if gotRelOffset != tt.wantRelOffset {
 				t.Errorf("findLineIndexAtOffset(%v) relOffset = %v, want %v", tt.openOffset, gotRelOffset, tt.wantRelOffset)
+			}
+		})
+	}
+}
+
+//go:embed testfiles/utf8_text.dart.txt
+var utf8Text string
+
+func TestNewEditor_with_utf8(t *testing.T) {
+	tests := []struct {
+		name string
+		buf  string
+		want []*Line
+	}{
+		{
+			name: "utf8 string",
+			buf:  utf8Text,
+			want: []*Line{
+				{line: "abstract class ElementImpl implements Element {", stripped: "abstract class ElementImpl implements Element {", strippedOffset: 0, originalIndex: 0, startOffset: 0, endOffset: 47, entityType: 0},
+				{line: "  /// An Unicode right arrow.", stripped: "/// An Unicode right arrow.", strippedOffset: 2, originalIndex: 1, startOffset: 48, endOffset: 77, entityType: 0},
+				{line: "  @deprecated", stripped: "@deprecated", strippedOffset: 2, originalIndex: 2, startOffset: 78, endOffset: 91, entityType: 0},
+				{line: "  static final String RIGHT_ARROW = \" \\u2192 \";", stripped: "static final String RIGHT_ARROW = \" \\u2192 \";", strippedOffset: 2, originalIndex: 3, startOffset: 92, endOffset: 139, entityType: 0},
+				{line: "}", stripped: "}", strippedOffset: 0, originalIndex: 4, startOffset: 140, endOffset: 141, entityType: 0},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := NewEditor(tt.buf)
+
+			if len(e.lines) != len(tt.want) {
+				t.Fatalf("NewEditor got %v lines, want %v", len(e.lines), len(tt.want))
+			}
+
+			for i := 0; i < len(e.lines); i++ {
+				if !reflect.DeepEqual(e.lines[i], tt.want[i]) {
+					t.Errorf("line[%v] =\n%#v\nwant\n%#v", i, e.lines[i], tt.want[i])
+				}
 			}
 		})
 	}

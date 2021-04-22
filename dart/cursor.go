@@ -65,7 +65,7 @@ func (c *Cursor) String() string {
 		line = c.e.lines[c.lineIndex].line
 		stripped = c.e.lines[c.lineIndex].stripped
 	}
-	return fmt.Sprintf(`{absOffet=%v, lineIndex=%v, relStrippedOffset=%v, stripped=%q(%v), line=%q(%v), '=%v, "=%v, '''=%v, """=%v, /*=%v, (=%v, braceLevels=%#v}`,
+	return fmt.Sprintf(`{absOffset=%v, lineIndex=%v, relStrippedOffset=%v, stripped=%q(%v), line=%q(%v), '=%v, "=%v, '''=%v, """=%v, /*=%v, (=%v, braceLevels=%#v}`,
 		c.absOffset, c.lineIndex, c.relStrippedOffset, stripped, len(stripped), line, len(line),
 		c.inSingleQuote, c.inDoubleQuote, c.inTripleSingle, c.inTripleDouble, c.inMultiLineComment, c.parenLevels, c.braceLevels)
 }
@@ -277,8 +277,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 	} else {
 		r, size, err = c.reader.ReadRune()
 		if err != nil {
-			err := c.advanceToNextLine()
-			if err != nil {
+			if err := c.advanceToNextLine(); err != nil {
 				return "", err
 			}
 			return c.advanceToNextFeature()
@@ -396,7 +395,7 @@ func (c *Cursor) advanceToNextLine() error {
 	c.lineIndex++
 
 	if c.lineIndex >= len(c.e.lines) {
-		return fmt.Errorf("advanceToNextLine went past EOF: cursor=%v", c)
+		return fmt.Errorf("advanceToNextLine went past EOF: lineIndex=%v, len(lines)=%v, cursor=%v", c.lineIndex, len(c.e.lines), c)
 	}
 
 	c.absOffset += c.e.lines[c.lineIndex].strippedOffset
