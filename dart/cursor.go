@@ -78,6 +78,7 @@ func (c *Cursor) String() string {
 // strings, bodies, and comments.
 func (c *Cursor) advanceUntil(searchFor ...string) ([]string, error) {
 	var features []string
+
 	for {
 		nf, err := c.advanceToNextFeature()
 		if err != nil {
@@ -292,6 +293,12 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 	}
 
 	switch r {
+	case '\\':
+		nr, _, err := c.reader.ReadRune()
+		if err != nil {
+			return "\\", nil
+		}
+		return fmt.Sprintf("\\%v", nr), nil
 	case '\'':
 		nr, nsize, err := c.reader.ReadRune()
 		if err != nil {
