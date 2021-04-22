@@ -92,6 +92,9 @@ var (
 
 func findOpenCurlyOffset(buf string, startOffset int) int {
 	offset := strings.Index(buf[startOffset:], "{")
+	if semiOffset := strings.Index(buf[startOffset:], ";"); offset < 0 || (semiOffset >= 0 && semiOffset < offset) {
+		offset = semiOffset // this is valid: class D = Object with Function;
+	}
 	return startOffset + offset
 }
 
@@ -103,9 +106,15 @@ func (c *Client) getClasses(editor *Editor, groupAndSortGetterMethods bool) ([]*
 		if len(mm) != 2 {
 			continue
 		}
+
 		className := mm[1]
 		classOffset := line.startOffset + line.strippedOffset
 		openCurlyOffset := findOpenCurlyOffset(editor.fullBuf, classOffset)
+
+		if editor.fullBuf[openCurlyOffset] == ';' {
+			continue
+		}
+
 		if openCurlyOffset <= classOffset {
 			return nil, fmt.Errorf(`expected "{" after "class" at offset %v`, classOffset)
 		}

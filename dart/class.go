@@ -509,110 +509,6 @@ func (c *Class) findSequence(lineNum int) (string, int, string, error) {
 	leadingText := strings.TrimSpace(strings.Join(buildStr, ""))
 	lineCount := cursor.lineIndex - startLine.originalIndex
 
-	// var openParenCount int
-	// var openBraceCount int
-	// var openCurlyCount int
-	// for i := 0; i < len(buf); i++ {
-	// 	if openParenCount > 0 {
-	// 		for ; i < len(buf); i++ {
-	// 			switch buf[i] {
-	// 			case '(':
-	// 				openParenCount++
-	// 				break
-	// 			case ')':
-	// 				openParenCount--
-	// 				break
-	// 			case '\n':
-	// 				lineCount++
-	// 				break
-	// 			}
-	// 			if openParenCount == 0 {
-	// 				result = append(result, string(buf[i]))
-	// 				break
-	// 			}
-	// 		}
-	// 	} else if openBraceCount > 0 {
-	// 		for ; i < len(buf); i++ {
-	// 			switch buf[i] {
-	// 			case '[':
-	// 				openBraceCount++
-	// 				break
-	// 			case ']':
-	// 				openBraceCount--
-	// 				break
-	// 			case '\n':
-	// 				lineCount++
-	// 				break
-	// 			}
-	// 			if openBraceCount == 0 {
-	// 				result = append(result, string(buf[i]))
-	// 				return strings.Join(result, ""), lineCount, leadingText
-	// 			}
-	// 		}
-	// 	} else if openCurlyCount > 0 {
-	// 		for ; i < len(buf); i++ {
-	// 			switch buf[i] {
-	// 			case '{':
-	// 				openCurlyCount++
-	// 				break
-	// 			case '}':
-	// 				openCurlyCount--
-	// 				break
-	// 			case '\n':
-	// 				lineCount++
-	// 				break
-	// 			}
-	// 			if openCurlyCount == 0 {
-	// 				result = append(result, string(buf[i]))
-	// 				return strings.Join(result, ""), lineCount, leadingText
-	// 			}
-	// 		}
-	// 	} else {
-	// 		switch buf[i] {
-	// 		case '(':
-	// 			openParenCount++
-	// 			result = append(result, string(buf[i]))
-	// 			if leadingText == "" {
-	// 				leadingText = strings.TrimSpace(buf[0:i])
-	// 			}
-	// 			break
-	// 		case '[':
-	// 			openBraceCount++
-	// 			result = append(result, string(buf[i]))
-	// 			if leadingText == "" {
-	// 				leadingText = strings.TrimSpace(buf[0:i])
-	// 			}
-	// 			break
-	// 		case '{':
-	// 			openCurlyCount++
-	// 			result = append(result, string(buf[i]))
-	// 			if leadingText == "" {
-	// 				leadingText = strings.TrimSpace(buf[0:i])
-	// 			}
-	// 			break
-	// 		case ';':
-	// 			result = append(result, string(buf[i]))
-	// 			if leadingText == "" {
-	// 				leadingText = strings.TrimSpace(buf[0:i])
-	// 			}
-	// 			return strings.Join(result, ""), lineCount, leadingText
-	// 		case '=':
-	// 			if i < len(buf)-1 && buf[i+1] == '>' {
-	// 				result = append(result, "=>")
-	// 			} else {
-	// 				result = append(result, string(buf[i]))
-	// 			}
-	// 			if leadingText == "" {
-	// 				leadingText = strings.TrimSpace(buf[0:i])
-	// 			}
-	// 			break
-	// 		case '\n':
-	// 			lineCount++
-	// 			break
-	// 		}
-	// 	}
-	// }
-
 	return strings.Join(result, ""), lineCount, leadingText, nil
 }
 
@@ -628,6 +524,10 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 
 	// Identify all lines within the main (or factory) constructor.
 	lineOffset := strings.Index(c.classBody, c.lines[lineNum].line)
+	if lineOffset < 0 {
+		return nil, fmt.Errorf("expected lineOffset>=0 searching for lineNum=%v, line=%#v", lineNum, c.lines[lineNum])
+	}
+
 	inLineOffset := strings.Index(c.lines[lineNum].line, methodName)
 	relOpenParenOffset := lineOffset + inLineOffset + len(methodName) - 1
 	if c.classBody[relOpenParenOffset] != '(' {
@@ -659,6 +559,11 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 
 		nextOffset = absCloseCurlyOffset - c.openCurlyOffset
 	}
+
+	if nextOffset+1 > len(c.classBody) {
+		nextOffset = len(c.classBody) - 1
+	}
+
 	constructorBuf := c.classBody[lineOffset : nextOffset+1]
 	numLines := len(strings.Split(constructorBuf, "\n"))
 	for i := 0; i < numLines; i++ {
