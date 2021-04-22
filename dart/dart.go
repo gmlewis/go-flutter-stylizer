@@ -59,7 +59,7 @@ var defaultMemberOrdering = []string{
 
 // New returns a new Dart processor.
 func New(opts Options) *Client {
-	if len(opts.MemberOrdering) == 0 {
+	if !validateMemberOrdering(opts.MemberOrdering) {
 		opts.MemberOrdering = defaultMemberOrdering
 	}
 
@@ -83,7 +83,39 @@ func (c *Client) StylizeFile(filename string) error {
 		log.Printf("Found %v classes in file %v", len(classes), filename)
 	}
 
+	edits := c.rewriteClasses(classes)
+	if !c.opts.Quiet && len(edits) > 0 {
+		log.Printf("%v classes need rewriting.", len(edits))
+	}
+
 	return nil
+}
+
+func validateMemberOrdering(memberOrdering []string) bool {
+	if len(memberOrdering) != len(defaultMemberOrdering) {
+		log.Printf("flutterStylizer.memberOrdering must have %v values. Ignoring and using defaults.", len(defaultMemberOrdering))
+		return false
+	}
+
+	lookup := map[string]bool{}
+	for _, s := range defaultMemberOrdering {
+		lookup[s] = true
+	}
+
+	seen := map[string]bool{}
+	for _, el := range memberOrdering {
+		if !lookup[el] {
+			log.Printf("Unknown member %q in flutterStylizer.memberOrdering. Ignoring and using defaults.", el)
+			return false
+		}
+		if seen[el] {
+			log.Printf("Duplicate member %q in flutterStylizer.memberOrdering. Ignoring and using defaults.", el)
+			return false
+		}
+		seen[el] = true
+	}
+
+	return true
 }
 
 var (
@@ -155,4 +187,11 @@ func (c *Client) getClasses(editor *Editor, groupAndSortGetterMethods bool) ([]*
 	}
 
 	return classes, nil
+}
+
+// logf logs the line if verbose is true.
+func (c *Client) logf(fmtStr string, args ...interface{}) {
+	if c.opts.Verbose {
+		log.Printf(fmtStr, args...)
+	}
 }
