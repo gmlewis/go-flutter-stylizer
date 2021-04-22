@@ -29,7 +29,7 @@ type Edit struct {
 	text     string
 }
 
-func (c *Client) rewriteClasses(classes []*Class) []*Edit {
+func (c *Client) generateEdits(classes []*Class) []*Edit {
 	var edits []*Edit
 
 	for i := len(classes) - 1; i >= 0; i-- {
@@ -157,12 +157,24 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 	}
 
 	var changesMade bool
-	for i := 0; i < len(dc.lines); i++ {
-		if dc.lines[i].line != lines[i] {
-			changesMade = true
-			break
+	if len(dc.lines) != len(lines) {
+		changesMade = true
+	} else {
+		for i := 0; i < len(dc.lines); i++ {
+			if dc.lines[i].line != lines[i] {
+				changesMade = true
+				break
+			}
 		}
 	}
 
 	return lines, changesMade
+}
+
+func (c *Client) rewriteClasses(buf string, edits []*Edit) string {
+	newBuf := buf
+	for _, edit := range edits {
+		newBuf = strings.Join([]string{newBuf[0:edit.startPos], edit.text, newBuf[edit.endPos:]}, "")
+	}
+	return newBuf
 }

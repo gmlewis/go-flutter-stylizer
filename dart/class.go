@@ -63,6 +63,18 @@ func NewClass(editor *Editor, className string,
 	p := strings.Split(classBody, "\n")
 	numClassLines := len(p)
 	classLines := editor.lines[lineOffset : lineOffset+numClassLines]
+
+	p0Stripped := strings.TrimSpace(p[0])
+	classLines[0] = &Line{
+		line:              p[0], // Keep only the open curly brace.
+		stripped:          p0Stripped,
+		strippedOffset:    classLines[0].strippedOffset + len(p0Stripped) - len(classLines[0].stripped),
+		originalIndex:     classLines[0].originalIndex,
+		startOffset:       openCurlyOffset,
+		endOffset:         classLines[0].endOffset,
+		entityType:        classLines[0].entityType,
+		isCommentOrString: classLines[0].isCommentOrString,
+	}
 	// log.Printf("p[%v]=%q(%v), closeCurlyOffset=%v, len(classBody)=%v, last classLine=%#v", len(p)-1, p[len(p)-1], len(p[len(p)-1]), closeCurlyOffset, len(classBody), classLines[len(classLines)-1])
 
 	// Replace last line for truncated classBody:

@@ -23,6 +23,8 @@ import (
 	"log"
 	"regexp"
 	"strings"
+
+	"github.com/pmezard/go-difflib/difflib"
 )
 
 // Options represents the configuration options for the Dart processor.
@@ -67,28 +69,75 @@ func New(opts Options) *Client {
 }
 
 // StylizeFile sylizes a single Dart file using the provided options.
-func (c *Client) StylizeFile(filename string) error {
-	buf, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return err
+// If any differences were found, true is returned.
+func (c *Client) StylizeFile(filename string) (bool, error) {
+	var buf string
+	{
+		b, err := ioutil.ReadFile(filename)
+		if err != nil {
+			return false, err
+		}
+		buf = string(b)
 	}
 
-	e := NewEditor(string(buf))
+	e := NewEditor(buf)
 	e.Verbose = c.opts.Verbose
 	classes, err := c.getClasses(e, c.opts.GroupAndSortGetterMethods)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if !c.opts.Quiet && len(classes) > 0 {
 		log.Printf("Found %v classes in file %v", len(classes), filename)
 	}
 
-	edits := c.rewriteClasses(classes)
-	if !c.opts.Quiet && len(edits) > 0 {
+	edits := c.generateEdits(classes)
+	if !c.opts.Quiet {
 		log.Printf("%v classes need rewriting.", len(edits))
 	}
 
-	return nil
+	if c.opts.List {
+		if len(edits) > 0 {
+			fmt.Printf("%v differs.\n", filename)
+		}
+		return len(edits) != 0, nil
+	}
+
+	newBuf := buf
+	if len(edits) > 0 {
+		newBuf = c.rewriteClasses(buf, edits)
+	}
+
+	switch {
+	case c.opts.Diff:
+		if len(edits) > 0 {
+			diff := difflib.UnifiedDiff{
+				A:        difflib.SplitLines(buf),
+				B:        difflib.SplitLines(newBuf),
+				FromFile: "Original",
+				ToFile:   "Stylized",
+				Context:  3,
+				Eol:      "\n",
+			}
+			result, err := difflib.GetUnifiedDiffString(diff)
+			if err != nil {
+				return true, err
+			}
+			fmt.Printf("%v\n", strings.Replace(result, "\t", " ", -1))
+		}
+	case c.opts.Write:
+		if len(edits) > 0 {
+			if err := ioutil.WriteFile(filename, []byte(newBuf), 0644); err != nil {
+				return true, err
+			}
+			if !c.opts.Quiet {
+				log.Printf("Successfully wrote %v bytes to file %v", len(newBuf), filename)
+			}
+		}
+	default: // dump file to stdout
+		fmt.Print(newBuf)
+	}
+
+	return len(edits) != 0, nil
 }
 
 func validateMemberOrdering(memberOrdering []string) bool {

@@ -124,14 +124,21 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		log.Printf("Stylizing %v files...", len(newArgs))
 	}
 
+	var anyDiffs bool
 	for i := 0; i < len(newArgs); i++ {
 		arg := newArgs[i]
 		if verbose && !quiet {
 			log.Printf("Stylizing file: %v ...", arg)
 		}
-		if err := c.StylizeFile(arg); err != nil {
+		diffs, err := c.StylizeFile(arg)
+		if err != nil {
 			log.Fatalf("StylizeFile(%q): %v", arg, err)
 		}
+		anyDiffs = anyDiffs || diffs
+	}
+
+	if anyDiffs && (opts.Diff || opts.List) {
+		log.Fatalf("Differences were found. Exit code 1.")
 	}
 
 	if !quiet {
@@ -154,9 +161,9 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.flutter-stylizer.yaml)")
-	rootCmd.Flags().BoolP("diff", "d", false, "display diffs (cannot be used with -l or -w)")
-	rootCmd.Flags().BoolP("list", "l", false, "list files whose formatting differs from flutter-stylizer's (cannot be used with -d or -w)")
-	rootCmd.Flags().BoolP("write", "w", false, "write result to (source) file instead of stdout (cannot be used with -d or -l)")
+	rootCmd.Flags().BoolP("diff", "d", false, "display diffs (cannot be used with -l or -w); exit code 1 on diffs")
+	rootCmd.Flags().BoolP("list", "l", false, "list files whose formatting differs from flutter-stylizer's (cannot be used with -d or -w); exit code 1 on diffs")
+	rootCmd.Flags().BoolP("write", "w", false, "write result to (source) file instead of stdout (cannot be used with -d or -l); exit code 0 on diffs")
 	rootCmd.Flags().BoolP("verbose", "v", false, "write progress details to stderr")
 	rootCmd.Flags().BoolP("quiet", "q", false, "don't print unless there are errors")
 }
