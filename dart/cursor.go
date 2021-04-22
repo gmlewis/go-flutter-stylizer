@@ -328,6 +328,9 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 		}
 		return fmt.Sprintf("\\%v", nr), nil
 	case '\'':
+		if (c.stringIsRaw || c.inDoubleQuote || c.inTripleDouble) && !c.inTripleSingle {
+			return string(r), nil
+		}
 		nr, nsize, err := c.reader.ReadRune()
 		if err != nil {
 			return "'", nil
@@ -351,6 +354,9 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 		c.relStrippedOffset += 2
 		return "'''", nil
 	case '"':
+		if (c.stringIsRaw || c.inSingleQuote || c.inTripleSingle) && !c.inTripleDouble {
+			return string(r), nil
+		}
 		nr, nsize, err := c.reader.ReadRune()
 		if err != nil {
 			return `"`, nil
@@ -374,6 +380,9 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 		c.relStrippedOffset += 2
 		return `"""`, nil
 	case '$':
+		if c.stringIsRaw {
+			return string(r), nil
+		}
 		nr, nsize, err := c.reader.ReadRune()
 		if err != nil {
 			return "$", nil
@@ -386,6 +395,9 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 		c.relStrippedOffset++
 		return "${", nil
 	case '/':
+		if c.stringIsRaw {
+			return string(r), nil
+		}
 		nr, nsize, err := c.reader.ReadRune()
 		if err != nil {
 			return "/", nil
@@ -401,6 +413,9 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 		}
 		return "/*", nil
 	case '*':
+		if c.stringIsRaw {
+			return string(r), nil
+		}
 		nr, nsize, err := c.reader.ReadRune()
 		if err != nil {
 			return "*", nil
