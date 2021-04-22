@@ -102,6 +102,13 @@ func (c *Client) getClasses(editor *Editor, groupAndSortGetterMethods bool) ([]*
 	var classes []*Class
 
 	for i, line := range editor.lines {
+		if strings.HasPrefix(line.stripped, "main(") && strings.HasSuffix(line.stripped, ") {") {
+			// Find the end of main, marking sections as comments or strings to avoid them below.
+			openCurlyOffset := findOpenCurlyOffset(editor.fullBuf, line.startOffset+line.strippedOffset)
+			editor.findMatchingBracket(openCurlyOffset)
+			continue
+		}
+
 		mm := matchClassRE.FindStringSubmatch(line.stripped)
 		if len(mm) != 2 {
 			continue
