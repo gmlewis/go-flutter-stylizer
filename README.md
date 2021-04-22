@@ -7,13 +7,13 @@ It is based on the [Flutter Stylizer VSCode plugin](
 https://github.com/gmlewis/flutter-stylizer) but is
 written in Go instead of TypeScript.
 
-This makes it particularly well-suited to be used in GitHub Actions
-to maintain Flutter code repositories.
+This makes it particularly well-suited to be used in GitHub Actions,
+Bitbucket pipelines, etc., to maintain Flutter code repositories.
 
 ## Status
 
-This is a fun side-project that is just getting started and is not
-usable yet.
+This is a fun side-project that now has a more robust parser than
+the VSCode plugin version and is ready to try out.
 
 ## Installation
 
@@ -36,16 +36,19 @@ $ go get -u github.com/gmlewis/go-flutter-stylizer/cmd/flutter-stylizer
 
 ```
 $ flutter-stylizer --help
+...
 
 Usage:
   flutter-stylizer [flags] [path ... | ./...]
 
 Flags:
       --config string   config file (default is $HOME/.flutter-stylizer.yaml)
-  -d, --diff            display diffs (cannot be used with -l or -w)
+  -d, --diff            display diffs (cannot be used with -l or -w); exit code 1 on diffs
   -h, --help            help for flutter-stylizer
-  -l, --list            list files whose formatting differs from flutter-stylizer's (cannot be used with -d or -w)
-  -w, --write           write result to (source) file instead of stdout (cannot be used with -d or -l)
+  -l, --list            list files whose formatting differs from flutter-stylizer's (cannot be used with -d or -w); exit code 1 on diffs
+  -q, --quiet           don't print unless there are errors
+  -v, --verbose         write progress details to stderr
+  -w, --write           write result to (source) file instead of stdout (cannot be used with -d or -l); exit code 0 on diffs
 ```
 
 ## Examples:
@@ -56,11 +59,18 @@ Flags:
 $ flutter-stylizer -w ./...
 ```
 
+Note that this command will only write files when the stylizer finds
+changes to make.
+
 ### Show stylizer differences for all Dart files in directory tree
 
 ```
 $ flutter-stylizer -d ./...
 ```
+
+Note that this command does not modify any files.
+Also if any differences were found, it will exit with code 1
+which is useful for breaking pipelines.
 
 ### List all Dart files with stylizer differences in directory tree
 
@@ -68,11 +78,18 @@ $ flutter-stylizer -d ./...
 $ flutter-stylizer -l ./...
 ```
 
+Note that this command does not modify any files.
+Also if any differences were found, it will exit with code 1
+which is useful for breaking pipelines.
+
 ### Show stylized output for a source file
 
 ```
 $ flutter-stylizer lib/path/to/file.dart
 ```
+
+Note that this command makes no changes to the file, but prints the
+stylized output to stdout.
 
 ## Features
 
