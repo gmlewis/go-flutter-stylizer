@@ -119,8 +119,8 @@ func (c *Client) getClasses(editor *Editor, groupAndSortGetterMethods bool) ([]*
 			return nil, fmt.Errorf(`expected "{" after "class" at offset %v`, classOffset)
 		}
 
-		if line.entityType != Unknown {
-			editor.logf("\n\nSkipping new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v due to entityType", className, classOffset, openCurlyOffset, line)
+		if line.entityType != Unknown || line.isCommentOrString {
+			editor.logf("\n\nSkipping new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v due to entityType/comment/string", className, classOffset, openCurlyOffset, line)
 			continue
 		}
 

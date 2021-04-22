@@ -88,6 +88,8 @@ type Line struct {
 	startOffset int
 	endOffset   int
 	entityType  EntityType
+
+	isCommentOrString bool // used when searching for new classes
 }
 
 // NewLine returns a new Line.

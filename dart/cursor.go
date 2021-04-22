@@ -446,5 +446,8 @@ func (c *Cursor) advanceToNextLine() error {
 	if c.inMultiLineComment > 0 {
 		c.e.lines[c.lineIndex].entityType = MultiLineComment
 	}
+	if c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
+		c.e.lines[c.lineIndex].isCommentOrString = true
+	}
 	return nil
 }
