@@ -119,7 +119,12 @@ func (c *Client) getClasses(editor *Editor, groupAndSortGetterMethods bool) ([]*
 			return nil, fmt.Errorf(`expected "{" after "class" at offset %v`, classOffset)
 		}
 
-		editor.logf("\n\nFound new class %q at classOffset=%v, openCurlyOffset=%v", className, classOffset, openCurlyOffset)
+		if line.entityType != Unknown {
+			editor.logf("\n\nSkipping new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v due to entityType", className, classOffset, openCurlyOffset, line)
+			continue
+		}
+
+		editor.logf("\n\nFound new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v", className, classOffset, openCurlyOffset, line)
 		closeCurlyOffset, err := editor.findMatchingBracket(openCurlyOffset)
 		if err != nil {
 			return nil, err

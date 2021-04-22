@@ -52,7 +52,7 @@ type Cursor struct {
 	inDoubleQuote      bool
 	inTripleSingle     bool
 	inTripleDouble     bool
-	inMultiLineComment bool
+	inMultiLineComment int // multiline comments can nest
 	stringIsRaw        bool
 
 	// UnreadRune can not be called twice in succession, so we need to keep track
@@ -106,7 +106,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 
 		switch nf {
 		case "//":
-			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
+			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 {
 				continue
 			}
 			c.relStrippedOffset -= 2
@@ -123,26 +123,26 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.e.logf("STRIPPED MODIFIED! singleLineComment=true: stripped=%q(%v), beforeLen=%v, afterLen=%v, cursor=%v", c.e.lines[c.lineIndex].stripped, len(c.e.lines[c.lineIndex].stripped), beforeLen, afterLen, c)
 			continue
 		case "/*":
-			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
+			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble {
 				continue
 			}
-			c.inMultiLineComment = true
+			c.inMultiLineComment++
 			c.e.lines[c.lineIndex].entityType = MultiLineComment
-			c.e.logf("inMultiLineComment=true: cursor=%v", c)
+			c.e.logf("inMultiLineComment=%v: cursor=%v", c.inMultiLineComment, c)
 			continue
 		case "*/":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble {
 				continue
 			}
-			if !c.inMultiLineComment {
+			if c.inMultiLineComment == 0 {
 				return nil, fmt.Errorf("ERROR: Found */ before /*: cursor=%v", c)
 			}
 			c.e.lines[c.lineIndex].entityType = MultiLineComment
-			c.inMultiLineComment = false
-			c.e.logf("inMultiLineComment=false: cursor=%v", c)
+			c.inMultiLineComment--
+			c.e.logf("inMultiLineComment=%v: cursor=%v", c.inMultiLineComment, c)
 			continue
 		case "'''":
-			if c.inMultiLineComment {
+			if c.inMultiLineComment > 0 {
 				continue
 			}
 			if c.inSingleQuote {
@@ -156,7 +156,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.e.logf("inTripleSingle: cursor=%v", c)
 			continue
 		case `"""`:
-			if c.inMultiLineComment {
+			if c.inMultiLineComment > 0 {
 				continue
 			}
 			if c.inDoubleQuote {
@@ -171,7 +171,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			continue
 		case "${":
 			switch {
-			case c.inMultiLineComment:
+			case c.inMultiLineComment > 0:
 			case c.inSingleQuote:
 				if c.stringIsRaw {
 					continue
@@ -205,7 +205,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			}
 			continue
 		case "'":
-			if c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
+			if c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
 				continue
 			}
 			c.inSingleQuote = !c.inSingleQuote
@@ -213,7 +213,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.e.logf("inSingleQuote: lastFeature=%q, cursor=%v", lastFeature, c)
 			continue
 		case `"`:
-			if c.inSingleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
+			if c.inSingleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
 				continue
 			}
 			c.inDoubleQuote = !c.inDoubleQuote
@@ -221,7 +221,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.e.logf("inDoubleQuote: cursor=%v", c)
 			continue
 		case "(":
-			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
+			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
 				continue
 			}
 			if c.parenLevels == 0 {
@@ -230,13 +230,13 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.parenLevels++
 			c.e.logf("parenLevels++: cursor=%v", c)
 		case ")":
-			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
+			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
 				continue
 			}
 			c.parenLevels--
 			c.e.logf("parenLevels--: cursor=%v", c)
 		case "{":
-			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
+			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 {
 				continue
 			}
 			if len(c.braceLevels) == 0 {
@@ -245,7 +245,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.braceLevels = append(c.braceLevels, BraceNormal)
 			c.e.logf("{: cursor=%v", c)
 		case "}":
-			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
+			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 {
 				continue
 			}
 			if len(c.braceLevels) == 0 {
@@ -269,7 +269,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.e.logf("}: cursor=%v", c)
 		}
 
-		if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment || c.parenLevels > 0 || len(c.braceLevels) > 0 {
+		if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 || c.parenLevels > 0 || len(c.braceLevels) > 0 {
 			continue
 		}
 		features = append(features, nf)
@@ -428,7 +428,7 @@ func (c *Cursor) advanceToNextLine() error {
 	c.relStrippedOffset = 0
 
 	c.reader = strings.NewReader(c.e.lines[c.lineIndex].stripped)
-	if c.inMultiLineComment {
+	if c.inMultiLineComment > 0 {
 		c.e.lines[c.lineIndex].entityType = MultiLineComment
 	}
 	return nil
