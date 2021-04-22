@@ -328,7 +328,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 
 	switch r {
 	case '\\':
-		if c.stringIsRaw {
+		if c.stringIsRaw || c.inMultiLineComment > 0 {
 			return string(r), nil
 		}
 		nr, _, err := getRune()
