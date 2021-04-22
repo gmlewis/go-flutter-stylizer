@@ -295,6 +295,11 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 		size = len(string(r))
 		c.runeBuf = c.runeBuf[1:]
 		c.e.logf("rune=%c, size=%v, after=%#v", r, size, c.runeBuf)
+
+		c.absOffset += size
+		c.relStrippedOffset += size
+
+		return string(r), nil
 	} else {
 		r, size, err = c.reader.ReadRune()
 		if err != nil {
@@ -326,7 +331,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 		if err != nil {
 			return "\\", nil
 		}
-		return fmt.Sprintf("\\%v", nr), nil
+		return fmt.Sprintf("\\%c", nr), nil
 	case '\'':
 		if (c.stringIsRaw || c.inDoubleQuote || c.inTripleDouble) && !c.inTripleSingle {
 			return string(r), nil
