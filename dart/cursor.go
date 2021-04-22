@@ -53,6 +53,7 @@ type Cursor struct {
 	inTripleSingle     bool
 	inTripleDouble     bool
 	inMultiLineComment bool
+	stringIsRaw        bool
 
 	// UnreadRune can not be called twice in succession, so we need to keep track
 	// of our lookahead stack ourselves.
@@ -65,8 +66,8 @@ func (c *Cursor) String() string {
 		line = c.e.lines[c.lineIndex].line
 		stripped = c.e.lines[c.lineIndex].stripped
 	}
-	return fmt.Sprintf(`{absOffset=%v, lineIndex=%v, relStrippedOffset=%v, stripped=%q(%v), line=%q(%v), '=%v, "=%v, '''=%v, """=%v, /*=%v, (=%v, braceLevels=%#v}`,
-		c.absOffset, c.lineIndex, c.relStrippedOffset, stripped, len(stripped), line, len(line),
+	return fmt.Sprintf(`{absOffset=%v, lineIndex=%v, relStrippedOffset=%v, stripped=%q(%v), line=%q(%v), raw=%v, '=%v, "=%v, '''=%v, """=%v, /*=%v, (=%v, braceLevels=%#v}`,
+		c.absOffset, c.lineIndex, c.relStrippedOffset, stripped, len(stripped), line, len(line), c.stringIsRaw,
 		c.inSingleQuote, c.inDoubleQuote, c.inTripleSingle, c.inTripleDouble, c.inMultiLineComment, c.parenLevels, c.braceLevels)
 }
 
@@ -76,11 +77,13 @@ func (c *Cursor) String() string {
 // It also adds a list of "interesting" top-level features encountered as it
 // processes the data, effectively filtering out the contents of
 // strings, bodies, and comments.
-func (c *Cursor) advanceUntil(searchFor ...string) ([]string, error) {
-	var features []string
+func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error) {
+	var lastFeature string
+	var nf string
 
 	for {
-		nf, err := c.advanceToNextFeature()
+		lastFeature = nf
+		nf, err = c.advanceToNextFeature()
 		if err != nil {
 			return nil, err
 		}
@@ -149,6 +152,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) ([]string, error) {
 				continue
 			}
 			c.inTripleSingle = !c.inTripleSingle
+			c.stringIsRaw = c.inTripleSingle && lastFeature == "r"
 			c.e.logf("inTripleSingle: cursor=%v", c)
 			continue
 		case `"""`:
@@ -162,24 +166,37 @@ func (c *Cursor) advanceUntil(searchFor ...string) ([]string, error) {
 				continue
 			}
 			c.inTripleDouble = !c.inTripleDouble
+			c.stringIsRaw = c.inTripleDouble && lastFeature == "r"
 			c.e.logf("inTripleDouble: cursor=%v", c)
 			continue
 		case "${":
 			switch {
 			case c.inMultiLineComment:
 			case c.inSingleQuote:
+				if c.stringIsRaw {
+					continue
+				}
 				c.inSingleQuote = false
 				c.braceLevels = append(c.braceLevels, BraceSingle)
 				c.e.logf("${: inSingleQuote: cursor=%v", c)
 			case c.inDoubleQuote:
+				if c.stringIsRaw {
+					continue
+				}
 				c.inDoubleQuote = false
 				c.braceLevels = append(c.braceLevels, BraceDouble)
 				c.e.logf("${: inDoubleQuote: cursor=%v", c)
 			case c.inTripleSingle:
+				if c.stringIsRaw {
+					continue
+				}
 				c.inTripleSingle = false
 				c.braceLevels = append(c.braceLevels, BraceTripleSingle)
 				c.e.logf("${: inTripleSingle: cursor=%v", c)
 			case c.inTripleDouble:
+				if c.stringIsRaw {
+					continue
+				}
 				c.inTripleDouble = false
 				c.braceLevels = append(c.braceLevels, BraceTripleDouble)
 				c.e.logf("${: inTripleDouble: cursor=%v", c)
@@ -192,13 +209,15 @@ func (c *Cursor) advanceUntil(searchFor ...string) ([]string, error) {
 				continue
 			}
 			c.inSingleQuote = !c.inSingleQuote
-			c.e.logf("inSingleQuote: cursor=%v", c)
+			c.stringIsRaw = c.inSingleQuote && lastFeature == "r"
+			c.e.logf("inSingleQuote: lastFeature=%q, cursor=%v", lastFeature, c)
 			continue
 		case `"`:
 			if c.inSingleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
 				continue
 			}
 			c.inDoubleQuote = !c.inDoubleQuote
+			c.stringIsRaw = c.inDoubleQuote && lastFeature == "r"
 			c.e.logf("inDoubleQuote: cursor=%v", c)
 			continue
 		case "(":
@@ -300,6 +319,9 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 
 	switch r {
 	case '\\':
+		if c.stringIsRaw {
+			return string(r), nil
+		}
 		nr, _, err := c.reader.ReadRune()
 		if err != nil {
 			return "\\", nil
