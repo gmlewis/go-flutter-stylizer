@@ -256,9 +256,9 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 	var err error
 
 	if len(c.runeBuf) > 0 {
-		r = c.runeBuf[len(c.runeBuf)-1]
+		r = c.runeBuf[0]
 		size = len(string(r))
-		c.runeBuf = c.runeBuf[0 : len(c.runeBuf)-1]
+		c.runeBuf = c.runeBuf[1:]
 	} else {
 		r, size, err = c.reader.ReadRune()
 		if err != nil {
@@ -371,14 +371,17 @@ func (c *Cursor) advanceToNextLine() error {
 	lineLengthDiff := len(c.e.lines[c.lineIndex].line) - len(c.e.lines[c.lineIndex].stripped)
 	lineLengthDiff++ // newline
 	c.absOffset += lineLengthDiff - c.e.lines[c.lineIndex].strippedOffset
-	c.e.logf("lineLengthDiff=%v, BEFORE absOffset=%v", lineLengthDiff, c.absOffset)
+	c.e.logf("advanceToNextLine: lineLengthDiff=%v, BEFORE absOffset=%v", lineLengthDiff, c.absOffset)
 	c.lineIndex++
-	c.absOffset += c.e.lines[c.lineIndex].strippedOffset
-	c.e.logf("AFTER absOffset=%v", c.absOffset)
-	c.relOffset = 0
+
 	if c.lineIndex >= len(c.e.lines) {
 		return fmt.Errorf("advanceToNextLine went past EOF: cursor=%v", c)
 	}
+
+	c.absOffset += c.e.lines[c.lineIndex].strippedOffset
+	c.e.logf("AFTER absOffset=%v", c.absOffset)
+	c.relOffset = 0
+
 	c.reader = strings.NewReader(c.e.lines[c.lineIndex].stripped)
 	if c.inMultiLineComment {
 		c.e.lines[c.lineIndex].entityType = MultiLineComment

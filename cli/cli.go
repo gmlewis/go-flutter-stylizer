@@ -70,6 +70,14 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		log.Fatalf("write: %v", err)
 	}
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		log.Fatalf("verbose: %v", err)
+	}
+	quiet, err := cmd.Flags().GetBool("quiet")
+	if err != nil {
+		log.Fatalf("quiet: %v", err)
+	}
 
 	var flagCount int
 	f := func(b bool) {
@@ -87,9 +95,11 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	}
 
 	opts := dart.Options{
-		Diff:  diff,
-		List:  list,
-		Write: write,
+		Diff:    diff,
+		List:    list,
+		Quiet:   quiet,
+		Verbose: verbose,
+		Write:   write,
 	}
 	c := dart.New(opts)
 
@@ -110,14 +120,22 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		log.Fatalf("No *.dart files found.")
 	}
 
-	log.Printf("Stylizing %v files...", len(newArgs))
+	if !quiet {
+		log.Printf("Stylizing %v files...", len(newArgs))
+	}
 
 	for i := 0; i < len(newArgs); i++ {
 		arg := newArgs[i]
-		log.Printf("Stylizing file: %v ...", arg)
-		if err := c.StylizeFile(arg); err != nil {
-			log.Fatalf("StylizeFile: %v", err)
+		if verbose && !quiet {
+			log.Printf("Stylizing file: %v ...", arg)
 		}
+		if err := c.StylizeFile(arg); err != nil {
+			log.Fatalf("StylizeFile(%q): %v", arg, err)
+		}
+	}
+
+	if !quiet {
+		log.Printf("Done.")
 	}
 
 	return nil
@@ -139,6 +157,8 @@ func init() {
 	rootCmd.Flags().BoolP("diff", "d", false, "display diffs (cannot be used with -l or -w)")
 	rootCmd.Flags().BoolP("list", "l", false, "list files whose formatting differs from flutter-stylizer's (cannot be used with -d or -w)")
 	rootCmd.Flags().BoolP("write", "w", false, "write result to (source) file instead of stdout (cannot be used with -d or -l)")
+	rootCmd.Flags().BoolP("verbose", "v", false, "write progress details to stderr")
+	rootCmd.Flags().BoolP("quiet", "q", false, "don't print unless there are errors")
 }
 
 // initConfig reads in config file and ENV variables if set.
