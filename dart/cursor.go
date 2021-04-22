@@ -285,33 +285,34 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 // If it encounters a triple single- or triple double-quote or a "${" while
 // within a string, it returns it as a whole string.
 func (c *Cursor) advanceToNextFeature() (string, error) {
-	var r rune
-	var size int
-	var err error
+	getRune := func() (rune, int, error) {
+		if len(c.runeBuf) > 0 {
+			c.e.logf("Grabbing rune from runeBuf... before=%#v", c.runeBuf)
+			r := c.runeBuf[0]
+			size := len(string(r))
+			c.runeBuf = c.runeBuf[1:]
+			c.absOffset += size
+			c.relStrippedOffset += size
+			c.e.logf("rune=%c, size=%v, after=%#v", r, size, c.runeBuf)
+			return r, size, nil
+		}
 
-	if len(c.runeBuf) > 0 {
-		c.e.logf("Grabbing rune from runeBuf... before=%#v", c.runeBuf)
-		r = c.runeBuf[0]
-		size = len(string(r))
-		c.runeBuf = c.runeBuf[1:]
-		c.e.logf("rune=%c, size=%v, after=%#v", r, size, c.runeBuf)
-
+		r, size, err := c.reader.ReadRune()
+		if err != nil {
+			return 0, 0, err
+		}
 		c.absOffset += size
 		c.relStrippedOffset += size
-
-		return string(r), nil
-	} else {
-		r, size, err = c.reader.ReadRune()
-		if err != nil {
-			if err := c.advanceToNextLine(); err != nil {
-				return "", err
-			}
-			return c.advanceToNextFeature()
-		}
+		return r, size, nil
 	}
 
-	c.absOffset += size
-	c.relStrippedOffset += size
+	r, size, err := getRune()
+	if err != nil {
+		if err := c.advanceToNextLine(); err != nil {
+			return "", err
+		}
+		return c.advanceToNextFeature()
+	}
 
 	if size > 1 { // a utf-8 rune of no interest; return it.
 		return string(r), nil
@@ -319,6 +320,9 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 
 	pushRune := func(r rune) {
 		c.runeBuf = append(c.runeBuf, r)
+		size := len(string(r))
+		c.absOffset -= size
+		c.relStrippedOffset -= size
 		c.e.logf("Pushing rune=%c, size=%v to runeBuf: after=%#v", r, len(string(r)), c.runeBuf)
 	}
 
@@ -327,7 +331,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 		if c.stringIsRaw {
 			return string(r), nil
 		}
-		nr, _, err := c.reader.ReadRune()
+		nr, _, err := getRune()
 		if err != nil {
 			return "\\", nil
 		}
@@ -336,7 +340,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 		if (c.stringIsRaw || c.inDoubleQuote || c.inTripleDouble) && !c.inTripleSingle {
 			return string(r), nil
 		}
-		nr, nsize, err := c.reader.ReadRune()
+		nr, nsize, err := getRune()
 		if err != nil {
 			return "'", nil
 		}
@@ -345,7 +349,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			return "'", nil
 		}
 		// r == nr == '\' at this point.
-		nr, nsize, err = c.reader.ReadRune()
+		nr, nsize, err = getRune()
 		if err != nil {
 			pushRune(r)
 			return "'", nil
@@ -355,14 +359,12 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			pushRune(nr)
 			return "'", nil
 		}
-		c.absOffset += 2
-		c.relStrippedOffset += 2
 		return "'''", nil
 	case '"':
 		if (c.stringIsRaw || c.inSingleQuote || c.inTripleSingle) && !c.inTripleDouble {
 			return string(r), nil
 		}
-		nr, nsize, err := c.reader.ReadRune()
+		nr, nsize, err := getRune()
 		if err != nil {
 			return `"`, nil
 		}
@@ -371,7 +373,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			return `"`, nil
 		}
 		// r == nr == '"' at this point.
-		nr, nsize, err = c.reader.ReadRune()
+		nr, nsize, err = getRune()
 		if err != nil {
 			pushRune(r)
 			return `"`, nil
@@ -381,14 +383,12 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			pushRune(nr)
 			return `"`, nil
 		}
-		c.absOffset += 2
-		c.relStrippedOffset += 2
 		return `"""`, nil
 	case '$':
 		if c.stringIsRaw {
 			return string(r), nil
 		}
-		nr, nsize, err := c.reader.ReadRune()
+		nr, nsize, err := getRune()
 		if err != nil {
 			return "$", nil
 		}
@@ -396,14 +396,12 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			pushRune(nr)
 			return "$", nil
 		}
-		c.absOffset++
-		c.relStrippedOffset++
 		return "${", nil
 	case '/':
 		if c.stringIsRaw {
 			return string(r), nil
 		}
-		nr, nsize, err := c.reader.ReadRune()
+		nr, nsize, err := getRune()
 		if err != nil {
 			return "/", nil
 		}
@@ -411,8 +409,6 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			pushRune(nr)
 			return "/", nil
 		}
-		c.absOffset++
-		c.relStrippedOffset++
 		if nr == '/' {
 			return "//", nil
 		}
@@ -421,7 +417,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 		if c.stringIsRaw {
 			return string(r), nil
 		}
-		nr, nsize, err := c.reader.ReadRune()
+		nr, nsize, err := getRune()
 		if err != nil {
 			return "*", nil
 		}
@@ -429,8 +425,6 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			pushRune(nr)
 			return "*", nil
 		}
-		c.absOffset++
-		c.relStrippedOffset++
 		return "*/", nil
 	}
 
