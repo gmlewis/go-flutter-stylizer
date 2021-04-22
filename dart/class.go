@@ -567,6 +567,10 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 	constructorBuf := c.classBody[lineOffset : nextOffset+1]
 	numLines := len(strings.Split(constructorBuf, "\n"))
 	for i := 0; i < numLines; i++ {
+		if lineNum+i >= len(c.lines) {
+			break
+		}
+
 		if c.lines[lineNum+i].entityType >= MainConstructor && c.lines[lineNum+i].entityType != entityType {
 			if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
 				return nil, err
