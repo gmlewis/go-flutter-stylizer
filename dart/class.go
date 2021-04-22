@@ -367,7 +367,6 @@ func (c *Class) identifyOthers() error {
 func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 	entity := &Entity{}
 
-	// buf := c.genStripped(lineNum)
 	sequence, lineCount, leadingText, err := c.findSequence(lineNum)
 	if err != nil {
 		return nil, err
@@ -476,7 +475,7 @@ func (c *Class) findSequence(lineNum int) (string, int, string, error) {
 	startLine := c.lines[lineNum]
 	cursor := &Cursor{
 		e:         c.e,
-		absOffset: startLine.startOffset,
+		absOffset: startLine.startOffset + startLine.strippedOffset,
 		lineIndex: startLine.originalIndex,
 
 		relStrippedOffset: 0,

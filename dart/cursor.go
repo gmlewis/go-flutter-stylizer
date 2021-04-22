@@ -73,9 +73,9 @@ func (c *Cursor) String() string {
 // advanceUntil searches for one of the provided strings, stepping through
 // the Dart source code (and obeying its grammatical nuances) until found.
 //
-// It also adds a list of "interesting" features encountered as it
+// It also adds a list of "interesting" top-level features encountered as it
 // processes the data, effectively filtering out the contents of
-// strings and comments.
+// strings, bodies, and comments.
 func (c *Cursor) advanceUntil(searchFor ...string) ([]string, error) {
 	var features []string
 	for {
@@ -95,9 +95,11 @@ func (c *Cursor) advanceUntil(searchFor ...string) ([]string, error) {
 
 		if foundIt &&
 			!c.inSingleQuote && !c.inDoubleQuote && !c.inTripleSingle && !c.inTripleDouble &&
-			c.parenLevels == 0 && len(c.braceLevels) == 0 {
+			c.parenLevels == 0 &&
+			len(c.braceLevels) == 0 {
 			return append(features, nf), nil
 		}
+
 		switch nf {
 		case "//":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
@@ -202,6 +204,9 @@ func (c *Cursor) advanceUntil(searchFor ...string) ([]string, error) {
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment {
 				continue
 			}
+			if c.parenLevels == 0 {
+				features = append(features, nf)
+			}
 			c.parenLevels++
 			c.e.logf("parenLevels++: cursor=%v", c)
 		case ")":
@@ -213,6 +218,9 @@ func (c *Cursor) advanceUntil(searchFor ...string) ([]string, error) {
 		case "{":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
 				continue
+			}
+			if len(c.braceLevels) == 0 {
+				features = append(features, nf)
 			}
 			c.braceLevels = append(c.braceLevels, BraceNormal)
 			c.e.logf("{: cursor=%v", c)
@@ -241,10 +249,14 @@ func (c *Cursor) advanceUntil(searchFor ...string) ([]string, error) {
 			c.e.logf("}: cursor=%v", c)
 		}
 
-		if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
+		if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment || c.parenLevels > 0 || len(c.braceLevels) > 0 {
 			continue
 		}
 		features = append(features, nf)
+
+		if foundIt && len(searchFor) > 1 {
+			return features, nil
+		}
 	}
 }
 
