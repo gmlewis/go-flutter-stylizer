@@ -66,23 +66,29 @@ func (e *Editor) findMatchingBracket(openOffset int) (int, error) {
 	}
 
 	absOffset := openOffset + 1
-	lineIndex, relOffset := e.findLineIndexAtOffset(absOffset)
+	lineIndex, relStrippedOffset := e.findLineIndexAtOffset(absOffset)
 	if lineIndex >= len(e.lines) {
 		return 0, fmt.Errorf("findLineIndexAtOffset(%v) returned lineIndex(=%v) past last line %v", absOffset, lineIndex, len(e.lines))
 	}
 
-	e.logf("lineIndex=%v, relOffset=%v, stripped=%q(%v), line=%q(%v)", lineIndex, relOffset, e.lines[lineIndex].stripped, len(e.lines[lineIndex].stripped), e.lines[lineIndex].line, len(e.lines[lineIndex].line))
+	e.logf("lineIndex=%v, relStrippedOffset=%v, stripped=%q(%v), line=%q(%v)", lineIndex, relStrippedOffset, e.lines[lineIndex].stripped, len(e.lines[lineIndex].stripped), e.lines[lineIndex].line, len(e.lines[lineIndex].line))
 
-	if relOffset < 0 || relOffset >= len(e.lines[lineIndex].stripped) {
-		return 0, fmt.Errorf("findLineIndexAtOffset(%v) returned bad relOffset(=%v) for stripped line %q(%v)", absOffset, relOffset, e.lines[lineIndex].stripped, len(e.lines[lineIndex].stripped))
+	reader := strings.NewReader("")
+	if relStrippedOffset < 0 {
+		return 0, fmt.Errorf("findLineIndexAtOffset(%v) returned bad relStrippedOffset(=%v) for stripped line %q(%v)", absOffset, relStrippedOffset, e.lines[lineIndex].stripped, len(e.lines[lineIndex].stripped))
+	}
+	if relStrippedOffset < len(e.lines[lineIndex].stripped) {
+		reader = strings.NewReader(e.lines[lineIndex].stripped[relStrippedOffset:])
 	}
 
 	cursor := &Cursor{
 		e:         e,
 		absOffset: absOffset,
 		lineIndex: lineIndex,
-		relOffset: relOffset,
-		reader:    strings.NewReader(e.lines[lineIndex].stripped[relOffset:]),
+
+		relStrippedOffset: relStrippedOffset,
+
+		reader: reader,
 	}
 	if _, err := cursor.advanceUntil(searchFor); err != nil {
 		return 0, fmt.Errorf("advanceUntil(%q): %v", searchFor, err)
@@ -92,23 +98,17 @@ func (e *Editor) findMatchingBracket(openOffset int) (int, error) {
 }
 
 // findLineIndexAtOffset finds the line index and relative offset for the
-// absolute offset within the text buffer. If the absOffset is past the
-// end of the stripped line, it returns the start of the next line.
+// absolute offset within the text buffer. Note that the returned
+// relStrippedOffset may be greater than the length of the stripped string
+// or even negative, before the stripped string.
 func (e *Editor) findLineIndexAtOffset(absOffset int) (int, int) {
 	for i, line := range e.lines {
 		if absOffset <= line.endOffset {
-			log.Printf("findLineIndexAtOffset(%v): line=#%v, startOffset=%v, endOffset=%v, strippedOffset=%v", absOffset, i+1, line.startOffset, line.endOffset, line.strippedOffset)
-			relOffset := absOffset - line.startOffset - line.strippedOffset
-			if relOffset < 0 {
-				return i, 0 // start of this line
-			}
-			if relOffset >= len(line.stripped) {
-				return i + 1, 0 // next line
-			}
-			return i, relOffset
+			relStrippedOffset := absOffset - line.startOffset - line.strippedOffset
+			return i, relStrippedOffset
 		}
 	}
-	return len(e.lines), absOffset
+	return len(e.lines), 0
 }
 
 // logf logs the line if verbose is true.

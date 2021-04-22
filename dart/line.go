@@ -107,7 +107,7 @@ func NewLine(line string, startOffset, originalIndex int) *Line {
 		originalIndex: originalIndex,
 
 		startOffset: startOffset,
-		endOffset:   startOffset + len(line) - 1,
+		endOffset:   startOffset + len(line),
 		entityType:  entityType,
 	}
 }

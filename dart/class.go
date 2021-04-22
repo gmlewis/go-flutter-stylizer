@@ -478,8 +478,10 @@ func (c *Class) findSequence(lineNum int) (string, int, string, error) {
 		e:         c.e,
 		absOffset: startLine.startOffset,
 		lineIndex: startLine.originalIndex,
-		relOffset: 0,
-		reader:    strings.NewReader(c.e.lines[startLine.originalIndex].stripped),
+
+		relStrippedOffset: 0,
+
+		reader: strings.NewReader(c.e.lines[startLine.originalIndex].stripped),
 	}
 	c.e.logf("\n\nfindSequence(line=%v): %#v, cursor=%v", lineNum+1, startLine, cursor)
 	features, err := cursor.advanceUntil(";", "}")

@@ -41,8 +41,10 @@ type Cursor struct {
 
 	absOffset int
 	lineIndex int
-	relOffset int
-	reader    *strings.Reader
+
+	relStrippedOffset int
+
+	reader *strings.Reader
 
 	braceLevels        []BraceLevel
 	parenLevels        int
@@ -63,8 +65,8 @@ func (c *Cursor) String() string {
 		line = c.e.lines[c.lineIndex].line
 		stripped = c.e.lines[c.lineIndex].stripped
 	}
-	return fmt.Sprintf(`{absOffet=%v, lineIndex=%v, relOffset=%v, stripped=%q(%v), line=%q(%v), '=%v, "=%v, '''=%v, """=%v, /*=%v, (=%v, braceLevels=%#v}`,
-		c.absOffset, c.lineIndex, c.relOffset, stripped, len(stripped), line, len(line),
+	return fmt.Sprintf(`{absOffet=%v, lineIndex=%v, relStrippedOffset=%v, stripped=%q(%v), line=%q(%v), '=%v, "=%v, '''=%v, """=%v, /*=%v, (=%v, braceLevels=%#v}`,
+		c.absOffset, c.lineIndex, c.relStrippedOffset, stripped, len(stripped), line, len(line),
 		c.inSingleQuote, c.inDoubleQuote, c.inTripleSingle, c.inTripleDouble, c.inMultiLineComment, c.parenLevels, c.braceLevels)
 }
 
@@ -82,7 +84,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) ([]string, error) {
 			return nil, err
 		}
 
-		c.e.logf("nf=%q searchFor=%#v, abs=%v, ind=%v, rel=%v", nf, searchFor, c.absOffset, c.lineIndex, c.relOffset)
+		c.e.logf("nf=%q searchFor=%#v, abs=%v, ind=%v, rel=%v", nf, searchFor, c.absOffset, c.lineIndex, c.relStrippedOffset)
 		var foundIt bool
 		for _, sf := range searchFor {
 			if nf == sf {
@@ -101,10 +103,10 @@ func (c *Cursor) advanceUntil(searchFor ...string) ([]string, error) {
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment {
 				continue
 			}
-			c.relOffset -= 2
+			c.relStrippedOffset -= 2
 			c.absOffset -= 2
-			beforeLen := c.relOffset
-			c.e.lines[c.lineIndex].stripped = strings.TrimSpace(c.e.lines[c.lineIndex].stripped[0:c.relOffset])
+			beforeLen := c.relStrippedOffset
+			c.e.lines[c.lineIndex].stripped = strings.TrimSpace(c.e.lines[c.lineIndex].stripped[0:c.relStrippedOffset])
 			afterLen := len(c.e.lines[c.lineIndex].stripped)
 			c.absOffset -= beforeLen - afterLen
 			// Reset the reader because we chopped off the stripped line.
@@ -271,7 +273,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 	}
 
 	c.absOffset += size
-	c.relOffset += size
+	c.relStrippedOffset += size
 
 	if size > 1 { // a utf-8 rune of no interest; return it.
 		return string(r), nil
@@ -298,7 +300,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			return "'", nil
 		}
 		c.absOffset += 2
-		c.relOffset += 2
+		c.relStrippedOffset += 2
 		return "'''", nil
 	case '"':
 		nr, nsize, err := c.reader.ReadRune()
@@ -320,7 +322,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			return `"`, nil
 		}
 		c.absOffset += 2
-		c.relOffset += 2
+		c.relStrippedOffset += 2
 		return `"""`, nil
 	case '$':
 		nr, nsize, err := c.reader.ReadRune()
@@ -332,7 +334,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			return "$", nil
 		}
 		c.absOffset++
-		c.relOffset++
+		c.relStrippedOffset++
 		return "${", nil
 	case '/':
 		nr, nsize, err := c.reader.ReadRune()
@@ -344,7 +346,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			return "/", nil
 		}
 		c.absOffset++
-		c.relOffset++
+		c.relStrippedOffset++
 		if nr == '/' {
 			return "//", nil
 		}
@@ -359,7 +361,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 			return "*", nil
 		}
 		c.absOffset++
-		c.relOffset++
+		c.relStrippedOffset++
 		return "*/", nil
 	}
 
@@ -380,7 +382,7 @@ func (c *Cursor) advanceToNextLine() error {
 
 	c.absOffset += c.e.lines[c.lineIndex].strippedOffset
 	c.e.logf("AFTER absOffset=%v", c.absOffset)
-	c.relOffset = 0
+	c.relStrippedOffset = 0
 
 	c.reader = strings.NewReader(c.e.lines[c.lineIndex].stripped)
 	if c.inMultiLineComment {
