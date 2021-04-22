@@ -131,6 +131,13 @@ func (c *Client) getClasses(editor *Editor, groupAndSortGetterMethods bool) ([]*
 			continue
 		}
 
+		// This is a hack, but helps with files like `localizations_utils.dart` in
+		// the Flutter distribution.
+		if strings.ContainsAny(line.stripped, "$'") {
+			editor.logf("\n\nSkipping new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v due to appearance of $ or '", className, classOffset, openCurlyOffset, line)
+			continue
+		}
+
 		editor.logf("\n\nFound new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v", className, classOffset, openCurlyOffset, line)
 		closeCurlyOffset, err := editor.findMatchingBracket(openCurlyOffset)
 		if err != nil {
