@@ -431,6 +431,10 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 	}
 
 	for i := 0; i <= lineCount; i++ {
+		if lineNum+i >= len(c.lines) {
+			break
+		}
+
 		if c.lines[lineNum+i].entityType >= MainConstructor && c.lines[lineNum+i].entityType != entity.entityType {
 			c.e.logf("scanMethod: Changing line #%v from type %v to type %v", lineNum+i+1, c.lines[lineNum+i].entityType, entity.entityType)
 			if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {

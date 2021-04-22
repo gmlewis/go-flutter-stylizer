@@ -79,7 +79,7 @@ func (c *Client) StylizeFile(filename string) error {
 	if err != nil {
 		return err
 	}
-	if !c.opts.Quiet {
+	if !c.opts.Quiet && len(classes) > 0 {
 		log.Printf("Found %v classes in file %v", len(classes), filename)
 	}
 
