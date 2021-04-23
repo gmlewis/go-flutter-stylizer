@@ -94,12 +94,22 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		log.Fatalf("Must supply only one of --diff (-d), --list (-l), and --write (-w).")
 	}
 
+	vp := viper.GetViper()
+	groupAndSortGetterMethods := vp.GetBool("groupAndSortGetterMethods")
+	memberOrdering := vp.GetStringSlice("memberOrdering")
+	sortOtherMethods := vp.GetBool("sortOtherMethods")
+
 	opts := dart.Options{
 		Diff:    diff,
 		List:    list,
 		Quiet:   quiet,
 		Verbose: verbose,
 		Write:   write,
+
+		GroupAndSortGetterMethods: groupAndSortGetterMethods,
+
+		MemberOrdering:   memberOrdering,
+		SortOtherMethods: sortOtherMethods,
 	}
 	c := dart.New(opts)
 

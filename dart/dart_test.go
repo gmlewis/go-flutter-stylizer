@@ -18,6 +18,7 @@ package dart
 
 import (
 	_ "embed"
+	"reflect"
 	"testing"
 )
 
@@ -36,4 +37,35 @@ func TestGetClasses(t *testing.T) {
 	if got, want := len(classes), 22; got != want {
 		t.Errorf("got %v classes", len(classes))
 	}
+
+	for i, class := range flowAnalysisWantClasses {
+		if !reflect.DeepEqual(classes[i], class) {
+			t.Errorf("class #%v (%q) differs; got:\n%#v\nwant:%#v", i+1, classes[i].className, classes[i], class)
+		}
+	}
+}
+
+var flowAnalysisWantClasses = []*Class{
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
 }

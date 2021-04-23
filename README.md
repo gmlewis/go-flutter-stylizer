@@ -12,8 +12,8 @@ Bitbucket pipelines, etc., to maintain Flutter code repositories.
 
 ## Status
 
-This is a fun side-project that now has a more robust parser than
-the VSCode plugin version and is ready to try out.
+This is a fun side-project that is still experimental and
+not yet ready to try out.
 
 ## Installation
 
@@ -150,7 +150,7 @@ memberOrdering:
   public-override-methods
   public-other-methods
   build-method
-sortOtherMethods: false,
+sortOtherMethods: false
 ```
 
 And then rearrange member names as desired.

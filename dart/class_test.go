@@ -20,6 +20,89 @@ import (
 	"testing"
 )
 
+func TestClassesAreFound(t *testing.T) {
+	const source = `// test.dart
+class myClass extends Widget {
+
+}`
+
+	e := NewEditor(source)
+	c := &Client{}
+	got, err := c.getClasses(e, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := 1; len(got) != want {
+		t.Errorf("getClasses = %v, want %v", got, want)
+	}
+
+	if want := 3; len(got[0].lines) != want {
+		t.Errorf("getClasses lines= %v, want %v", got, want)
+	}
+}
+
+func TestNamedConstructorsAreKeptIntact(t *testing.T) {
+	const source = `class AnimationController extends Animation<double>
+with AnimationEagerListenerMixin, AnimationLocalListenersMixin, AnimationLocalStatusListenersMixin {
+	AnimationController.unbounded({
+	double value = 0.0,
+	this.duration,
+	this.debugLabel,
+	@required TickerProvider vsync,
+	this.animationBehavior = AnimationBehavior.preserve,
+	}) : assert(value != null),
+			assert(vsync != null),
+			lowerBound = double.negativeInfinity,
+			upperBound = double.infinity,
+			_direction = _AnimationDirection.forward {
+	_ticker = vsync.createTicker(_tick);
+	_internalSetValue(value);
+	}
+}`
+
+	e := NewEditor(source)
+	c := &Client{}
+	got, err := c.getClasses(e, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := 1; len(got) != want {
+		t.Errorf("getClasses = %v, want %v", got, want)
+	}
+
+	want := []EntityType{
+		Unknown,          // line #1: {
+		NamedConstructor, // line #2: 	AnimationController.unbounded({
+		NamedConstructor, // line #3: 	double value = 0.0,
+		NamedConstructor, // line #4: 	this.duration,
+		NamedConstructor, // line #5: 	this.debugLabel,
+		NamedConstructor, // line #6: 	@required TickerProvider vsync,
+		NamedConstructor, // line #7: 	this.animationBehavior = AnimationBehavior.preserve,
+		NamedConstructor, // line #8: 	}) : assert(value != null),
+		NamedConstructor, // line #9: 			assert(vsync != null),
+		NamedConstructor, // line #10: 			lowerBound = double.negativeInfinity,
+		NamedConstructor, // line #11: 			upperBound = double.infinity,
+		NamedConstructor, // line #12: 			_direction = _AnimationDirection.forward {
+		NamedConstructor, // line #13: 	_ticker = vsync.createTicker(_tick);
+		NamedConstructor, // line #14: 	_internalSetValue(value);
+		NamedConstructor, // line #15: 	}
+		BlankLine,        // line #16:
+	}
+
+	if len(got[0].lines) != len(want) {
+		t.Errorf("getClasses lines= %v, want %v", got, want)
+	}
+
+	for i := 0; i < len(got[0].lines); i++ {
+		line := got[0].lines[i]
+		if line.entityType != want[i] {
+			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+		}
+	}
+}
+
 func TestFindFeatures_linux_mac(t *testing.T) {
 	bc, bcLineOffset, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
 

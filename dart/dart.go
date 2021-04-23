@@ -142,7 +142,7 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 
 func validateMemberOrdering(memberOrdering []string) bool {
 	if len(memberOrdering) != len(defaultMemberOrdering) {
-		log.Printf("flutterStylizer.memberOrdering must have %v values. Ignoring and using defaults.", len(defaultMemberOrdering))
+		log.Printf("flutterStylizer.memberOrdering must have %v values, but found %v. Ignoring and using defaults.", len(defaultMemberOrdering), len(memberOrdering))
 		return false
 	}
 
