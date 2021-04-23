@@ -28,17 +28,17 @@ class myClass extends Widget {
 
 	e := NewEditor(source)
 	c := &Client{}
-	got, err := c.getClasses(e, false)
+	got, err := c.GetClasses(e, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if want := 1; len(got) != want {
-		t.Errorf("getClasses = %v, want %v", got, want)
+		t.Errorf("GetClasses = %v, want %v", got, want)
 	}
 
 	if want := 3; len(got[0].lines) != want {
-		t.Errorf("getClasses lines= %v, want %v", got, want)
+		t.Errorf("GetClasses lines= %v, want %v", got, want)
 	}
 }
 
@@ -63,13 +63,13 @@ with AnimationEagerListenerMixin, AnimationLocalListenersMixin, AnimationLocalSt
 
 	e := NewEditor(source)
 	c := &Client{}
-	got, err := c.getClasses(e, false)
+	got, err := c.GetClasses(e, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if want := 1; len(got) != want {
-		t.Errorf("getClasses = %v, want %v", got, want)
+		t.Errorf("GetClasses = %v, want %v", got, want)
 	}
 
 	want := []EntityType{
@@ -110,7 +110,7 @@ func TestFindFeatures_linux_mac(t *testing.T) {
 	if err != nil {
 		t.Fatalf("findMatchingBracket(%v) = %v, want nil", bcOCO, err)
 	}
-	uc := NewClass(bc, "Class1", bcLineOffset, bcOCO, bcCCO, false)
+	uc := NewClass(bc, "Class1", bcOCO, bcCCO, false)
 
 	want := []EntityType{
 		Unknown,                 // line #7: class Class1 {
@@ -188,7 +188,7 @@ func TestFindFeatures_windoze(t *testing.T) {
 	if err != nil {
 		t.Fatalf("findMatchingBracket(%v) = %v, want nil", wzOCO, err)
 	}
-	wc := NewClass(wz, "Class1", wzLineOffset, wzOCO, wzCCO, false)
+	wc := NewClass(wz, "Class1", wzOCO, wzCCO, false)
 
 	want := []EntityType{
 		Unknown,                 // line #7: class Class1 {

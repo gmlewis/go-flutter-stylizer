@@ -82,7 +82,7 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 
 	e := NewEditor(buf)
 	e.Verbose = c.opts.Verbose
-	classes, err := c.getClasses(e, c.opts.GroupAndSortGetterMethods)
+	classes, err := c.GetClasses(e, c.opts.GroupAndSortGetterMethods)
 	if err != nil {
 		return false, err
 	}
@@ -177,65 +177,6 @@ func findOpenCurlyOffset(buf string, startOffset int) int {
 		offset = semiOffset // this is valid: class D = Object with Function;
 	}
 	return startOffset + offset
-}
-
-func (c *Client) getClasses(editor *Editor, groupAndSortGetterMethods bool) ([]*Class, error) {
-	var classes []*Class
-
-	for i, line := range editor.lines {
-		if (strings.HasPrefix(line.line, "void main(") || strings.HasPrefix(line.line, "main(")) && strings.HasSuffix(line.line, ") {") {
-			// Find the end of main, marking sections as comments or strings to avoid them below.
-			openCurlyOffset := findOpenCurlyOffset(editor.fullBuf, line.startOffset)
-			editor.findMatchingBracket(openCurlyOffset)
-			continue
-		}
-
-		mm := matchClassRE.FindStringSubmatch(line.line)
-		if len(mm) != 2 {
-			continue
-		}
-
-		className := mm[1]
-		classOffset := line.startOffset
-		openCurlyOffset := findOpenCurlyOffset(editor.fullBuf, classOffset)
-
-		if editor.fullBuf[openCurlyOffset] == ';' {
-			continue
-		}
-
-		if openCurlyOffset <= classOffset {
-			return nil, fmt.Errorf(`expected "{" after "class" at offset %v`, classOffset)
-		}
-
-		if line.entityType != Unknown || line.isCommentOrString {
-			editor.logf("\n\nSkipping new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v due to entityType/comment/string", className, classOffset, openCurlyOffset, line)
-			continue
-		}
-
-		// This is a hack, but helps with files like `localizations_utils.dart` in
-		// the Flutter distribution.
-		if strings.ContainsAny(line.stripped, "$'") {
-			editor.logf("\n\nSkipping new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v due to appearance of $ or '", className, classOffset, openCurlyOffset, line)
-			continue
-		}
-
-		editor.logf("\n\nFound new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v", className, classOffset, openCurlyOffset, line)
-		closeCurlyOffset, err := editor.findMatchingBracket(openCurlyOffset)
-		if err != nil {
-			return nil, err
-		}
-
-		if closeCurlyOffset <= openCurlyOffset {
-			return nil, fmt.Errorf(`expected "}" after "{" at offset %v`, openCurlyOffset)
-		}
-		editor.logf("\n\nFound end of class %q at closeCurlyOffset=%v", className, closeCurlyOffset)
-
-		dartClass := NewClass(editor, className, i, openCurlyOffset, closeCurlyOffset, groupAndSortGetterMethods)
-		dartClass.FindFeatures()
-		classes = append(classes, dartClass)
-	}
-
-	return classes, nil
 }
 
 // logf logs the line if verbose is true.
