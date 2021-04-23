@@ -17,6 +17,8 @@ limitations under the License.
 package dart
 
 import (
+	_ "embed"
+	"strings"
 	"testing"
 )
 
@@ -181,7 +183,6 @@ func TestHandleOverriddenGettersWithBodies(t *testing.T) {
 }`
 
 	e := NewEditor(source)
-	e.Verbose = true
 	c := &Client{}
 	got, err := c.GetClasses(e, false)
 	if err != nil {
@@ -269,7 +270,6 @@ static PGDateTime parse(String formattedString) =>
 }`
 
 	e := NewEditor(source)
-	e.Verbose = true
 	c := &Client{}
 	got, err := c.GetClasses(e, false)
 	if err != nil {
@@ -318,6 +318,117 @@ static PGDateTime parse(String formattedString) =>
 		line := got[0].lines[i]
 		if line.entityType != want[i] {
 			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+		}
+	}
+}
+
+//go:embed testfiles/basic_classes_default_order.txt
+var basicClassesDefaultOrder string
+
+func TestIssue11_RunWithDefaultMemberOrdering(t *testing.T) {
+	e := NewEditor(basicClasses)
+	c := &Client{}
+	got, err := c.GetClasses(e, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := 1; len(got) != want {
+		t.Errorf("GetClasses = %v, want %v", got, want)
+	}
+
+	want := []EntityType{
+		Unknown,                 // line #7: class Class1 {
+		PrivateInstanceVariable, // line #8:   // _pvi is a private instance variable.
+		PrivateInstanceVariable, // line #9:   List<String> _pvi = ['one', 'two'];
+		BuildMethod,             // line #10:   @override
+		BuildMethod,             // line #11:   build() {} // build method
+		BlankLine,               // line #12:
+		StaticPrivateVariable,   // line #13:   // This is a random single-line comment somewhere in the class.
+		StaticPrivateVariable,   // line #14:
+		StaticPrivateVariable,   // line #15:   // _spv is a static private variable.
+		StaticPrivateVariable,   // line #16:   static final String _spv = 'spv';
+		BlankLine,               // line #17:
+		StaticPrivateVariable,   // line #18:   /* This is a
+		StaticPrivateVariable,   // line #19:    * random multi-
+		StaticPrivateVariable,   // line #20:    * line comment
+		StaticPrivateVariable,   // line #21:    * somewhere in the middle
+		StaticPrivateVariable,   // line #22:    * of the class */
+		StaticPrivateVariable,   // line #23:
+		StaticPrivateVariable,   // line #24:   // _spvni is a static private variable with no initializer.
+		StaticPrivateVariable,   // line #25:   static double _spvni = 0;
+		PrivateInstanceVariable, // line #26:   int _pvini = 1;
+		StaticVariable,          // line #27:   static int sv = 0;
+		InstanceVariable,        // line #28:   int v = 2;
+		InstanceVariable,        // line #29:   final double fv = 42.0;
+		MainConstructor,         // line #30:   Class1();
+		NamedConstructor,        // line #31:   Class1.fromNum();
+		OtherMethod,             // line #32:   var myfunc = (int n) => n;
+		OtherMethod,             // line #33:   get vv => v; // getter
+		OverrideMethod,          // line #34:   @override
+		OverrideMethod,          // line #35:   toString() {
+		OverrideMethod,          // line #36:     print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');
+		OverrideMethod,          // line #37:     return '';
+		OverrideMethod,          // line #38:   }
+		BlankLine,               // line #39:
+		StaticVariable,          // line #40:   // "Here is 'where we add ${ text to "trip 'up' ''' the ${dart parser}.
+		StaticVariable,          // line #41:   /*
+		StaticVariable,          // line #42:     '''
+		StaticVariable,          // line #43:     """
+		StaticVariable,          // line #44:     //
+		StaticVariable,          // line #45:   */
+		StaticVariable,          // line #46:   static const a = """;
+		StaticVariable,          // line #47:    '${b};
+		StaticVariable,          // line #48:    ''' ;
+		StaticVariable,          // line #49:   """;
+		StaticVariable,          // line #50:   static const b = ''';
+		StaticVariable,          // line #51:     {  (  ))) """ {{{} ))));
+		StaticVariable,          // line #52:   ''';
+		StaticVariable,          // line #53:   static const c = {'{{{((... """ ${'((('};'};
+		BlankLine,               // line #54: }
+	}
+
+	if len(got[0].lines) != len(want) {
+		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
+	}
+
+	for i := 0; i < len(got[0].lines); i++ {
+		line := got[0].lines[i]
+		if line.entityType != want[i] {
+			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+		}
+	}
+
+	c.opts.MemberOrdering = []string{
+		"public-constructor",
+		"named-constructors",
+		"public-static-variables",
+		"public-instance-variables",
+		"public-override-variables",
+		"private-static-variables",
+		"private-instance-variables",
+		"public-override-methods",
+		"public-other-methods",
+		"build-method",
+	}
+
+	edits := c.generateEdits(got)
+	if want := 1; len(edits) != want {
+		t.Errorf("want %v edits, got %v", len(edits), want)
+	}
+
+	newBuf := c.rewriteClasses(basicClasses, edits)
+	gotLines := strings.Split(newBuf, "\n")
+	wantLines := strings.Split(basicClassesDefaultOrder, "\n")
+	if len(gotLines) != len(wantLines) {
+		t.Errorf("rewriteClasses = %v lines, want %v lines", len(gotLines), len(wantLines))
+		t.Errorf("rewriteClasses got:\n%v", newBuf)
+	}
+
+	for i := 0; i < len(gotLines); i++ {
+		line := strings.ReplaceAll(gotLines[i], "\r", "")
+		if line != wantLines[i] {
+			t.Errorf("line #%v: got:\n%v\nwant:\n%v", i+1, line, wantLines[i])
 		}
 	}
 }

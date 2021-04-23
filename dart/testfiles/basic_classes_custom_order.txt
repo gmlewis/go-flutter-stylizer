@@ -1,4 +1,10 @@
-{
+// This is a test file. After running this through `Flutter Stylizer`,
+// the output should match the content of file `basic_classes_out.dart`.
+
+import 'dart:math';
+
+// Class1 is the first class.
+class Class1 {
   Class1();
 
   Class1.fromNum();
