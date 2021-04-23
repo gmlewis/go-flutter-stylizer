@@ -224,7 +224,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
 				continue
 			}
-			if c.parenLevels == 0 {
+			if c.parenLevels == 0 && len(c.braceLevels) == 0 {
 				features = append(features, nf)
 			}
 			c.parenLevels++
@@ -239,7 +239,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 {
 				continue
 			}
-			if len(c.braceLevels) == 0 {
+			if c.parenLevels == 0 && len(c.braceLevels) == 0 {
 				features = append(features, nf)
 			}
 			c.braceLevels = append(c.braceLevels, BraceNormal)
@@ -272,7 +272,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 		if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 || c.parenLevels > 0 || len(c.braceLevels) > 0 {
 			continue
 		}
-		features = append(features, nf)
+		features = append(features, nf) // only ")" or "}" collected here.
 
 		if foundIt && len(searchFor) > 1 {
 			return features, nil

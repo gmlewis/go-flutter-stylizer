@@ -620,6 +620,58 @@ class Chat extends Equatable implements SubscriptionObject {
 	}
 }
 
+func TestIssue17FunctionTypeVariableIsNotAFunction(t *testing.T) {
+	const source = `
+class Test {
+  final String Function() functionName;
+
+  String fun(){
+    return "fun";
+  }
+
+  Function makeAdder(int addBy) {
+    return (int i) => addBy + i;
+  }
+}
+`
+
+	e := NewEditor(source)
+	c := &Client{}
+	got, err := c.GetClasses(e, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := 1; len(got) != want {
+		t.Errorf("GetClasses = %v, want %v", got, want)
+	}
+
+	want := []EntityType{
+		Unknown,
+		InstanceVariable,
+		BlankLine,
+		OtherMethod,
+		OtherMethod,
+		OtherMethod,
+		BlankLine,
+		OtherMethod,
+		OtherMethod,
+		OtherMethod,
+		BlankLine,
+	}
+
+	if len(got[0].lines) != len(want) {
+		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
+	}
+
+	for i := 0; i < len(got[0].lines); i++ {
+		line := got[0].lines[i]
+		if line.entityType != want[i] {
+			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+		}
+	}
+}
+
 func TestFindFeatures_linux_mac(t *testing.T) {
 	bc, bcLineOffset, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
 
