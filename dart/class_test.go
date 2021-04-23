@@ -38,7 +38,7 @@ class myClass extends Widget {
 	}
 
 	if want := 3; len(got[0].lines) != want {
-		t.Errorf("GetClasses lines= %v, want %v", got, want)
+		t.Errorf("GetClasses lines = %v, want %v", len(got[0].lines), want)
 	}
 }
 
@@ -92,7 +92,7 @@ with AnimationEagerListenerMixin, AnimationLocalListenersMixin, AnimationLocalSt
 	}
 
 	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines= %v, want %v", got, want)
+		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
 	}
 
 	for i := 0; i < len(got[0].lines); i++ {
@@ -134,7 +134,102 @@ _InterpolationSimulation(this._begin, this._end, Duration duration, this._curve,
 	}
 
 	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines= %v, want %v", got, want)
+		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
+	}
+
+	for i := 0; i < len(got[0].lines); i++ {
+		line := got[0].lines[i]
+		if line.entityType != want[i] {
+			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+		}
+	}
+}
+
+func TestHandleOverriddenGettersWithBodies(t *testing.T) {
+	const source = `class CurvedAnimation extends Animation<double>
+    with AnimationWithParentMixin<double> {
+  @override
+  double get value {
+    final Curve activeCurve = _useForwardCurve ? curve : reverseCurve;
+
+    final double t = parent.value;
+    if (activeCurve == null) return t;
+    if (t == 0.0 || t == 1.0) {
+      assert(() {
+        final double transformedValue = activeCurve.transform(t);
+        final double roundedTransformedValue =
+            transformedValue.round().toDouble();
+        if (roundedTransformedValue != t) {
+          throw FlutterError('Invalid curve endpoint at $t.\n'
+              'Curves must map 0.0 to near zero and 1.0 to near one but '
+              'is near $roundedTransformedValue.');
+        }
+        return true;
+      }());
+      return t;
+    }
+    return activeCurve.transform(t);
+  }
+
+  @override
+  String toString() {
+    if (reverseCurve == null) return '$parent\u27A9$curve';
+    if (_useForwardCurve)
+      return '$parent\u27A9$curve\u2092\u2099/$reverseCurve';
+    return '$parent\u27A9$curve/$reverseCurve\u2092\u2099';
+  }
+}`
+
+	e := NewEditor(source)
+	e.Verbose = true
+	c := &Client{}
+	got, err := c.GetClasses(e, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := 1; len(got) != want {
+		t.Errorf("GetClasses = %v, want %v", got, want)
+	}
+
+	want := []EntityType{
+		Unknown,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		BlankLine,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		BlankLine,
+	}
+
+	if len(got[0].lines) != len(want) {
+		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
 	}
 
 	for i := 0; i < len(got[0].lines); i++ {

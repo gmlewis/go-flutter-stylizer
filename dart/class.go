@@ -155,7 +155,10 @@ func (c *Client) GetClasses(editor *Editor, groupAndSortGetterMethods bool) ([]*
 		editor.logf("\n\nFound end of class %q at closeCurlyOffset=%v", className, closeCurlyOffset)
 
 		dartClass := NewClass(editor, className, openCurlyOffset, closeCurlyOffset, groupAndSortGetterMethods)
-		dartClass.FindFeatures()
+		if err := dartClass.FindFeatures(); err != nil {
+			return nil, err
+		}
+
 		classes = append(classes, dartClass)
 	}
 
@@ -330,8 +333,8 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 
 					relCloseCurlyOffset := absCloseCurlyOffset - c.openCurlyOffset
 
-					if c.classBody[relOpenCurlyOffset] != '}' {
-						return fmt.Errorf("expected close curly bracket at relative offset %v but got %q", relCloseCurlyOffset, c.classBody[relCloseCurlyOffset:])
+					if c.classBody[relCloseCurlyOffset] != '}' {
+						return fmt.Errorf("expected close curly bracket at relative offset %v but got %c: %q", relCloseCurlyOffset, c.classBody[relCloseCurlyOffset], c.classBody[relCloseCurlyOffset:])
 					}
 
 					nextOffset := absCloseCurlyOffset - c.openCurlyOffset
