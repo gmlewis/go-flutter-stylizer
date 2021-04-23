@@ -194,7 +194,7 @@ func (c *Class) FindFeatures() error {
 	if c.e.Verbose {
 		for i := 0; i < len(c.lines); i++ {
 			line := c.lines[i]
-			c.e.logf("line #%v type=%v: %v", i, line.entityType, line.line)
+			c.e.logf("line #%v type=%v: %v", i+1, line.entityType, line.line)
 		}
 	}
 

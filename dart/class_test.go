@@ -193,39 +193,38 @@ func TestHandleOverriddenGettersWithBodies(t *testing.T) {
 	}
 
 	want := []EntityType{
-		Unknown,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		BlankLine,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		OverrideMethod,
-		BlankLine,
+		Unknown,        // line #1: {
+		OverrideMethod, // line #2:   @override
+		OverrideMethod, // line #3:   double get value {
+		OverrideMethod, // line #4:     final Curve activeCurve = _useForwardCurve ? curve : reverseCurve;
+		OverrideMethod, // line #5:
+		OverrideMethod, // line #6:     final double t = parent.value;
+		OverrideMethod, // line #7:     if (activeCurve == null) return t;
+		OverrideMethod, // line #8:     if (t == 0.0 || t == 1.0) {
+		OverrideMethod, // line #9:       assert(() {
+		OverrideMethod, // line #10:         final double transformedValue = activeCurve.transform(t);
+		OverrideMethod, // line #11:         final double roundedTransformedValue =
+		OverrideMethod, // line #12:             transformedValue.round().toDouble();
+		OverrideMethod, // line #13:         if (roundedTransformedValue != t) {
+		OverrideMethod, // line #14:           throw FlutterError('Invalid curve endpoint at $t.\n'
+		OverrideMethod, // line #15:               'Curves must map 0.0 to near zero and 1.0 to near one but '
+		OverrideMethod, // line #16:               'is near $roundedTransformedValue.');
+		OverrideMethod, // line #17:         }
+		OverrideMethod, // line #18:         return true;
+		OverrideMethod, // line #19:       }());
+		OverrideMethod, // line #20:       return t;
+		OverrideMethod, // line #21:     }
+		OverrideMethod, // line #22:     return activeCurve.transform(t);
+		OverrideMethod, // line #23:   }
+		BlankLine,      // line #24:
+		OverrideMethod, // line #25:   @override
+		OverrideMethod, // line #26:   String toString() {
+		OverrideMethod, // line #27:     if (reverseCurve == null) return '$parent\u27A9$curve';
+		OverrideMethod, // line #28:     if (_useForwardCurve)
+		OverrideMethod, // line #29:       return '$parent\u27A9$curve\u2092\u2099/$reverseCurve';
+		OverrideMethod, // line #30:     return '$parent\u27A9$curve/$reverseCurve\u2092\u2099';
+		OverrideMethod, // line #31:   }
+		BlankLine,      // line #32: }`
 	}
 
 	if len(got[0].lines) != len(want) {
