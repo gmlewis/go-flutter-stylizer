@@ -103,6 +103,48 @@ with AnimationEagerListenerMixin, AnimationLocalListenersMixin, AnimationLocalSt
 	}
 }
 
+func TestPrivateConstructorsAreKeptIntact(t *testing.T) {
+	const source = `class _InterpolationSimulation extends Simulation {
+_InterpolationSimulation(this._begin, this._end, Duration duration, this._curve, double scale)
+	: assert(_begin != null),
+		assert(_end != null),
+		assert(duration != null && duration.inMicroseconds > 0),
+		_durationInSeconds = (duration.inMicroseconds * scale) / Duration.microsecondsPerSecond;
+}`
+
+	e := NewEditor(source)
+	c := &Client{}
+	got, err := c.GetClasses(e, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := 1; len(got) != want {
+		t.Errorf("GetClasses = %v, want %v", got, want)
+	}
+
+	want := []EntityType{
+		Unknown,
+		MainConstructor,
+		MainConstructor,
+		MainConstructor,
+		MainConstructor,
+		MainConstructor,
+		BlankLine,
+	}
+
+	if len(got[0].lines) != len(want) {
+		t.Errorf("getClasses lines= %v, want %v", got, want)
+	}
+
+	for i := 0; i < len(got[0].lines); i++ {
+		line := got[0].lines[i]
+		if line.entityType != want[i] {
+			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+		}
+	}
+}
+
 func TestFindFeatures_linux_mac(t *testing.T) {
 	bc, bcLineOffset, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
 
