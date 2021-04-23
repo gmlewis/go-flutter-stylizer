@@ -672,6 +672,110 @@ class Test {
 	}
 }
 
+//go:embed testfiles/issue18.dart.txt
+var issue18_dart_txt string
+
+//go:embed testfiles/issue18_case1.txt
+var issue18_case1_txt string
+
+//go:embed testfiles/issue18_case2.txt
+var issue18_case2_txt string
+
+//go:embed testfiles/issue18_case3.txt
+var issue18_case3_txt string
+
+//go:embed testfiles/issue18_case4.txt
+var issue18_case4_txt string
+
+func TestIssue18Case1(t *testing.T) {
+	const groupAndSortGetterMethods = false
+	const sortOtherMethods = false
+
+	e := NewEditor(issue18_dart_txt)
+	c := &Client{opts: Options{
+		GroupAndSortGetterMethods: groupAndSortGetterMethods,
+		SortOtherMethods:          sortOtherMethods,
+	}}
+	got, err := c.GetClasses(e, groupAndSortGetterMethods)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := 1; len(got) != want {
+		t.Errorf("GetClasses = %v, want %v", got, want)
+	}
+
+	want := []EntityType{
+		Unknown,
+		PrivateInstanceVariable,
+		BlankLine,
+		MainConstructor,
+		BlankLine,
+		OtherMethod,
+		BlankLine,
+		PrivateInstanceVariable,
+		BlankLine,
+		OtherMethod,
+		BlankLine,
+		OtherMethod,
+		BlankLine,
+		OtherMethod,
+		OtherMethod,
+		OtherMethod,
+		BlankLine,
+		OtherMethod,
+		BlankLine,
+		OtherMethod,
+		OtherMethod,
+		OtherMethod,
+		BlankLine,
+	}
+
+	if len(got[0].lines) != len(want) {
+		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
+	}
+
+	for i := 0; i < len(got[0].lines); i++ {
+		line := got[0].lines[i]
+		if line.entityType != want[i] {
+			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+		}
+	}
+
+	c.opts.MemberOrdering = []string{
+		"public-constructor",
+		"named-constructors",
+		"public-static-variables",
+		"public-instance-variables",
+		"public-override-variables",
+		"private-static-variables",
+		"private-instance-variables",
+		"public-override-methods",
+		"public-other-methods",
+		"build-method",
+	}
+
+	edits := c.generateEdits(got)
+	if want := 1; len(edits) != want {
+		t.Errorf("want %v edits, got %v", len(edits), want)
+	}
+
+	newBuf := c.rewriteClasses(issue18_dart_txt, edits)
+	gotLines := strings.Split(newBuf, "\n")
+	wantLines := strings.Split(issue18_case1_txt, "\n")
+	if len(gotLines) != len(wantLines) {
+		t.Errorf("rewriteClasses = %v lines, want %v lines", len(gotLines), len(wantLines))
+		t.Errorf("rewriteClasses got:\n%v", newBuf)
+	}
+
+	for i := 0; i < len(gotLines); i++ {
+		line := strings.ReplaceAll(gotLines[i], "\r", "")
+		if line != wantLines[i] {
+			t.Errorf("line #%v: got:\n%v\nwant:\n%v", i+1, line, wantLines[i])
+		}
+	}
+}
+
 func TestFindFeatures_linux_mac(t *testing.T) {
 	bc, bcLineOffset, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
 
