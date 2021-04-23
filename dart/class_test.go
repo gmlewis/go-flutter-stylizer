@@ -239,6 +239,89 @@ func TestHandleOverriddenGettersWithBodies(t *testing.T) {
 	}
 }
 
+func TestIssue9_ConstructorFalsePositive(t *testing.T) {
+	const source = `class PGDateTime {
+// value xor isInfinity
+PGDateTime({
+    this.value,
+    this.isInfinity = false,
+}) : assert((value != null || isInfinity == true) &&
+            !(value != null && isInfinity == true));
+
+PGDateTime.infinity() {
+    isInfinity = true;
+}
+
+PGDateTime.now() {
+    value = DateTime.now();
+    isInfinity = false;
+}
+
+PGDateTime.fromDateTime(this.value) : isInfinity = false;
+
+bool isInfinity = false;
+DateTime value;
+
+static PGDateTime parse(String formattedString) =>
+    formattedString == 'infinity'
+        ? PGDateTime.infinity()
+        : PGDateTime(value: DateTime.parse(formattedString).toLocal());
+}`
+
+	e := NewEditor(source)
+	e.Verbose = true
+	c := &Client{}
+	got, err := c.GetClasses(e, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := 1; len(got) != want {
+		t.Errorf("GetClasses = %v, want %v", got, want)
+	}
+
+	want := []EntityType{
+		Unknown,
+		MainConstructor,
+		MainConstructor,
+		MainConstructor,
+		MainConstructor,
+		MainConstructor,
+		MainConstructor,
+		BlankLine,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		BlankLine,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		BlankLine,
+		NamedConstructor,
+		BlankLine,
+		InstanceVariable,
+		InstanceVariable,
+		BlankLine,
+		OtherMethod,
+		OtherMethod,
+		OtherMethod,
+		OtherMethod,
+		BlankLine,
+	}
+
+	if len(got[0].lines) != len(want) {
+		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
+	}
+
+	for i := 0; i < len(got[0].lines); i++ {
+		line := got[0].lines[i]
+		if line.entityType != want[i] {
+			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+		}
+	}
+}
+
 func TestFindFeatures_linux_mac(t *testing.T) {
 	bc, bcLineOffset, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
 
