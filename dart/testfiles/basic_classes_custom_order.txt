@@ -9,10 +9,26 @@ class Class1 {
 
   Class1.fromNum();
 
-  static int sv;
+  // "Here is 'where we add ${ text to "trip 'up' ''' the ${dart parser}.
+  /*
+    '''
+    """
+    //
+  */
+  static const a = """;
+   '${b};
+   ''' ;
+  """;
+
+  static const b = ''';
+    {  (  ))) """ {{{} ))));
+  ''';
+
+  static const c = {'{{{((... """ ${'((('};'};
+  static int sv = 0;
 
   final double fv = 42.0;
-  int v;
+  int v = 2;
 
   @override
   toString() {
@@ -24,24 +40,25 @@ class Class1 {
 
   get vv => v; // getter
 
+  // This is a random single-line comment somewhere in the class.
+
+  // _spv is a static private variable.
+  static final String _spv = 'spv';
+
   /* This is a
    * random multi-
    * line comment
    * somewhere in the middle
    * of the class */
 
-  // This is a random single-line comment somewhere in the class.
-
-  // _spv is a static private variable.
-  static final String _spv = 'spv';
-
   // _spvni is a static private variable with no initializer.
-  static double _spvni;
+  static double _spvni = 0;
 
   // _pvi is a private instance variable.
   List<String> _pvi = ['one', 'two'];
 
-  int _pvini;
+  int _pvini = 1;
 
   @override
-  build() {}  // build method
+  build() {} // build method
+}

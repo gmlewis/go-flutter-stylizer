@@ -433,6 +433,117 @@ func TestIssue11_RunWithDefaultMemberOrdering(t *testing.T) {
 	}
 }
 
+//go:embed testfiles/basic_classes_custom_order.txt
+var basicClassesCustomOrder string
+
+func TestIssue11_RunWithCustomMemberOrdering(t *testing.T) {
+	e := NewEditor(basicClasses)
+	c := &Client{}
+	got, err := c.GetClasses(e, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := 1; len(got) != want {
+		t.Errorf("GetClasses = %v, want %v", got, want)
+	}
+
+	want := []EntityType{
+		Unknown,                 // line #1: {
+		PrivateInstanceVariable, // line #2:   // _pvi is a private instance variable.
+		PrivateInstanceVariable, // line #3:   List<String> _pvi = ['one', 'two'];
+		BuildMethod,             // line #4:   @override
+		BuildMethod,             // line #5:   build() {} // build method
+		BlankLine,               // line #6:
+		StaticPrivateVariable,   // line #7:   // This is a random single-line comment somewhere in the class.
+		StaticPrivateVariable,   // line #8:
+		StaticPrivateVariable,   // line #9:   // _spv is a static private variable.
+		StaticPrivateVariable,   // line #10:   static final String _spv = 'spv';
+		BlankLine,               // line #11:
+		StaticPrivateVariable,   // line #12:   /* This is a
+		StaticPrivateVariable,   // line #13:    * random multi-
+		StaticPrivateVariable,   // line #14:    * line comment
+		StaticPrivateVariable,   // line #15:    * somewhere in the middle
+		StaticPrivateVariable,   // line #16:    * of the class */
+		StaticPrivateVariable,   // line #17:
+		StaticPrivateVariable,   // line #18:   // _spvni is a static private variable with no initializer.
+		StaticPrivateVariable,   // line #19:   static double _spvni = 0;
+		PrivateInstanceVariable, // line #20:   int _pvini = 1;
+		StaticVariable,          // line #21:   static int sv = 0;
+		InstanceVariable,        // line #22:   int v = 2;
+		InstanceVariable,        // line #23:   final double fv = 42.0;
+		MainConstructor,         // line #24:   Class1();
+		NamedConstructor,        // line #25:   Class1.fromNum();
+		OtherMethod,             // line #26:   var myfunc = (int n) => n;
+		OtherMethod,             // line #27:   get vv => v; // getter
+		OverrideMethod,          // line #28:   @override
+		OverrideMethod,          // line #29:   toString() {
+		OverrideMethod,          // line #30:     print('$_pvi, $_spv, $_spvni, $_pvini, ${sqrt(2)}');
+		OverrideMethod,          // line #31:     return '';
+		OverrideMethod,          // line #32:   }
+		BlankLine,               // line #33:
+		StaticVariable,          // line #34:   // "Here is 'where we add ${ text to "trip 'up' ''' the ${dart parser}.
+		StaticVariable,          // line #35:   /*
+		StaticVariable,          // line #36:     '''
+		StaticVariable,          // line #37:     """
+		StaticVariable,          // line #38:     //
+		StaticVariable,          // line #39:   */
+		StaticVariable,          // line #40:   static const a = """;
+		StaticVariable,          // line #41:    '${b};
+		StaticVariable,          // line #42:    ''' ;
+		StaticVariable,          // line #43:   """;
+		StaticVariable,          // line #44:   static const b = ''';
+		StaticVariable,          // line #45:     {  (  ))) """ {{{} ))));
+		StaticVariable,          // line #46:   ''';
+		StaticVariable,          // line #47:   static const c = {'{{{((... """ ${'((('};'};
+		BlankLine,               // line #48:
+	}
+
+	if len(got[0].lines) != len(want) {
+		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
+	}
+
+	for i := 0; i < len(got[0].lines); i++ {
+		line := got[0].lines[i]
+		if line.entityType != want[i] {
+			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+		}
+	}
+
+	c.opts.MemberOrdering = []string{
+		"public-constructor",
+		"named-constructors",
+		"public-static-variables",
+		"public-instance-variables",
+		"public-override-variables",
+		"public-override-methods",
+		"public-other-methods",
+		"private-static-variables",
+		"private-instance-variables",
+		"build-method",
+	}
+
+	edits := c.generateEdits(got)
+	if want := 1; len(edits) != want {
+		t.Errorf("want %v edits, got %v", len(edits), want)
+	}
+
+	newBuf := c.rewriteClasses(basicClasses, edits)
+	gotLines := strings.Split(newBuf, "\n")
+	wantLines := strings.Split(basicClassesCustomOrder, "\n")
+	if len(gotLines) != len(wantLines) {
+		t.Errorf("rewriteClasses = %v lines, want %v lines", len(gotLines), len(wantLines))
+		t.Errorf("rewriteClasses got:\n%v", newBuf)
+	}
+
+	for i := 0; i < len(gotLines); i++ {
+		line := strings.ReplaceAll(gotLines[i], "\r", "")
+		if line != wantLines[i] {
+			t.Errorf("line #%v: got:\n%v\nwant:\n%v", i+1, line, wantLines[i])
+		}
+	}
+}
+
 func TestFindFeatures_linux_mac(t *testing.T) {
 	bc, bcLineOffset, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
 
