@@ -544,6 +544,82 @@ func TestIssue11_RunWithCustomMemberOrdering(t *testing.T) {
 	}
 }
 
+func TestIssue16SupportNewPublicOverrideVariablesFeature(t *testing.T) {
+	const source = `
+class Chat extends Equatable implements SubscriptionObject {
+  final String displayName;
+  final ChatText? lastText;
+  final List<User> users;
+
+  Chat({
+    required this.id,
+    required this.users,
+    required this.lastText,
+    required this.displayName,
+  });
+
+  @override
+  final String id;
+
+  @override
+  List<Object?> get props => [
+        id,
+        users,
+        lastText,
+        displayName,
+      ];
+}
+`
+
+	e := NewEditor(source)
+	c := &Client{}
+	got, err := c.GetClasses(e, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := 1; len(got) != want {
+		t.Errorf("GetClasses = %v, want %v", got, want)
+	}
+
+	want := []EntityType{
+		Unknown,
+		InstanceVariable,
+		InstanceVariable,
+		InstanceVariable,
+		BlankLine,
+		MainConstructor,
+		MainConstructor,
+		MainConstructor,
+		MainConstructor,
+		MainConstructor,
+		MainConstructor,
+		BlankLine,
+		OverrideVariable,
+		OverrideVariable,
+		BlankLine,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		BlankLine,
+	}
+
+	if len(got[0].lines) != len(want) {
+		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
+	}
+
+	for i := 0; i < len(got[0].lines); i++ {
+		line := got[0].lines[i]
+		if line.entityType != want[i] {
+			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+		}
+	}
+}
+
 func TestFindFeatures_linux_mac(t *testing.T) {
 	bc, bcLineOffset, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
 
