@@ -296,6 +296,63 @@ static PGDateTime parse(String formattedString) =>
 	runParsePhase(t, nil, source, want)
 }
 
+func TestGetOnSeparateLine(t *testing.T) {
+	source := `class _LinkedNodeImpl extends Object
+    with _LinkedNodeMixin
+    implements idl.LinkedNode {
+  final fb.BufferContext _bc;
+  final int _bcOffset;
+
+  _LinkedNodeImpl(this._bc, this._bcOffset);
+
+  @override
+  idl.LinkedNodeTypeSubstitution
+      get redirectingConstructorInvocation_substitution {
+    assert(kind == idl.LinkedNodeKind.redirectingConstructorInvocation);
+    _variantField_38 ??= const _LinkedNodeTypeSubstitutionReader()
+        .vTableGet(_bc, _bcOffset, 38, null);
+    return _variantField_38;
+  }
+}`
+	wantSource := `class _LinkedNodeImpl extends Object
+    with _LinkedNodeMixin
+    implements idl.LinkedNode {
+  _LinkedNodeImpl(this._bc, this._bcOffset);
+
+  final fb.BufferContext _bc;
+  final int _bcOffset;
+
+  @override
+  idl.LinkedNodeTypeSubstitution
+      get redirectingConstructorInvocation_substitution {
+    assert(kind == idl.LinkedNodeKind.redirectingConstructorInvocation);
+    _variantField_38 ??= const _LinkedNodeTypeSubstitutionReader()
+        .vTableGet(_bc, _bcOffset, 38, null);
+    return _variantField_38;
+  }
+}`
+
+	want := []EntityType{
+		Unknown,                 // line #1: {
+		PrivateInstanceVariable, // line #2:   final fb.BufferContext _bc;
+		PrivateInstanceVariable, // line #3:   final int _bcOffset;
+		BlankLine,               // line #4:
+		MainConstructor,         // line #5:   _LinkedNodeImpl(this._bc, this._bcOffset);
+		BlankLine,               // line #6:
+		OverrideMethod,          // line #7:   @override
+		OverrideMethod,          // line #8:   idl.LinkedNodeTypeSubstitution
+		OverrideMethod,          // line #9:       get redirectingConstructorInvocation_substitution {
+		OverrideMethod,          // line #10:     assert(kind == idl.LinkedNodeKind.redirectingConstructorInvocation);
+		OverrideMethod,          // line #11:     _variantField_38 ??= const _LinkedNodeTypeSubstitutionReader()
+		OverrideMethod,          // line #12:         .vTableGet(_bc, _bcOffset, 38, null);
+		OverrideMethod,          // line #13:     return _variantField_38;
+		OverrideMethod,          // line #14:   }
+		BlankLine,               // line #15:
+	}
+
+	runFullStylizer(t, nil, source, wantSource, want)
+}
+
 //go:embed testfiles/basic_classes_default_order.txt
 var basicClassesDefaultOrder string
 

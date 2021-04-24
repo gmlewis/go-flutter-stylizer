@@ -204,14 +204,6 @@ func (c *Class) FindFeatures() error {
 	return nil
 }
 
-// func (c *Class) genStripped(startLine int) string {
-// 	var strippedLines []string
-// 	for i := startLine; i < len(c.lines); i++ {
-// 		strippedLines = append(strippedLines, c.lines[i].stripped)
-// 	}
-// 	return strings.Join(strippedLines, "\n")
-// }
-
 func (c *Class) identifyDeprecatedAsComments() error {
 	const depStr = "@deprecated("
 
@@ -314,143 +306,157 @@ func (c *Class) identifyNamedConstructors() error {
 
 func (c *Class) identifyOverrideMethodsAndVars() error {
 	for i := 1; i < len(c.lines); i++ {
-		line := c.lines[i]
-		if line.entityType != Unknown {
+		if c.lines[i].entityType != Unknown {
 			continue
 		}
 
-		if strings.HasPrefix(line.stripped, "@override") && i < len(c.lines)-1 {
-			lineNum := i + 1
+		if !strings.HasPrefix(c.lines[i].stripped, "@override") || i >= len(c.lines)-1 {
+			continue
+		}
 
-			equalsStrippedIndex := strings.Index(c.lines[lineNum].stripped, "=")
-			fatArrowStrippedIndex := strings.Index(c.lines[lineNum].stripped, "=>")
-			openCurlyStrippedIndex := strings.Index(c.lines[lineNum].stripped, "{")
-			offset := strings.Index(c.lines[lineNum].stripped, "(")
-			c.e.logf("identifyOverrideMethodsAndVars: line #%v, '('offset=%v, equalsIndex=%v, fatArrowStrippedIndex=%v, openCurlyStrippedIndex=%v, stripped=%q",
-				lineNum+1, offset, equalsStrippedIndex, fatArrowStrippedIndex, openCurlyStrippedIndex, c.lines[lineNum].stripped)
+		lineNum := i + 1
 
-			if offset >= 0 &&
-				(openCurlyStrippedIndex < 0 || openCurlyStrippedIndex > offset) &&
-				(equalsStrippedIndex < 0 || equalsStrippedIndex > offset) &&
-				(fatArrowStrippedIndex < 0 || fatArrowStrippedIndex > offset) {
-				// Include open paren in name.
-				ss := c.lines[lineNum].stripped[0 : offset+1]
-				// Search for beginning of method name.
-				nameOffset := strings.LastIndex(ss, " ") + 1
-				name := ss[nameOffset:]
-				entityType := OverrideMethod
-				if name == "build(" {
-					entityType = BuildMethod
+		startLine := c.lines[lineNum]
+		cursor := &Cursor{
+			e:         c.e,
+			absOffset: startLine.startOffset + startLine.strippedOffset,
+			lineIndex: startLine.originalIndex,
+
+			relStrippedOffset: 0,
+
+			reader: strings.NewReader(c.e.lines[startLine.originalIndex].stripped),
+		}
+		c.e.logf("identifyOverrideMethodsAndVars - searching for [=,=>,{,(,;] - (line=%v): %#v, cursor=%v", lineNum+1, startLine, cursor)
+		features, err := cursor.advanceUntil("=", "{", "(", ";")
+		if err != nil || len(features) == 0 {
+			return fmt.Errorf(`advanceUntil("=", "{", "(", ";"): %v`, err)
+		}
+		c.e.logf("cursor=%v, features=%v", cursor, strings.Join(features, ""))
+
+		if features[len(features)-1] == "(" {
+			// Include open paren in name.
+			ss := strings.Join(features, "")
+			// Search for beginning of method name.
+			nameOffset := strings.LastIndex(ss, " ") + 1
+			name := ss[nameOffset:]
+			entityType := OverrideMethod
+			if name == "build(" {
+				entityType = BuildMethod
+			}
+			if c.lines[i].entityType >= MainConstructor && c.lines[i].entityType != entityType {
+				if err := c.repairIncorrectlyLabeledLine(i); err != nil {
+					return err
 				}
-				if c.lines[i].entityType >= MainConstructor && c.lines[i].entityType != entityType {
-					if err := c.repairIncorrectlyLabeledLine(i); err != nil {
-						return err
-					}
-				}
-				c.lines[i].entityType = entityType
+			}
+			c.lines[i].entityType = entityType
 
-				c.e.logf("identifyOverrideMethodsAndVars: calling markMethod(line #%v, name=%q, %v), stripped=%q", lineNum+1, name, entityType, c.lines[lineNum].stripped)
-				entity, err := c.markMethod(lineNum, name, entityType)
+			c.e.logf("identifyOverrideMethodsAndVars: calling markMethod(line #%v, name=%q, %v), stripped=%q", lineNum+1, name, entityType, c.lines[lineNum].stripped)
+			entity, err := c.markMethod(lineNum, name, entityType)
+			if err != nil {
+				return err
+			}
+			if name == "build(" {
+				c.buildMethod = entity
+			} else {
+				c.overrideMethods = append(c.overrideMethods, entity)
+			}
+		} else {
+			entity := &Entity{
+				entityType: OverrideMethod,
+			}
+
+			// No open paren - could be a getter. See if it has a body.
+			if features[len(features)-1] == "{" {
+				// lineOffset := strings.Index(c.classBody, c.lines[lineNum].line)
+				// inLineOffset := strings.Index(c.lines[lineNum].line, "{")
+				// relOpenCurlyOffset := lineOffset + inLineOffset
+
+				// if c.classBody[relOpenCurlyOffset] != '{' {
+				// 	return fmt.Errorf("expected open curly bracket at relative offset %v but got %q", relOpenCurlyOffset, c.classBody[relOpenCurlyOffset:])
+				// }
+
+				absOpenCurlyOffset := cursor.absOffset - 1
+				if c.e.fullBuf[absOpenCurlyOffset] != '{' {
+					return fmt.Errorf("identifyOverrideMethodsAndVars: expected '{' at offset %v but got %c", absOpenCurlyOffset, c.e.fullBuf[absOpenCurlyOffset])
+				}
+
+				c.e.logf("identifyOverrideMethodsAndVars: calling findMatchingBracket(%v)", absOpenCurlyOffset)
+				absCloseCurlyOffset, err := c.e.findMatchingBracket(absOpenCurlyOffset)
 				if err != nil {
 					return err
 				}
-				if name == "build(" {
-					c.buildMethod = entity
-				} else {
-					c.overrideMethods = append(c.overrideMethods, entity)
+
+				relCloseCurlyOffset := absCloseCurlyOffset - c.openCurlyOffset
+
+				if c.classBody[relCloseCurlyOffset] != '}' {
+					return fmt.Errorf("expected '}' at relative offset %v but got %c: %q", relCloseCurlyOffset, c.classBody[relCloseCurlyOffset], c.classBody[relCloseCurlyOffset:])
+				}
+
+				lineOffset := c.lines[lineNum].startOffset - c.openCurlyOffset
+				bodyBuf := c.classBody[lineOffset : relCloseCurlyOffset+1]
+				numLines := len(strings.Split(bodyBuf, "\n"))
+				for j := 0; j < numLines; j++ {
+					if c.lines[lineNum+j].entityType >= MainConstructor && c.lines[lineNum+j].entityType != entity.entityType {
+						if err := c.repairIncorrectlyLabeledLine(lineNum + j); err != nil {
+							return err
+						}
+					}
+					c.e.logf("identifyOverrideMethodsAndVars: marking body line %v as type %v", lineNum+j+1, entity.entityType)
+					c.lines[lineNum+j].entityType = entity.entityType
+					entity.lines = append(entity.lines, c.lines[lineNum+j])
 				}
 			} else {
-				entity := &Entity{
-					entityType: OverrideMethod,
+				// Does not have a body - if it has no fat arrow, it is a variable.
+				if features[len(features)-1] != "=" ||
+					(cursor.absOffset < len(c.e.fullBuf) && c.e.fullBuf[cursor.absOffset] != '>') {
+					entity.entityType = OverrideVariable
 				}
 
-				// No open paren - could be a getter. See if it has a body.
-				if openCurlyStrippedIndex >= 0 &&
-					(fatArrowStrippedIndex < 0 || fatArrowStrippedIndex > openCurlyStrippedIndex) {
-					lineOffset := strings.Index(c.classBody, c.lines[lineNum].line)
-					inLineOffset := strings.Index(c.lines[lineNum].line, "{")
-					relOpenCurlyOffset := lineOffset + inLineOffset
+				startLine := c.lines[lineNum]
+				cursor := &Cursor{
+					e:         c.e,
+					absOffset: startLine.startOffset + startLine.strippedOffset,
+					lineIndex: startLine.originalIndex,
 
-					if c.classBody[relOpenCurlyOffset] != '{' {
-						return fmt.Errorf("expected open curly bracket at relative offset %v but got %q", relOpenCurlyOffset, c.classBody[relOpenCurlyOffset:])
-					}
+					relStrippedOffset: 0,
 
-					absOpenCurlyOffset := c.openCurlyOffset + relOpenCurlyOffset
-					c.e.logf("identifyOverrideMethodsAndVars: calling findMatchingBracket(%v)", absOpenCurlyOffset)
-					absCloseCurlyOffset, err := c.e.findMatchingBracket(absOpenCurlyOffset)
-					if err != nil {
-						return err
-					}
+					reader: strings.NewReader(c.e.lines[startLine.originalIndex].stripped),
+				}
+				c.e.logf("identifyOverrideMethodsAndVars - searching for ';' - (line=%v): %#v, cursor=%v", lineNum+1, startLine, cursor)
+				_, err := cursor.advanceUntil(";")
+				if err != nil {
+					return fmt.Errorf("advanceUntil(';'): %v", err)
+				}
+				c.e.logf("cursor=%v", cursor)
 
-					relCloseCurlyOffset := absCloseCurlyOffset - c.openCurlyOffset
-
-					if c.classBody[relCloseCurlyOffset] != '}' {
-						return fmt.Errorf("expected close curly bracket at relative offset %v but got %c: %q", relCloseCurlyOffset, c.classBody[relCloseCurlyOffset], c.classBody[relCloseCurlyOffset:])
-					}
-
-					nextOffset := absCloseCurlyOffset - c.openCurlyOffset
-					bodyBuf := c.classBody[lineOffset : nextOffset+1]
-					numLines := len(strings.Split(bodyBuf, "\n"))
-					for j := 0; j < numLines; j++ {
-						if c.lines[lineNum+j].entityType >= MainConstructor && c.lines[lineNum+j].entityType != entity.entityType {
-							if err := c.repairIncorrectlyLabeledLine(lineNum + j); err != nil {
-								return err
-							}
+				numLines := cursor.lineIndex - startLine.originalIndex
+				for j := lineNum; j <= lineNum+numLines; j++ {
+					if c.lines[j].entityType >= MainConstructor && c.lines[j].entityType != entity.entityType {
+						if err := c.repairIncorrectlyLabeledLine(j); err != nil {
+							return err
 						}
-						c.lines[lineNum+j].entityType = entity.entityType
-						entity.lines = append(entity.lines, c.lines[lineNum+j])
 					}
-				} else {
-					// Does not have a body - if it has no fat arrow, it is a variable.
-					if strings.Index(c.lines[lineNum].stripped, "=>") < 0 {
-						entity.entityType = OverrideVariable
-					}
-
-					startLine := c.lines[lineNum]
-					cursor := &Cursor{
-						e:         c.e,
-						absOffset: startLine.startOffset + startLine.strippedOffset,
-						lineIndex: startLine.originalIndex,
-
-						relStrippedOffset: 0,
-
-						reader: strings.NewReader(c.e.lines[startLine.originalIndex].stripped),
-					}
-					c.e.logf("identifyOverrideMethodsAndVars - searching for ';' - (line=%v): %#v, cursor=%v", lineNum+1, startLine, cursor)
-					_, err := cursor.advanceUntil(";")
-					if err != nil {
-						return fmt.Errorf("advanceUntil(';'): %v", err)
-					}
-					c.e.logf("cursor=%v", cursor)
-
-					numLines := cursor.lineIndex - startLine.originalIndex
-					for j := lineNum; j <= lineNum+numLines; j++ {
-						if c.lines[j].entityType >= MainConstructor && c.lines[j].entityType != entity.entityType {
-							if err := c.repairIncorrectlyLabeledLine(j); err != nil {
-								return err
-							}
-						}
-						c.e.logf("identifyOverrideMethodsAndVars: marking line %v as type %v", j+1, entity.entityType)
-						c.lines[j].entityType = entity.entityType
-						entity.lines = append(entity.lines, c.lines[j])
-					}
+					c.e.logf("identifyOverrideMethodsAndVars: marking line %v as type %v", j+1, entity.entityType)
+					c.lines[j].entityType = entity.entityType
+					entity.lines = append(entity.lines, c.lines[j])
 				}
+			}
 
-				// Preserve the comment lines leading up to the method.
-				for lineNum--; lineNum > 0; lineNum-- {
-					if isComment(c.lines[lineNum]) || strings.HasPrefix(c.lines[lineNum].stripped, "@") {
-						c.lines[lineNum].entityType = entity.entityType
-						entity.lines = append([]*Line{c.lines[lineNum]}, entity.lines...)
-						continue
-					}
-					break
+			// Preserve the comment lines leading up to the method.
+			for lineNum--; lineNum > 0; lineNum-- {
+				if isComment(c.lines[lineNum]) || strings.HasPrefix(c.lines[lineNum].stripped, "@") {
+					c.e.logf("identifyOverrideMethodsAndVars: marking comment line %v as type %v", lineNum+1, entity.entityType)
+					c.lines[lineNum].entityType = entity.entityType
+					entity.lines = append([]*Line{c.lines[lineNum]}, entity.lines...)
+					continue
 				}
+				break
+			}
 
-				if entity.entityType == OverrideVariable {
-					c.overrideVariables = append(c.overrideVariables, entity)
-				} else {
-					c.overrideMethods = append(c.overrideMethods, entity)
-				}
+			if entity.entityType == OverrideVariable {
+				c.overrideVariables = append(c.overrideVariables, entity)
+			} else {
+				c.overrideMethods = append(c.overrideMethods, entity)
 			}
 		}
 	}
