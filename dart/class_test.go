@@ -658,6 +658,47 @@ func TestIssue18Case3(t *testing.T) {
 	runFullStylizer(t, opts, source, wantSource, want)
 }
 
+func TestIssue18Case4(t *testing.T) {
+	const groupAndSortGetterMethods = true
+	const sortOtherMethods = true
+	source := issue18_dart_txt
+	wantSource := issue18_case4_txt
+
+	opts := &Options{
+		GroupAndSortGetterMethods: groupAndSortGetterMethods,
+		MemberOrdering:            defaultMemberOrdering,
+		SortOtherMethods:          sortOtherMethods,
+	}
+
+	want := []EntityType{
+		Unknown,
+		PrivateInstanceVariable,
+		BlankLine,
+		MainConstructor,
+		BlankLine,
+		GetterMethod,
+		BlankLine,
+		PrivateInstanceVariable,
+		BlankLine,
+		OtherMethod,
+		BlankLine,
+		GetterMethod,
+		BlankLine,
+		OtherMethod,
+		OtherMethod,
+		OtherMethod,
+		BlankLine,
+		OtherMethod,
+		BlankLine,
+		OtherMethod,
+		OtherMethod,
+		OtherMethod,
+		BlankLine,
+	}
+
+	runFullStylizer(t, opts, source, wantSource, want)
+}
+
 func TestFindFeatures_linux_mac(t *testing.T) {
 	bc, bcLineOffset, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
 
