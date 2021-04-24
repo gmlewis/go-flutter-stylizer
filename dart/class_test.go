@@ -89,20 +89,13 @@ class myClass extends Widget {
 
 }`
 
-	e := NewEditor(source)
-	c := &Client{}
-	got, err := c.GetClasses(e, false)
-	if err != nil {
-		t.Fatal(err)
+	want := []EntityType{
+		Unknown,
+		BlankLine,
+		BlankLine,
 	}
 
-	if want := 1; len(got) != want {
-		t.Errorf("GetClasses = %v, want %v", got, want)
-	}
-
-	if want := 3; len(got[0].lines) != want {
-		t.Errorf("GetClasses lines = %v, want %v", len(got[0].lines), want)
-	}
+	runParsePhase(t, nil, source, want)
 }
 
 func TestNamedConstructorsAreKeptIntact(t *testing.T) {
@@ -124,17 +117,6 @@ with AnimationEagerListenerMixin, AnimationLocalListenersMixin, AnimationLocalSt
 	}
 }`
 
-	e := NewEditor(source)
-	c := &Client{}
-	got, err := c.GetClasses(e, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want := 1; len(got) != want {
-		t.Errorf("GetClasses = %v, want %v", got, want)
-	}
-
 	want := []EntityType{
 		Unknown,          // line #1: {
 		NamedConstructor, // line #2: 	AnimationController.unbounded({
@@ -154,16 +136,7 @@ with AnimationEagerListenerMixin, AnimationLocalListenersMixin, AnimationLocalSt
 		BlankLine,        // line #16:
 	}
 
-	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
-	}
-
-	for i := 0; i < len(got[0].lines); i++ {
-		line := got[0].lines[i]
-		if line.entityType != want[i] {
-			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
-		}
-	}
+	runParsePhase(t, nil, source, want)
 }
 
 func TestPrivateConstructorsAreKeptIntact(t *testing.T) {
@@ -175,17 +148,6 @@ _InterpolationSimulation(this._begin, this._end, Duration duration, this._curve,
 		_durationInSeconds = (duration.inMicroseconds * scale) / Duration.microsecondsPerSecond;
 }`
 
-	e := NewEditor(source)
-	c := &Client{}
-	got, err := c.GetClasses(e, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want := 1; len(got) != want {
-		t.Errorf("GetClasses = %v, want %v", got, want)
-	}
-
 	want := []EntityType{
 		Unknown,
 		MainConstructor,
@@ -196,16 +158,7 @@ _InterpolationSimulation(this._begin, this._end, Duration duration, this._curve,
 		BlankLine,
 	}
 
-	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
-	}
-
-	for i := 0; i < len(got[0].lines); i++ {
-		line := got[0].lines[i]
-		if line.entityType != want[i] {
-			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
-		}
-	}
+	runParsePhase(t, nil, source, want)
 }
 
 func TestHandleOverriddenGettersWithBodies(t *testing.T) {
