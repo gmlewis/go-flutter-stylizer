@@ -311,7 +311,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 		if err := c.advanceToNextLine(); err != nil {
 			return "", err
 		}
-		return c.advanceToNextFeature()
+		r, size, err = ' ', 1, nil // replace newline with single space
 	}
 
 	if size > 1 { // a utf-8 rune of no interest; return it.

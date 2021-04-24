@@ -415,6 +415,28 @@ func TestMarkMethodOffsetAlignment(t *testing.T) {
 	runParsePhase(t, nil, source, want)
 }
 
+func TestMultipleDecorators(t *testing.T) {
+	source := `class MultipleDecorators {
+  @override
+  @failingTest
+  test_initializer_literal_map_untyped_empty() async {
+    fail('times out.');
+  }
+}`
+
+	want := []EntityType{
+		Unknown,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		BlankLine,
+	}
+
+	runParsePhase(t, nil, source, want)
+}
+
 //go:embed testfiles/basic_classes_default_order.txt
 var basicClassesDefaultOrder string
 
