@@ -698,10 +698,15 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 		return nil, fmt.Errorf("expected close parenthesis at relative offset %v but got %v", relCloseParenOffset, c.classBody[relCloseParenOffset:])
 	}
 
+	fatArrowOffset := strings.Index(c.classBody[relCloseParenOffset:], "=>")
 	curlyDeltaOffset := strings.Index(c.classBody[relCloseParenOffset:], "{")
 	semicolonOffset := strings.Index(c.classBody[relCloseParenOffset:], ";")
+	c.e.logf("fatArrowOffset=%v, curlyDeltaOffset=%v, semicolonOffset=%v", fatArrowOffset, curlyDeltaOffset, semicolonOffset)
+
 	var nextOffset int
-	if curlyDeltaOffset < 0 || (curlyDeltaOffset >= 0 && semicolonOffset >= 0 && semicolonOffset < curlyDeltaOffset) { // no body.
+	if curlyDeltaOffset < 0 ||
+		(curlyDeltaOffset >= 0 && fatArrowOffset >= 0 && semicolonOffset >= 0 && fatArrowOffset < curlyDeltaOffset && fatArrowOffset < semicolonOffset) ||
+		(curlyDeltaOffset >= 0 && semicolonOffset >= 0 && semicolonOffset < curlyDeltaOffset) { // no curly-braced body.
 		nextOffset = relCloseParenOffset + semicolonOffset
 	} else {
 		absOpenCurlyOffset := absCloseParenOffset + curlyDeltaOffset
