@@ -393,6 +393,28 @@ func TestOperatorOverrides(t *testing.T) {
 	runParsePhase(t, nil, source, want)
 }
 
+func TestMarkMethodOffsetAlignment(t *testing.T) {
+	source := `class MarkMethod {
+  @override
+  // TODO(gmlewis) Implement this by looking in the BUILD file for 'deps'
+  //  lists.
+  Map<String, List<Folder>> packagesAvailableTo(String libraryPath) =>
+      <String, List<Folder>>{};
+}`
+
+	want := []EntityType{
+		Unknown,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		BlankLine,
+	}
+
+	runParsePhase(t, nil, source, want)
+}
+
 //go:embed testfiles/basic_classes_default_order.txt
 var basicClassesDefaultOrder string
 

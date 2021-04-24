@@ -710,6 +710,18 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 	}
 
 	line := c.lines[lineNum]
+	for {
+		index := strings.Index(line.line, methodName)
+		if index >= 0 {
+			break
+		}
+		lineNum++
+		if lineNum >= len(c.lines) {
+			return nil, fmt.Errorf("expected to find methodName=%q, but ran out of lines", methodName)
+		}
+		line = c.lines[lineNum]
+	}
+
 	absOpenParenOffset := line.startOffset + strings.Index(line.line, methodName) + len(methodName) - 1
 	if c.e.fullBuf[absOpenParenOffset] != '(' {
 		return nil, fmt.Errorf("expected absOpenParenOffset=%v to be '(' but got '%c': line=%q", absOpenParenOffset, c.e.fullBuf[absOpenParenOffset], line.line)
