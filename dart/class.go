@@ -322,13 +322,16 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 		if strings.HasPrefix(line.stripped, "@override") && i < len(c.lines)-1 {
 			lineNum := i + 1
 
+			equalsStrippedIndex := strings.Index(c.lines[lineNum].stripped, "=")
 			fatArrowStrippedIndex := strings.Index(c.lines[lineNum].stripped, "=>")
 			openCurlyStrippedIndex := strings.Index(c.lines[lineNum].stripped, "{")
-			c.e.logf("identifyOverrideMethodsAndVars: line #%v, fatArrowStrippedIndex=%v, openCurlyStrippedIndex=%v, stripped=%q", lineNum+1, fatArrowStrippedIndex, openCurlyStrippedIndex, c.lines[lineNum].stripped)
-
 			offset := strings.Index(c.lines[lineNum].stripped, "(")
+			c.e.logf("identifyOverrideMethodsAndVars: line #%v, '('offset=%v, equalsIndex=%v, fatArrowStrippedIndex=%v, openCurlyStrippedIndex=%v, stripped=%q",
+				lineNum+1, offset, equalsStrippedIndex, fatArrowStrippedIndex, openCurlyStrippedIndex, c.lines[lineNum].stripped)
+
 			if offset >= 0 &&
 				(openCurlyStrippedIndex < 0 || openCurlyStrippedIndex > offset) &&
+				(equalsStrippedIndex < 0 || equalsStrippedIndex > offset) &&
 				(fatArrowStrippedIndex < 0 || fatArrowStrippedIndex > offset) {
 				// Include open paren in name.
 				ss := c.lines[lineNum].stripped[0 : offset+1]
@@ -362,7 +365,8 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 				}
 
 				// No open paren - could be a getter. See if it has a body.
-				if openCurlyStrippedIndex >= 0 && (fatArrowStrippedIndex < 0 || fatArrowStrippedIndex > openCurlyStrippedIndex) {
+				if openCurlyStrippedIndex >= 0 &&
+					(fatArrowStrippedIndex < 0 || fatArrowStrippedIndex > openCurlyStrippedIndex) {
 					lineOffset := strings.Index(c.classBody, c.lines[lineNum].line)
 					inLineOffset := strings.Index(c.lines[lineNum].line, "{")
 					relOpenCurlyOffset := lineOffset + inLineOffset
@@ -398,22 +402,37 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 					}
 				} else {
 					// Does not have a body - if it has no fat arrow, it is a variable.
-					if strings.Index(c.lines[i+1].stripped, "=>") < 0 {
+					if strings.Index(c.lines[lineNum].stripped, "=>") < 0 {
 						entity.entityType = OverrideVariable
 					}
-					// Find next ";", marking entityType forward.
-					for j := i + 1; j < len(c.lines); j++ {
+
+					startLine := c.lines[lineNum]
+					cursor := &Cursor{
+						e:         c.e,
+						absOffset: startLine.startOffset + startLine.strippedOffset,
+						lineIndex: startLine.originalIndex,
+
+						relStrippedOffset: 0,
+
+						reader: strings.NewReader(c.e.lines[startLine.originalIndex].stripped),
+					}
+					c.e.logf("identifyOverrideMethodsAndVars - searching for ';' - (line=%v): %#v, cursor=%v", lineNum+1, startLine, cursor)
+					_, err := cursor.advanceUntil(";")
+					if err != nil {
+						return fmt.Errorf("advanceUntil(';'): %v", err)
+					}
+					c.e.logf("cursor=%v", cursor)
+
+					numLines := cursor.lineIndex - startLine.originalIndex
+					for j := lineNum; j <= lineNum+numLines; j++ {
 						if c.lines[j].entityType >= MainConstructor && c.lines[j].entityType != entity.entityType {
 							if err := c.repairIncorrectlyLabeledLine(j); err != nil {
 								return err
 							}
 						}
+						c.e.logf("identifyOverrideMethodsAndVars: marking line %v as type %v", j+1, entity.entityType)
 						c.lines[j].entityType = entity.entityType
 						entity.lines = append(entity.lines, c.lines[j])
-						semicolonOffset := strings.Index(c.lines[j].stripped, ";")
-						if semicolonOffset >= 0 {
-							break
-						}
 					}
 				}
 
