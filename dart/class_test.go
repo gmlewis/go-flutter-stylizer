@@ -356,23 +356,39 @@ func TestGetOnSeparateLine(t *testing.T) {
 func TestOperatorOverrides(t *testing.T) {
 	source := `class Op {
   @override
+  dynamic operator [](int index) => nodes[index].value;
+
+  @override
+  operator []=(int index, value) {
+    throw UnsupportedError('Cannot modify an unmodifiable List');
+  }
+
+  @override
   bool operator <=(Object other) {
-    return true
+    return true;
   }
 
   @override
   bool operator ==(Object other) {
-    return true
+    return true;
   }
 
   @override
   bool operator >=(Object other) {
-    return true
+    return true;
   }
 }`
 
 	want := []EntityType{
 		Unknown,
+		OverrideMethod,
+		OverrideMethod,
+		BlankLine,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		BlankLine,
 		OverrideMethod,
 		OverrideMethod,
 		OverrideMethod,
