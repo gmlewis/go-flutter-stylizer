@@ -259,6 +259,10 @@ func (c *Class) identifyNamedConstructors() error {
 			}
 			openParenOffset := offset + strings.Index(line.stripped[offset:], "(")
 			namedConstructor := line.stripped[offset : openParenOffset+1] // Include open parenthesis.
+			if namedConstructor == "" {
+				continue
+			}
+
 			if c.lines[i].entityType >= MainConstructor && c.lines[i].entityType != NamedConstructor {
 				if err := c.repairIncorrectlyLabeledLine(i); err != nil {
 					return err
@@ -528,6 +532,19 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
 	incorrectLabel := c.lines[lineNum].entityType
 	switch incorrectLabel {
+	case MainConstructor:
+		el := c.theConstructor
+		for j := 0; j < len(el.lines); j++ {
+			line := el.lines[j]
+			if line != c.lines[lineNum] {
+				continue
+			}
+			c.theConstructor.lines = append(c.theConstructor.lines[:j], c.theConstructor.lines[j+1:]...)
+			if len(c.theConstructor.lines) == 0 {
+				c.theConstructor = nil
+			}
+			return nil
+		}
 	case NamedConstructor:
 		for i := 0; i < len(c.namedConstructors); i++ {
 			el := c.namedConstructors[i]
