@@ -572,12 +572,13 @@ func (c *Class) findSequence(lineNum int) (string, int, string, error) {
 
 	buildLeadingText := true
 	var buildStr []string
-	for _, f := range features {
-		if strings.ContainsAny(f, "(){}=>;") {
-			result = append(result, f)
-			if f != ">" {
-				buildLeadingText = false
+	for i, f := range features {
+		if strings.ContainsAny(f, "()[]{}=;") {
+			buildLeadingText = false
+			if f == "=" && i < len(features)-1 && features[i+1] == ">" {
+				f = "=>"
 			}
+			result = append(result, f)
 		}
 		if buildLeadingText {
 			buildStr = append(buildStr, f)
