@@ -330,17 +330,6 @@ static PGDateTime parse(String formattedString) =>
         : PGDateTime(value: DateTime.parse(formattedString).toLocal());
 }`
 
-	e := NewEditor(source)
-	c := &Client{}
-	got, err := c.GetClasses(e, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want := 1; len(got) != want {
-		t.Errorf("GetClasses = %v, want %v", got, want)
-	}
-
 	want := []EntityType{
 		Unknown,
 		MainConstructor,
@@ -371,16 +360,7 @@ static PGDateTime parse(String formattedString) =>
 		BlankLine,
 	}
 
-	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
-	}
-
-	for i := 0; i < len(got[0].lines); i++ {
-		line := got[0].lines[i]
-		if line.entityType != want[i] {
-			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
-		}
-	}
+	runParsePhase(t, nil, source, want)
 }
 
 //go:embed testfiles/basic_classes_default_order.txt
@@ -389,17 +369,6 @@ var basicClassesDefaultOrder string
 func TestIssue11_RunWithDefaultMemberOrdering(t *testing.T) {
 	source := basicClasses
 	wantSource := basicClassesDefaultOrder
-
-	e := NewEditor(source)
-	c := &Client{}
-	got, err := c.GetClasses(e, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want := 1; len(got) != want {
-		t.Errorf("GetClasses = %v, want %v", got, want)
-	}
 
 	want := []EntityType{
 		Unknown,                 // line #7: class Class1 {
@@ -452,38 +421,7 @@ func TestIssue11_RunWithDefaultMemberOrdering(t *testing.T) {
 		BlankLine,               // line #54: }
 	}
 
-	c.opts.MemberOrdering = defaultMemberOrdering
-
-	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
-	}
-
-	for i := 0; i < len(got[0].lines); i++ {
-		line := got[0].lines[i]
-		if line.entityType != want[i] {
-			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
-		}
-	}
-
-	edits := c.generateEdits(got)
-	if want := 1; len(edits) != want {
-		t.Errorf("want %v edits, got %v", len(edits), want)
-	}
-
-	newBuf := c.rewriteClasses(source, edits)
-	gotLines := strings.Split(newBuf, "\n")
-	wantLines := strings.Split(wantSource, "\n")
-	if len(gotLines) != len(wantLines) {
-		t.Errorf("rewriteClasses = %v lines, want %v lines", len(gotLines), len(wantLines))
-		t.Errorf("rewriteClasses got:\n%v", newBuf)
-	}
-
-	for i := 0; i < len(gotLines); i++ {
-		line := strings.ReplaceAll(gotLines[i], "\r", "")
-		if line != wantLines[i] {
-			t.Errorf("line #%v: got:\n%v\nwant:\n%v", i+1, line, wantLines[i])
-		}
-	}
+	runFullStylizer(t, nil, source, wantSource, want)
 }
 
 //go:embed testfiles/basic_classes_custom_order.txt
