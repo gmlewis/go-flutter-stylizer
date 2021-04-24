@@ -243,17 +243,6 @@ func TestHandleOverriddenGettersWithBodies(t *testing.T) {
   }
 }`
 
-	e := NewEditor(source)
-	c := &Client{}
-	got, err := c.GetClasses(e, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want := 1; len(got) != want {
-		t.Errorf("GetClasses = %v, want %v", got, want)
-	}
-
 	want := []EntityType{
 		Unknown,        // line #1: {
 		OverrideMethod, // line #2:   @override
@@ -289,16 +278,7 @@ func TestHandleOverriddenGettersWithBodies(t *testing.T) {
 		BlankLine,      // line #32: }`
 	}
 
-	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
-	}
-
-	for i := 0; i < len(got[0].lines); i++ {
-		line := got[0].lines[i]
-		if line.entityType != want[i] {
-			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
-		}
-	}
+	runParsePhase(t, nil, source, want)
 }
 
 func TestIssue9_ConstructorFalsePositive(t *testing.T) {
