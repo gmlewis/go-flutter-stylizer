@@ -493,17 +493,6 @@ func TestIssue11_RunWithCustomMemberOrdering(t *testing.T) {
 	source := basicClasses
 	wantSource := basicClassesCustomOrder
 
-	e := NewEditor(source)
-	c := &Client{}
-	got, err := c.GetClasses(e, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want := 1; len(got) != want {
-		t.Errorf("GetClasses = %v, want %v", got, want)
-	}
-
 	want := []EntityType{
 		Unknown,                 // line #1: {
 		PrivateInstanceVariable, // line #2:   // _pvi is a private instance variable.
@@ -555,49 +544,22 @@ func TestIssue11_RunWithCustomMemberOrdering(t *testing.T) {
 		BlankLine,               // line #48:
 	}
 
-	c.opts.MemberOrdering = []string{
-		"public-constructor",
-		"named-constructors",
-		"public-static-variables",
-		"public-instance-variables",
-		"public-override-variables",
-		"public-override-methods",
-		"public-other-methods",
-		"private-static-variables",
-		"private-instance-variables",
-		"build-method",
+	opts := &Options{
+		MemberOrdering: []string{
+			"public-constructor",
+			"named-constructors",
+			"public-static-variables",
+			"public-instance-variables",
+			"public-override-variables",
+			"public-override-methods",
+			"public-other-methods",
+			"private-static-variables",
+			"private-instance-variables",
+			"build-method",
+		},
 	}
 
-	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
-	}
-
-	for i := 0; i < len(got[0].lines); i++ {
-		line := got[0].lines[i]
-		if line.entityType != want[i] {
-			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
-		}
-	}
-
-	edits := c.generateEdits(got)
-	if want := 1; len(edits) != want {
-		t.Errorf("want %v edits, got %v", len(edits), want)
-	}
-
-	newBuf := c.rewriteClasses(source, edits)
-	gotLines := strings.Split(newBuf, "\n")
-	wantLines := strings.Split(wantSource, "\n")
-	if len(gotLines) != len(wantLines) {
-		t.Errorf("rewriteClasses = %v lines, want %v lines", len(gotLines), len(wantLines))
-		t.Errorf("rewriteClasses got:\n%v", newBuf)
-	}
-
-	for i := 0; i < len(gotLines); i++ {
-		line := strings.ReplaceAll(gotLines[i], "\r", "")
-		if line != wantLines[i] {
-			t.Errorf("line #%v: got:\n%v\nwant:\n%v", i+1, line, wantLines[i])
-		}
-	}
+	runFullStylizer(t, opts, source, wantSource, want)
 }
 
 func TestIssue16SupportNewPublicOverrideVariablesFeature(t *testing.T) {
@@ -627,17 +589,6 @@ class Chat extends Equatable implements SubscriptionObject {
 }
 `
 
-	e := NewEditor(source)
-	c := &Client{}
-	got, err := c.GetClasses(e, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want := 1; len(got) != want {
-		t.Errorf("GetClasses = %v, want %v", got, want)
-	}
-
 	want := []EntityType{
 		Unknown,
 		InstanceVariable,
@@ -664,16 +615,7 @@ class Chat extends Equatable implements SubscriptionObject {
 		BlankLine,
 	}
 
-	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
-	}
-
-	for i := 0; i < len(got[0].lines); i++ {
-		line := got[0].lines[i]
-		if line.entityType != want[i] {
-			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
-		}
-	}
+	runParsePhase(t, nil, source, want)
 }
 
 func TestIssue17FunctionTypeVariableIsNotAFunction(t *testing.T) {
