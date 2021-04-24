@@ -603,6 +603,21 @@ func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
 				return nil
 			}
 		}
+	case OverrideVariable:
+		for i := 0; i < len(c.overrideVariables); i++ {
+			el := c.overrideVariables[i]
+			for j := 0; j < len(el.lines); j++ {
+				line := el.lines[j]
+				if line != c.lines[lineNum] {
+					continue
+				}
+				c.overrideVariables[i].lines = append(c.overrideVariables[i].lines[:j], c.overrideVariables[i].lines[j+1:]...)
+				if len(c.overrideVariables[i].lines) == 0 {
+					c.overrideVariables = append(c.overrideVariables[:i], c.overrideVariables[i+1:]...)
+				}
+				return nil
+			}
+		}
 	default:
 		return fmt.Errorf("repairIncorrectlyLabeledLine: line #%v, unhandled case %v. Please report on GitHub Issue Tracker with example test case.", lineNum+1, incorrectLabel)
 	}
