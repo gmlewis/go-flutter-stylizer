@@ -258,6 +258,8 @@ func (c *Class) identifyMainConstructor() error {
 				}
 			}
 			c.lines[i].entityType = MainConstructor
+
+			c.e.logf("identifyMainConstructor: calling markMethod(line #%v, className=%q, MainConstructor)", i+1, className)
 			var err error
 			c.theConstructor, err = c.markMethod(i, className, MainConstructor)
 			if err != nil {
@@ -297,6 +299,8 @@ func (c *Class) identifyNamedConstructors() error {
 				}
 			}
 			c.lines[i].entityType = NamedConstructor
+
+			c.e.logf("identifyNamedConstructor: calling markMethod(line #%v, namedConstructor=%q, NamedConstructor)", i+1, namedConstructor)
 			entity, err := c.markMethod(i, namedConstructor, NamedConstructor)
 			if err != nil {
 				return err
@@ -316,10 +320,18 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 		}
 
 		if strings.HasPrefix(line.stripped, "@override") && i < len(c.lines)-1 {
-			offset := strings.Index(c.lines[i+1].stripped, "(")
-			if offset >= 0 {
+			lineNum := i + 1
+
+			fatArrowStrippedIndex := strings.Index(c.lines[lineNum].stripped, "=>")
+			openCurlyStrippedIndex := strings.Index(c.lines[lineNum].stripped, "{")
+			c.e.logf("identifyOverrideMethodsAndVars: line #%v, fatArrowStrippedIndex=%v, openCurlyStrippedIndex=%v, stripped=%q", lineNum+1, fatArrowStrippedIndex, openCurlyStrippedIndex, c.lines[lineNum].stripped)
+
+			offset := strings.Index(c.lines[lineNum].stripped, "(")
+			if offset >= 0 &&
+				(openCurlyStrippedIndex < 0 || openCurlyStrippedIndex > offset) &&
+				(fatArrowStrippedIndex < 0 || fatArrowStrippedIndex > offset) {
 				// Include open paren in name.
-				ss := c.lines[i+1].stripped[0 : offset+1]
+				ss := c.lines[lineNum].stripped[0 : offset+1]
 				// Search for beginning of method name.
 				nameOffset := strings.LastIndex(ss, " ") + 1
 				name := ss[nameOffset:]
@@ -333,7 +345,9 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 					}
 				}
 				c.lines[i].entityType = entityType
-				entity, err := c.markMethod(i+1, name, entityType)
+
+				c.e.logf("identifyOverrideMethodsAndVars: calling markMethod(line #%v, name=%q, %v)", lineNum+1, name, entityType)
+				entity, err := c.markMethod(lineNum, name, entityType)
 				if err != nil {
 					return err
 				}
@@ -346,11 +360,11 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 				entity := &Entity{
 					entityType: OverrideMethod,
 				}
-				lineNum := i + 1
+
 				// No open paren - could be a getter. See if it has a body.
-				if strings.Index(c.lines[i+1].stripped, "{") >= 0 {
-					lineOffset := strings.Index(c.classBody, c.lines[i+1].line)
-					inLineOffset := strings.Index(c.lines[i+1].line, "{")
+				if openCurlyStrippedIndex >= 0 && (fatArrowStrippedIndex < 0 || fatArrowStrippedIndex > openCurlyStrippedIndex) {
+					lineOffset := strings.Index(c.classBody, c.lines[lineNum].line)
+					inLineOffset := strings.Index(c.lines[lineNum].line, "{")
 					relOpenCurlyOffset := lineOffset + inLineOffset
 
 					if c.classBody[relOpenCurlyOffset] != '{' {
@@ -358,6 +372,7 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 					}
 
 					absOpenCurlyOffset := c.openCurlyOffset + relOpenCurlyOffset
+					c.e.logf("identifyOverrideMethodsAndVars: calling findMatchingBracket(%v)", absOpenCurlyOffset)
 					absCloseCurlyOffset, err := c.e.findMatchingBracket(absOpenCurlyOffset)
 					if err != nil {
 						return err
@@ -688,6 +703,7 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 	}
 
 	absOpenParenOffset := c.openCurlyOffset + relOpenParenOffset
+	c.e.logf("markMethod(line #%v, methodName=%q, entityType=%v): calling findMatchingBracket(absOpenParenOffset=%v)", lineNum+1, methodName, entityType, absOpenParenOffset)
 	absCloseParenOffset, err := c.e.findMatchingBracket(absOpenParenOffset)
 	if err != nil {
 		return nil, err
@@ -710,6 +726,7 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 		nextOffset = relCloseParenOffset + semicolonOffset
 	} else {
 		absOpenCurlyOffset := absCloseParenOffset + curlyDeltaOffset
+		c.e.logf("markMethod: calling findMatchingBracket(absOpenCurlyOffset=%v)", absOpenCurlyOffset)
 		absCloseCurlyOffset, err := c.e.findMatchingBracket(absOpenCurlyOffset)
 		if err != nil {
 			return nil, err
