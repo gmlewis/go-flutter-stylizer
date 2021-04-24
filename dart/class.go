@@ -178,6 +178,9 @@ func (c *Class) FindFeatures() error {
 	}
 
 	// c.identifyMultiLineComments()  // This step is not needed, as the editor marked these already.
+	if err := c.identifyDeprecatedAsComments(); err != nil {
+		return err
+	}
 	if err := c.identifyMainConstructor(); err != nil {
 		return err
 	}
@@ -208,6 +211,31 @@ func (c *Class) FindFeatures() error {
 // 	}
 // 	return strings.Join(strippedLines, "\n")
 // }
+
+func (c *Class) identifyDeprecatedAsComments() error {
+	const depStr = "@deprecated("
+
+	for i := 1; i < len(c.lines); i++ {
+		line := c.lines[i]
+		if line.entityType != Unknown {
+			continue
+		}
+
+		lower := strings.ToLower(line.stripped)
+		if !strings.HasPrefix(lower, depStr[0:len(depStr)-1]) {
+			continue
+		}
+
+		c.lines[i].entityType = SingleLineComment
+		if strings.HasPrefix(lower, depStr) {
+			if _, err := c.markMethod(i, line.stripped[0:len(depStr)], SingleLineComment); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
 
 func (c *Class) identifyMainConstructor() error {
 	className := c.className + "("
