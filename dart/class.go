@@ -346,7 +346,7 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 				}
 				c.lines[i].entityType = entityType
 
-				c.e.logf("identifyOverrideMethodsAndVars: calling markMethod(line #%v, name=%q, %v)", lineNum+1, name, entityType)
+				c.e.logf("identifyOverrideMethodsAndVars: calling markMethod(line #%v, name=%q, %v), stripped=%q", lineNum+1, name, entityType, c.lines[lineNum].stripped)
 				entity, err := c.markMethod(lineNum, name, entityType)
 				if err != nil {
 					return err
@@ -690,20 +690,14 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 		entityType: entityType,
 	}
 
-	// Identify all lines within the main (or factory) constructor.
-	lineOffset := strings.Index(c.classBody, c.lines[lineNum].line)
-	if lineOffset < 0 {
-		return nil, fmt.Errorf("expected lineOffset>=0 searching for lineNum=%v, line=%#v", lineNum, c.lines[lineNum])
+	line := c.lines[lineNum]
+	absOpenParenOffset := line.startOffset + strings.Index(line.line, methodName) + len(methodName) - 1
+	if c.e.fullBuf[absOpenParenOffset] != '(' {
+		return nil, fmt.Errorf("expected absOpenParenOffset=%v to be '(' but got '%c': line=%q", absOpenParenOffset, c.e.fullBuf[absOpenParenOffset], line.line)
 	}
+	lineOffset := line.startOffset - c.openCurlyOffset
 
-	inLineOffset := strings.Index(c.lines[lineNum].line, methodName)
-	relOpenParenOffset := lineOffset + inLineOffset + len(methodName) - 1
-	if c.classBody[relOpenParenOffset] != '(' {
-		return nil, fmt.Errorf("expected open parenthesis at relative offset %v but got %v", relOpenParenOffset, c.classBody[relOpenParenOffset:])
-	}
-
-	absOpenParenOffset := c.openCurlyOffset + relOpenParenOffset
-	c.e.logf("markMethod(line #%v, methodName=%q, entityType=%v): calling findMatchingBracket(absOpenParenOffset=%v)", lineNum+1, methodName, entityType, absOpenParenOffset)
+	c.e.logf("markMethod(line #%v, methodName=%q, entityType=%v): absOpenParenOffset=%v, lineOffset=%v, calling findMatchingBracket(absOpenParenOffset=%v), line=%q", lineNum+1, methodName, entityType, absOpenParenOffset, lineOffset, absOpenParenOffset, line.line)
 	absCloseParenOffset, err := c.e.findMatchingBracket(absOpenParenOffset)
 	if err != nil {
 		return nil, err
@@ -740,6 +734,7 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 	}
 
 	constructorBuf := c.classBody[lineOffset : nextOffset+1]
+	c.e.logf("markMethod: constructorBuf[%v:%v]=%q", lineOffset, nextOffset+1, constructorBuf)
 	numLines := len(strings.Split(constructorBuf, "\n"))
 	for i := 0; i < numLines; i++ {
 		if lineNum+i >= len(c.lines) {
