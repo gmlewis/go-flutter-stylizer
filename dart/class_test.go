@@ -22,6 +22,59 @@ import (
 	"testing"
 )
 
+func runFullStylizer(t *testing.T, opts *Options, source, wantSource string, want []EntityType) {
+	t.Helper()
+
+	testOpts := Options{MemberOrdering: defaultMemberOrdering}
+	if opts != nil {
+		testOpts.GroupAndSortGetterMethods = opts.GroupAndSortGetterMethods
+		testOpts.MemberOrdering = opts.MemberOrdering
+		testOpts.SortOtherMethods = opts.SortOtherMethods
+	}
+
+	e := NewEditor(source)
+	c := &Client{opts: testOpts}
+	got, err := c.GetClasses(e, testOpts.GroupAndSortGetterMethods)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := 1; len(got) != want {
+		t.Errorf("GetClasses = %v, want %v", got, want)
+	}
+
+	if len(got[0].lines) != len(want) {
+		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
+	}
+
+	for i := 0; i < len(got[0].lines); i++ {
+		line := got[0].lines[i]
+		if line.entityType != want[i] {
+			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+		}
+	}
+
+	edits := c.generateEdits(got)
+	if want := 1; len(edits) != want {
+		t.Errorf("want %v edits, got %v", len(edits), want)
+	}
+
+	newBuf := c.rewriteClasses(source, edits)
+	gotLines := strings.Split(newBuf, "\n")
+	wantLines := strings.Split(wantSource, "\n")
+	if len(gotLines) != len(wantLines) {
+		t.Errorf("rewriteClasses = %v lines, want %v lines", len(gotLines), len(wantLines))
+		t.Errorf("rewriteClasses got:\n%v", newBuf)
+	}
+
+	for i := 0; i < len(gotLines); i++ {
+		line := strings.ReplaceAll(gotLines[i], "\r", "")
+		if line != wantLines[i] {
+			t.Errorf("line #%v: got:\n%v\nwant:\n%v", i+1, line, wantLines[i])
+		}
+	}
+}
+
 func TestClassesAreFound(t *testing.T) {
 	const source = `// test.dart
 class myClass extends Widget {
@@ -326,7 +379,10 @@ static PGDateTime parse(String formattedString) =>
 var basicClassesDefaultOrder string
 
 func TestIssue11_RunWithDefaultMemberOrdering(t *testing.T) {
-	e := NewEditor(basicClasses)
+	source := basicClasses
+	wantSource := basicClassesDefaultOrder
+
+	e := NewEditor(source)
 	c := &Client{}
 	got, err := c.GetClasses(e, false)
 	if err != nil {
@@ -388,6 +444,8 @@ func TestIssue11_RunWithDefaultMemberOrdering(t *testing.T) {
 		BlankLine,               // line #54: }
 	}
 
+	c.opts.MemberOrdering = defaultMemberOrdering
+
 	if len(got[0].lines) != len(want) {
 		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
 	}
@@ -399,27 +457,14 @@ func TestIssue11_RunWithDefaultMemberOrdering(t *testing.T) {
 		}
 	}
 
-	c.opts.MemberOrdering = []string{
-		"public-constructor",
-		"named-constructors",
-		"public-static-variables",
-		"public-instance-variables",
-		"public-override-variables",
-		"private-static-variables",
-		"private-instance-variables",
-		"public-override-methods",
-		"public-other-methods",
-		"build-method",
-	}
-
 	edits := c.generateEdits(got)
 	if want := 1; len(edits) != want {
 		t.Errorf("want %v edits, got %v", len(edits), want)
 	}
 
-	newBuf := c.rewriteClasses(basicClasses, edits)
+	newBuf := c.rewriteClasses(source, edits)
 	gotLines := strings.Split(newBuf, "\n")
-	wantLines := strings.Split(basicClassesDefaultOrder, "\n")
+	wantLines := strings.Split(wantSource, "\n")
 	if len(gotLines) != len(wantLines) {
 		t.Errorf("rewriteClasses = %v lines, want %v lines", len(gotLines), len(wantLines))
 		t.Errorf("rewriteClasses got:\n%v", newBuf)
@@ -437,7 +482,10 @@ func TestIssue11_RunWithDefaultMemberOrdering(t *testing.T) {
 var basicClassesCustomOrder string
 
 func TestIssue11_RunWithCustomMemberOrdering(t *testing.T) {
-	e := NewEditor(basicClasses)
+	source := basicClasses
+	wantSource := basicClassesCustomOrder
+
+	e := NewEditor(source)
 	c := &Client{}
 	got, err := c.GetClasses(e, false)
 	if err != nil {
@@ -499,17 +547,6 @@ func TestIssue11_RunWithCustomMemberOrdering(t *testing.T) {
 		BlankLine,               // line #48:
 	}
 
-	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
-	}
-
-	for i := 0; i < len(got[0].lines); i++ {
-		line := got[0].lines[i]
-		if line.entityType != want[i] {
-			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
-		}
-	}
-
 	c.opts.MemberOrdering = []string{
 		"public-constructor",
 		"named-constructors",
@@ -523,14 +560,25 @@ func TestIssue11_RunWithCustomMemberOrdering(t *testing.T) {
 		"build-method",
 	}
 
+	if len(got[0].lines) != len(want) {
+		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
+	}
+
+	for i := 0; i < len(got[0].lines); i++ {
+		line := got[0].lines[i]
+		if line.entityType != want[i] {
+			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+		}
+	}
+
 	edits := c.generateEdits(got)
 	if want := 1; len(edits) != want {
 		t.Errorf("want %v edits, got %v", len(edits), want)
 	}
 
-	newBuf := c.rewriteClasses(basicClasses, edits)
+	newBuf := c.rewriteClasses(source, edits)
 	gotLines := strings.Split(newBuf, "\n")
-	wantLines := strings.Split(basicClassesCustomOrder, "\n")
+	wantLines := strings.Split(wantSource, "\n")
 	if len(gotLines) != len(wantLines) {
 		t.Errorf("rewriteClasses = %v lines, want %v lines", len(gotLines), len(wantLines))
 		t.Errorf("rewriteClasses got:\n%v", newBuf)
@@ -690,8 +738,10 @@ var issue18_case4_txt string
 func TestIssue18Case1(t *testing.T) {
 	const groupAndSortGetterMethods = false
 	const sortOtherMethods = false
+	source := issue18_dart_txt
+	wantSource := issue18_case1_txt
 
-	e := NewEditor(issue18_dart_txt)
+	e := NewEditor(source)
 	c := &Client{opts: Options{
 		GroupAndSortGetterMethods: groupAndSortGetterMethods,
 		SortOtherMethods:          sortOtherMethods,
@@ -731,6 +781,8 @@ func TestIssue18Case1(t *testing.T) {
 		BlankLine,
 	}
 
+	c.opts.MemberOrdering = defaultMemberOrdering
+
 	if len(got[0].lines) != len(want) {
 		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
 	}
@@ -742,27 +794,14 @@ func TestIssue18Case1(t *testing.T) {
 		}
 	}
 
-	c.opts.MemberOrdering = []string{
-		"public-constructor",
-		"named-constructors",
-		"public-static-variables",
-		"public-instance-variables",
-		"public-override-variables",
-		"private-static-variables",
-		"private-instance-variables",
-		"public-override-methods",
-		"public-other-methods",
-		"build-method",
-	}
-
 	edits := c.generateEdits(got)
 	if want := 1; len(edits) != want {
 		t.Errorf("want %v edits, got %v", len(edits), want)
 	}
 
-	newBuf := c.rewriteClasses(issue18_dart_txt, edits)
+	newBuf := c.rewriteClasses(source, edits)
 	gotLines := strings.Split(newBuf, "\n")
-	wantLines := strings.Split(issue18_case1_txt, "\n")
+	wantLines := strings.Split(wantSource, "\n")
 	if len(gotLines) != len(wantLines) {
 		t.Errorf("rewriteClasses = %v lines, want %v lines", len(gotLines), len(wantLines))
 		t.Errorf("rewriteClasses got:\n%v", newBuf)
@@ -779,8 +818,10 @@ func TestIssue18Case1(t *testing.T) {
 func TestIssue18Case2(t *testing.T) {
 	const groupAndSortGetterMethods = false
 	const sortOtherMethods = true
+	source := issue18_dart_txt
+	wantSource := issue18_case2_txt
 
-	e := NewEditor(issue18_dart_txt)
+	e := NewEditor(source)
 	c := &Client{opts: Options{
 		GroupAndSortGetterMethods: groupAndSortGetterMethods,
 		SortOtherMethods:          sortOtherMethods,
@@ -820,6 +861,8 @@ func TestIssue18Case2(t *testing.T) {
 		BlankLine,
 	}
 
+	c.opts.MemberOrdering = defaultMemberOrdering
+
 	if len(got[0].lines) != len(want) {
 		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
 	}
@@ -831,27 +874,14 @@ func TestIssue18Case2(t *testing.T) {
 		}
 	}
 
-	c.opts.MemberOrdering = []string{
-		"public-constructor",
-		"named-constructors",
-		"public-static-variables",
-		"public-instance-variables",
-		"public-override-variables",
-		"private-static-variables",
-		"private-instance-variables",
-		"public-override-methods",
-		"public-other-methods",
-		"build-method",
-	}
-
 	edits := c.generateEdits(got)
 	if want := 1; len(edits) != want {
 		t.Errorf("want %v edits, got %v", len(edits), want)
 	}
 
-	newBuf := c.rewriteClasses(issue18_dart_txt, edits)
+	newBuf := c.rewriteClasses(source, edits)
 	gotLines := strings.Split(newBuf, "\n")
-	wantLines := strings.Split(issue18_case2_txt, "\n")
+	wantLines := strings.Split(wantSource, "\n")
 	if len(gotLines) != len(wantLines) {
 		t.Errorf("rewriteClasses = %v lines, want %v lines", len(gotLines), len(wantLines))
 		t.Errorf("rewriteClasses got:\n%v", newBuf)
@@ -868,20 +898,13 @@ func TestIssue18Case2(t *testing.T) {
 func TestIssue18Case3(t *testing.T) {
 	const groupAndSortGetterMethods = true
 	const sortOtherMethods = false
-
-	e := NewEditor(issue18_dart_txt)
-	c := &Client{opts: Options{
+	opts := &Options{
 		GroupAndSortGetterMethods: groupAndSortGetterMethods,
+		MemberOrdering:            defaultMemberOrdering,
 		SortOtherMethods:          sortOtherMethods,
-	}}
-	got, err := c.GetClasses(e, groupAndSortGetterMethods)
-	if err != nil {
-		t.Fatal(err)
 	}
-
-	if want := 1; len(got) != want {
-		t.Errorf("GetClasses = %v, want %v", got, want)
-	}
+	source := issue18_dart_txt
+	wantSource := issue18_case3_txt
 
 	want := []EntityType{
 		Unknown,
@@ -909,49 +932,7 @@ func TestIssue18Case3(t *testing.T) {
 		BlankLine,
 	}
 
-	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
-	}
-
-	for i := 0; i < len(got[0].lines); i++ {
-		line := got[0].lines[i]
-		if line.entityType != want[i] {
-			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
-		}
-	}
-
-	c.opts.MemberOrdering = []string{
-		"public-constructor",
-		"named-constructors",
-		"public-static-variables",
-		"public-instance-variables",
-		"public-override-variables",
-		"private-static-variables",
-		"private-instance-variables",
-		"public-override-methods",
-		"public-other-methods",
-		"build-method",
-	}
-
-	edits := c.generateEdits(got)
-	if want := 1; len(edits) != want {
-		t.Errorf("want %v edits, got %v", len(edits), want)
-	}
-
-	newBuf := c.rewriteClasses(issue18_dart_txt, edits)
-	gotLines := strings.Split(newBuf, "\n")
-	wantLines := strings.Split(issue18_case3_txt, "\n")
-	if len(gotLines) != len(wantLines) {
-		t.Errorf("rewriteClasses = %v lines, want %v lines", len(gotLines), len(wantLines))
-		t.Errorf("rewriteClasses got:\n%v", newBuf)
-	}
-
-	for i := 0; i < len(gotLines); i++ {
-		line := strings.ReplaceAll(gotLines[i], "\r", "")
-		if line != wantLines[i] {
-			t.Errorf("line #%v: got:\n%v\nwant:\n%v", i+1, line, wantLines[i])
-		}
-	}
+	runFullStylizer(t, opts, source, wantSource, want)
 }
 
 func TestFindFeatures_linux_mac(t *testing.T) {
