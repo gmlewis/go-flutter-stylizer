@@ -209,7 +209,7 @@ func (c *Class) identifyDeprecatedAsComments() error {
 
 	for i := 1; i < len(c.lines); i++ {
 		line := c.lines[i]
-		if line.entityType != Unknown {
+		if line.entityType != Unknown || line.isCommentOrString {
 			continue
 		}
 
@@ -233,7 +233,7 @@ func (c *Class) identifyMainConstructor() error {
 	className := c.className + "("
 	for i := 1; i < len(c.lines); i++ {
 		line := c.lines[i]
-		if line.entityType != Unknown {
+		if line.entityType != Unknown || line.isCommentOrString {
 			continue
 		}
 		offset := strings.Index(line.stripped, className)
@@ -268,7 +268,7 @@ func (c *Class) identifyNamedConstructors() error {
 	className := c.className + "."
 	for i := 1; i < len(c.lines); i++ {
 		line := c.lines[i]
-		if line.entityType != Unknown {
+		if line.entityType != Unknown || line.isCommentOrString {
 			continue
 		}
 		offset := strings.Index(line.stripped, className)
@@ -327,7 +327,7 @@ func (c *Class) findNext(lineNum int, searchFor ...string) ([]string, *Cursor, e
 
 func (c *Class) identifyOverrideMethodsAndVars() error {
 	for i := 1; i < len(c.lines); i++ {
-		if c.lines[i].entityType != Unknown {
+		if c.lines[i].entityType != Unknown || c.lines[i].isCommentOrString {
 			continue
 		}
 
@@ -342,7 +342,7 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 			return fmt.Errorf(`findNext: %v`, err)
 		}
 
-		if fs := strings.Join(features, ""); strings.HasPrefix(fs, "operator ") || strings.Contains(fs, " operator ") {
+		if fs := strings.Join(features, ""); strings.HasPrefix(fs, "operator") || strings.Contains(fs, " operator") {
 			// redo the search, but don't include "=" since "operator" is
 			// a reserved keyword and must be an OverrideMethod.
 			features, cursor, err = c.findNext(lineNum, "{", "(", ";")
@@ -437,6 +437,10 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 
 				numLines := cursor.lineIndex - c.lines[lineNum].originalIndex
 				for j := lineNum; j <= lineNum+numLines; j++ {
+					if j >= len(c.lines) {
+						continue
+					}
+
 					if c.lines[j].entityType >= MainConstructor && c.lines[j].entityType != entity.entityType {
 						if err := c.repairIncorrectlyLabeledLine(j); err != nil {
 							return err
@@ -473,7 +477,7 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 func (c *Class) identifyOthers() error {
 	for i := 1; i < len(c.lines); i++ {
 		line := c.lines[i]
-		if line.entityType != Unknown {
+		if line.entityType != Unknown || line.isCommentOrString {
 			continue
 		}
 
@@ -781,6 +785,7 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 				return nil, err
 			}
 		}
+		c.e.logf("markMethod: marking line %v as type %v", lineNum+i+1, entityType)
 		c.lines[lineNum+i].entityType = entityType
 		entity.lines = append(entity.lines, c.lines[lineNum+i])
 	}
@@ -788,6 +793,7 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 	// Preserve the comment lines leading up to the method.
 	for lineNum--; lineNum > 0; lineNum-- {
 		if isComment(c.lines[lineNum]) || strings.HasPrefix(c.lines[lineNum].stripped, "@") {
+			c.e.logf("markMethod: marking comment line %v as type %v", lineNum+1, entityType)
 			c.lines[lineNum].entityType = entityType
 			entity.lines = append([]*Line{c.lines[lineNum]}, entity.lines...)
 			continue

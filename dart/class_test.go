@@ -369,7 +369,7 @@ func TestOperatorOverrides(t *testing.T) {
   }
 
   @override
-  bool operator ==(Object other) {
+  bool operator==(Object other) {
     return true;
   }
 

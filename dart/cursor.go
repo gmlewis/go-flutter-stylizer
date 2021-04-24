@@ -443,9 +443,11 @@ func (c *Cursor) advanceToNextLine() error {
 
 	c.reader = strings.NewReader(c.e.lines[c.lineIndex].stripped)
 	if c.inMultiLineComment > 0 {
+		c.e.logf("advanceToNextLine: marking line #%v as MultiLineComment", c.lineIndex+1)
 		c.e.lines[c.lineIndex].entityType = MultiLineComment
 	}
 	if c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
+		c.e.logf("advanceToNextLine: marking line #%v as isCommentOrString", c.lineIndex+1)
 		c.e.lines[c.lineIndex].isCommentOrString = true
 	}
 	return nil
