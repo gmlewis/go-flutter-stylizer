@@ -699,6 +699,68 @@ func TestIssue18Case4(t *testing.T) {
 	runFullStylizer(t, opts, source, wantSource, want)
 }
 
+//go:embed testfiles/issue19.dart.txt
+var issue19_dart_txt string
+
+//go:embed testfiles/issue19_want.txt
+var issue19_want_txt string
+
+func TestIssue19_FactoryConstructorShouldNotBeDuplicated(t *testing.T) {
+	const groupAndSortGetterMethods = true
+	const sortOtherMethods = true
+	source := issue19_dart_txt
+	wantSource := issue19_want_txt
+
+	opts := &Options{
+		GroupAndSortGetterMethods: groupAndSortGetterMethods,
+		MemberOrdering:            defaultMemberOrdering,
+		SortOtherMethods:          sortOtherMethods,
+	}
+
+	want := []EntityType{
+		Unknown,
+		InstanceVariable,
+		InstanceVariable,
+		InstanceVariable,
+		BlankLine,
+		MainConstructor,
+		MainConstructor,
+		MainConstructor,
+		BlankLine,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		NamedConstructor,
+		BlankLine,
+	}
+
+	runFullStylizer(t, opts, source, wantSource, want)
+}
+
 func TestFindFeatures_linux_mac(t *testing.T) {
 	bc, bcLineOffset, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
 
