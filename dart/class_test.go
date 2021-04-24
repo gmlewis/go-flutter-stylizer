@@ -22,7 +22,7 @@ import (
 	"testing"
 )
 
-func runFullStylizer(t *testing.T, opts *Options, source, wantSource string, want []EntityType) {
+func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType) (*Client, []*Class) {
 	t.Helper()
 
 	testOpts := Options{MemberOrdering: defaultMemberOrdering}
@@ -53,6 +53,14 @@ func runFullStylizer(t *testing.T, opts *Options, source, wantSource string, wan
 			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
 		}
 	}
+
+	return c, got
+}
+
+func runFullStylizer(t *testing.T, opts *Options, source, wantSource string, want []EntityType) {
+	t.Helper()
+
+	c, got := runParsePhase(t, opts, source, want)
 
 	edits := c.generateEdits(got)
 	if want := 1; len(edits) != want {
@@ -682,18 +690,6 @@ class Test {
   }
 }
 `
-
-	e := NewEditor(source)
-	c := &Client{}
-	got, err := c.GetClasses(e, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want := 1; len(got) != want {
-		t.Errorf("GetClasses = %v, want %v", got, want)
-	}
-
 	want := []EntityType{
 		Unknown,
 		InstanceVariable,
@@ -708,16 +704,7 @@ class Test {
 		BlankLine,
 	}
 
-	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
-	}
-
-	for i := 0; i < len(got[0].lines); i++ {
-		line := got[0].lines[i]
-		if line.entityType != want[i] {
-			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
-		}
-	}
+	runParsePhase(t, nil, source, want)
 }
 
 //go:embed testfiles/issue18.dart.txt
@@ -741,18 +728,10 @@ func TestIssue18Case1(t *testing.T) {
 	source := issue18_dart_txt
 	wantSource := issue18_case1_txt
 
-	e := NewEditor(source)
-	c := &Client{opts: Options{
+	opts := &Options{
 		GroupAndSortGetterMethods: groupAndSortGetterMethods,
+		MemberOrdering:            defaultMemberOrdering,
 		SortOtherMethods:          sortOtherMethods,
-	}}
-	got, err := c.GetClasses(e, groupAndSortGetterMethods)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want := 1; len(got) != want {
-		t.Errorf("GetClasses = %v, want %v", got, want)
 	}
 
 	want := []EntityType{
@@ -781,38 +760,7 @@ func TestIssue18Case1(t *testing.T) {
 		BlankLine,
 	}
 
-	c.opts.MemberOrdering = defaultMemberOrdering
-
-	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
-	}
-
-	for i := 0; i < len(got[0].lines); i++ {
-		line := got[0].lines[i]
-		if line.entityType != want[i] {
-			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
-		}
-	}
-
-	edits := c.generateEdits(got)
-	if want := 1; len(edits) != want {
-		t.Errorf("want %v edits, got %v", len(edits), want)
-	}
-
-	newBuf := c.rewriteClasses(source, edits)
-	gotLines := strings.Split(newBuf, "\n")
-	wantLines := strings.Split(wantSource, "\n")
-	if len(gotLines) != len(wantLines) {
-		t.Errorf("rewriteClasses = %v lines, want %v lines", len(gotLines), len(wantLines))
-		t.Errorf("rewriteClasses got:\n%v", newBuf)
-	}
-
-	for i := 0; i < len(gotLines); i++ {
-		line := strings.ReplaceAll(gotLines[i], "\r", "")
-		if line != wantLines[i] {
-			t.Errorf("line #%v: got:\n%v\nwant:\n%v", i+1, line, wantLines[i])
-		}
-	}
+	runFullStylizer(t, opts, source, wantSource, want)
 }
 
 func TestIssue18Case2(t *testing.T) {
@@ -821,18 +769,10 @@ func TestIssue18Case2(t *testing.T) {
 	source := issue18_dart_txt
 	wantSource := issue18_case2_txt
 
-	e := NewEditor(source)
-	c := &Client{opts: Options{
+	opts := &Options{
 		GroupAndSortGetterMethods: groupAndSortGetterMethods,
+		MemberOrdering:            defaultMemberOrdering,
 		SortOtherMethods:          sortOtherMethods,
-	}}
-	got, err := c.GetClasses(e, groupAndSortGetterMethods)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if want := 1; len(got) != want {
-		t.Errorf("GetClasses = %v, want %v", got, want)
 	}
 
 	want := []EntityType{
@@ -861,50 +801,20 @@ func TestIssue18Case2(t *testing.T) {
 		BlankLine,
 	}
 
-	c.opts.MemberOrdering = defaultMemberOrdering
-
-	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
-	}
-
-	for i := 0; i < len(got[0].lines); i++ {
-		line := got[0].lines[i]
-		if line.entityType != want[i] {
-			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
-		}
-	}
-
-	edits := c.generateEdits(got)
-	if want := 1; len(edits) != want {
-		t.Errorf("want %v edits, got %v", len(edits), want)
-	}
-
-	newBuf := c.rewriteClasses(source, edits)
-	gotLines := strings.Split(newBuf, "\n")
-	wantLines := strings.Split(wantSource, "\n")
-	if len(gotLines) != len(wantLines) {
-		t.Errorf("rewriteClasses = %v lines, want %v lines", len(gotLines), len(wantLines))
-		t.Errorf("rewriteClasses got:\n%v", newBuf)
-	}
-
-	for i := 0; i < len(gotLines); i++ {
-		line := strings.ReplaceAll(gotLines[i], "\r", "")
-		if line != wantLines[i] {
-			t.Errorf("line #%v: got:\n%v\nwant:\n%v", i+1, line, wantLines[i])
-		}
-	}
+	runFullStylizer(t, opts, source, wantSource, want)
 }
 
 func TestIssue18Case3(t *testing.T) {
 	const groupAndSortGetterMethods = true
 	const sortOtherMethods = false
+	source := issue18_dart_txt
+	wantSource := issue18_case3_txt
+
 	opts := &Options{
 		GroupAndSortGetterMethods: groupAndSortGetterMethods,
 		MemberOrdering:            defaultMemberOrdering,
 		SortOtherMethods:          sortOtherMethods,
 	}
-	source := issue18_dart_txt
-	wantSource := issue18_case3_txt
 
 	want := []EntityType{
 		Unknown,
