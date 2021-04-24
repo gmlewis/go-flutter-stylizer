@@ -64,7 +64,7 @@ func runFullStylizer(t *testing.T, opts *Options, source, wantSource string, wan
 
 	edits := c.generateEdits(got)
 	if want := 1; len(edits) != want {
-		t.Errorf("want %v edits, got %v", len(edits), want)
+		t.Errorf("got %v edits, want %v", len(edits), want)
 	}
 
 	newBuf := c.rewriteClasses(source, edits)
@@ -351,6 +351,46 @@ func TestGetOnSeparateLine(t *testing.T) {
 	}
 
 	runFullStylizer(t, nil, source, wantSource, want)
+}
+
+func TestOperatorOverrides(t *testing.T) {
+	source := `class Op {
+  @override
+  bool operator <=(Object other) {
+    return true
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return true
+  }
+
+  @override
+  bool operator >=(Object other) {
+    return true
+  }
+}`
+
+	want := []EntityType{
+		Unknown,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		BlankLine,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		BlankLine,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		BlankLine,
+	}
+
+	runParsePhase(t, nil, source, want)
 }
 
 //go:embed testfiles/basic_classes_default_order.txt

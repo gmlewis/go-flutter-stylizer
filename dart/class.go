@@ -304,6 +304,27 @@ func (c *Class) identifyNamedConstructors() error {
 	return nil
 }
 
+func (c *Class) findNext(lineNum int, searchFor ...string) ([]string, *Cursor, error) {
+	startLine := c.lines[lineNum]
+	cursor := &Cursor{
+		e:         c.e,
+		absOffset: startLine.startOffset + startLine.strippedOffset,
+		lineIndex: startLine.originalIndex,
+
+		relStrippedOffset: 0,
+
+		reader: strings.NewReader(c.e.lines[startLine.originalIndex].stripped),
+	}
+	c.e.logf("findNext(%v, %#v): %#v, BEFORE: cursor=%v", lineNum+1, searchFor, startLine, cursor)
+	features, err := cursor.advanceUntil(searchFor...)
+	if err != nil || len(features) == 0 {
+		return nil, nil, fmt.Errorf(`advanceUntil(%#v): %v`, searchFor, err)
+	}
+	c.e.logf("findNext(%v, %#v): AFTER: cursor=%v, features=%v", lineNum+1, searchFor, cursor, strings.Join(features, ""))
+
+	return features, cursor, nil
+}
+
 func (c *Class) identifyOverrideMethodsAndVars() error {
 	for i := 1; i < len(c.lines); i++ {
 		if c.lines[i].entityType != Unknown {
@@ -316,22 +337,19 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 
 		lineNum := i + 1
 
-		startLine := c.lines[lineNum]
-		cursor := &Cursor{
-			e:         c.e,
-			absOffset: startLine.startOffset + startLine.strippedOffset,
-			lineIndex: startLine.originalIndex,
-
-			relStrippedOffset: 0,
-
-			reader: strings.NewReader(c.e.lines[startLine.originalIndex].stripped),
-		}
-		c.e.logf("identifyOverrideMethodsAndVars - searching for [=,=>,{,(,;] - (line=%v): %#v, cursor=%v", lineNum+1, startLine, cursor)
-		features, err := cursor.advanceUntil("=", "{", "(", ";")
+		features, cursor, err := c.findNext(lineNum, "=", "{", "(", ";")
 		if err != nil || len(features) == 0 {
-			return fmt.Errorf(`advanceUntil("=", "{", "(", ";"): %v`, err)
+			return fmt.Errorf(`findNext: %v`, err)
 		}
-		c.e.logf("cursor=%v, features=%v", cursor, strings.Join(features, ""))
+
+		if strings.Contains(strings.Join(features, ""), " operator ") {
+			// redo the search, but don't include "=" since "operator" is
+			// a reserved keyword and must be an OverrideMethod.
+			features, cursor, err = c.findNext(lineNum, "{", "(", ";")
+			if err != nil || len(features) == 0 {
+				return fmt.Errorf(`findNext: %v`, err)
+			}
+		}
 
 		if features[len(features)-1] == "(" {
 			// Include open paren in name.
@@ -412,24 +430,12 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 					entity.entityType = OverrideVariable
 				}
 
-				startLine := c.lines[lineNum]
-				cursor := &Cursor{
-					e:         c.e,
-					absOffset: startLine.startOffset + startLine.strippedOffset,
-					lineIndex: startLine.originalIndex,
-
-					relStrippedOffset: 0,
-
-					reader: strings.NewReader(c.e.lines[startLine.originalIndex].stripped),
+				features, cursor, err := c.findNext(lineNum, ";")
+				if err != nil || len(features) == 0 {
+					return fmt.Errorf(`findNext: %v`, err)
 				}
-				c.e.logf("identifyOverrideMethodsAndVars - searching for ';' - (line=%v): %#v, cursor=%v", lineNum+1, startLine, cursor)
-				_, err := cursor.advanceUntil(";")
-				if err != nil {
-					return fmt.Errorf("advanceUntil(';'): %v", err)
-				}
-				c.e.logf("cursor=%v", cursor)
 
-				numLines := cursor.lineIndex - startLine.originalIndex
+				numLines := cursor.lineIndex - c.lines[lineNum].originalIndex
 				for j := lineNum; j <= lineNum+numLines; j++ {
 					if c.lines[j].entityType >= MainConstructor && c.lines[j].entityType != entity.entityType {
 						if err := c.repairIncorrectlyLabeledLine(j); err != nil {
@@ -668,22 +674,10 @@ func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
 func (c *Class) findSequence(lineNum int) (string, int, string, error) {
 	var result []string
 
-	startLine := c.lines[lineNum]
-	cursor := &Cursor{
-		e:         c.e,
-		absOffset: startLine.startOffset + startLine.strippedOffset,
-		lineIndex: startLine.originalIndex,
-
-		relStrippedOffset: 0,
-
-		reader: strings.NewReader(c.e.lines[startLine.originalIndex].stripped),
+	features, cursor, err := c.findNext(lineNum, ";", "}")
+	if err != nil || len(features) == 0 {
+		return "", 0, "", fmt.Errorf(`findNext: %v`, err)
 	}
-	c.e.logf("\n\nfindSequence(line=%v): %#v, cursor=%v", lineNum+1, startLine, cursor)
-	features, err := cursor.advanceUntil(";", "}")
-	if err != nil {
-		return "", 0, "", fmt.Errorf("advanceUntil(';', '}'): %v", err)
-	}
-	c.e.logf("cursor=%v", cursor)
 
 	buildLeadingText := true
 	var buildStr []string
@@ -700,7 +694,7 @@ func (c *Class) findSequence(lineNum int) (string, int, string, error) {
 		}
 	}
 	leadingText := strings.TrimSpace(strings.Join(buildStr, ""))
-	lineCount := cursor.lineIndex - startLine.originalIndex
+	lineCount := cursor.lineIndex - c.lines[lineNum].originalIndex
 
 	return strings.Join(result, ""), lineCount, leadingText, nil
 }
