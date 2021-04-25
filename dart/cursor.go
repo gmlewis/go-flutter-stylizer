@@ -112,7 +112,6 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 				c.e.lines[c.lineIndex].entityType = SingleLineComment
 			}
 			// c.e.logf("STRIPPED MODIFIED! singleLineComment=true: stripped=%q(%v), beforeLen=%v, afterLen=%v, cursor=%v", c.e.lines[c.lineIndex].stripped, len(c.e.lines[c.lineIndex].stripped), beforeLen, afterLen, c)
-			continue
 		case "/*":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble {
 				continue
@@ -122,7 +121,6 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			c.e.lines[c.lineIndex].entityType = MultiLineComment
 			c.e.logf("inMultiLineComment=%v: cursor=%v", c.inMultiLineComment, c)
 			matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
-			continue
 		case "*/":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble {
 				continue
@@ -135,7 +133,6 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			c.inMultiLineComment--
 			c.e.logf("inMultiLineComment=%v: cursor=%v", c.inMultiLineComment, c)
 			matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
-			continue
 		case "'''":
 			if c.inMultiLineComment > 0 {
 				continue
@@ -158,7 +155,9 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			} else {
 				matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
 			}
-			continue
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+			}
 		case `"""`:
 			if c.inMultiLineComment > 0 {
 				continue
@@ -181,7 +180,9 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			} else {
 				matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
 			}
-			continue
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+			}
 		case "${":
 			switch {
 			case c.inMultiLineComment > 0:
@@ -220,7 +221,6 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			default:
 				return fmt.Errorf("ERROR: Found ${ outside of a string: cursor=%v", c)
 			}
-			continue
 		case "'":
 			if c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
 				continue
@@ -237,7 +237,9 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			} else {
 				matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
 			}
-			continue
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+			}
 		case `"`:
 			if c.inSingleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
 				continue
@@ -254,14 +256,16 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			} else {
 				matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
 			}
-			continue
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+			}
 		case "(":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
 				continue
 			}
-			// if c.parenLevels == 0 && len(c.braceLevels) == 0 {
-			// 	features = append(features, nf)
-			// }
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+			}
 			c.parenLevels++
 			c.e.logf("parenLevels++: cursor=%v", c)
 			matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
@@ -272,13 +276,16 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			c.parenLevels--
 			c.e.logf("parenLevels--: cursor=%v", c)
 			matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+			}
 		case "{":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 {
 				continue
 			}
-			// if c.parenLevels == 0 && len(c.braceLevels) == 0 {
-			// 	features = append(features, nf)
-			// }
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+			}
 			c.braceLevels = append(c.braceLevels, BraceNormal)
 			c.e.logf("{: cursor=%v", c)
 			matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
@@ -306,16 +313,14 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			}
 			c.e.logf("}: cursor=%v", c)
 			matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+			}
+		default:
+			if c.atTopOfBraceLevel(1) {
+				c.e.lines[c.lineIndex].classLevelText += nf
+			}
 		}
-
-		// if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 || c.parenLevels > 0 || len(c.braceLevels) > 0 {
-		// 	continue
-		// }
-		// features = append(features, nf) // all top-level characters captured here.
-
-		// if foundIt && len(searchFor) > 1 {
-		// 	return features, nil
-		// }
 	}
 }
 
@@ -375,7 +380,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 		}
 		nr, _, err := getRune()
 		if err != nil {
-			return "\\", nil
+			return `\`, nil
 		}
 		return fmt.Sprintf("\\%c", nr), nil
 	case '\'':
@@ -488,6 +493,8 @@ func (c *Cursor) advanceToNextLine() error {
 	if c.lineIndex == 0 && matchClassRE.FindStringSubmatch(c.e.lines[c.lineIndex].line) != nil {
 		c.classLineIndices = append(c.classLineIndices, c.lineIndex)
 	}
+
+	c.e.lines[c.lineIndex].classLevelText = strings.TrimSpace(c.e.lines[c.lineIndex].classLevelText)
 
 	c.lineIndex++
 	if c.lineIndex >= len(c.e.lines) {

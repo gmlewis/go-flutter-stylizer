@@ -22,9 +22,10 @@ import (
 
 // Line represents a line of Dart code.
 type Line struct {
-	line           string
-	stripped       string
-	strippedOffset int
+	line           string // original, unmodified line
+	stripped       string // removes comments and surrounding whitespace
+	strippedOffset int    // offset to start of stripped line, compared to 'line'
+	classLevelText string // preserved text at braceLevel==1
 
 	originalIndex int
 
