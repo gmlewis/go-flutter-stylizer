@@ -134,7 +134,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			c.e.lines[c.lineIndex].entityType = MultiLineComment
 			c.inMultiLineComment--
 			c.e.logf("inMultiLineComment=%v: cursor=%v", c.inMultiLineComment, c)
-			c.CloseMatchingPair(nf, matchingPairStack)
+			matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
 			continue
 		case "'''":
 			if c.inMultiLineComment > 0 {
@@ -156,7 +156,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 					matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 				}
 			} else {
-				c.CloseMatchingPair(nf, matchingPairStack)
+				matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
 			}
 			continue
 		case `"""`:
@@ -179,7 +179,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 					matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 				}
 			} else {
-				c.CloseMatchingPair(nf, matchingPairStack)
+				matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
 			}
 			continue
 		case "${":
@@ -235,7 +235,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 					matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 				}
 			} else {
-				c.CloseMatchingPair(nf, matchingPairStack)
+				matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
 			}
 			continue
 		case `"`:
@@ -252,7 +252,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 					matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 				}
 			} else {
-				c.CloseMatchingPair(nf, matchingPairStack)
+				matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
 			}
 			continue
 		case "(":
@@ -271,7 +271,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			}
 			c.parenLevels--
 			c.e.logf("parenLevels--: cursor=%v", c)
-			c.CloseMatchingPair(nf, matchingPairStack)
+			matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
 		case "{":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 {
 				continue
@@ -305,7 +305,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 				return fmt.Errorf("ERROR: Unknown braceLevel %v: cursor=%v", braceLevel, c)
 			}
 			c.e.logf("}: cursor=%v", c)
-			c.CloseMatchingPair(nf, matchingPairStack)
+			matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
 		}
 
 		// if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 || c.parenLevels > 0 || len(c.braceLevels) > 0 {

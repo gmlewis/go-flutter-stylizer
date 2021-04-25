@@ -43,9 +43,10 @@ type MatchingPair struct {
 
 // NewMatchingPair adds the start of a new matching pair onto the stack.
 func (c *Cursor) NewMatchingPair(open string, matchingPairs MatchingPairsMap, matchingPairStack []*MatchingPair) []*MatchingPair {
+	absOffset := c.absOffset - len(open)
 	pair := &MatchingPair{
 		open:                  open,
-		openAbsOffset:         c.absOffset - len(open),
+		openAbsOffset:         absOffset,
 		openLineIndex:         c.lineIndex,
 		openRelStrippedOffset: c.relStrippedOffset,
 		pairStackDepth:        len(matchingPairStack),
@@ -59,13 +60,13 @@ func (c *Cursor) NewMatchingPair(open string, matchingPairs MatchingPairsMap, ma
 		pair.parentPairOpenAbsOffset = matchingPairStack[i-1].openAbsOffset
 	}
 
-	matchingPairs[c.absOffset] = pair
+	matchingPairs[absOffset] = pair
 
 	return append(matchingPairStack, pair)
 }
 
 // CloseMatchingPair closes the last open matching pair on the stack.
-func (c *Cursor) CloseMatchingPair(close string, matchingPairStack []*MatchingPair) {
+func (c *Cursor) CloseMatchingPair(close string, matchingPairStack []*MatchingPair) []*MatchingPair {
 	pair := matchingPairStack[len(matchingPairStack)-1]
 
 	pair.close = close
@@ -76,4 +77,6 @@ func (c *Cursor) CloseMatchingPair(close string, matchingPairStack []*MatchingPa
 	if got := c.e.fullBuf[pair.closeAbsOffset : pair.closeAbsOffset+len(close)]; got != close {
 		log.Fatalf("programming error: closeAbsOffset = %q, want %q", got, close)
 	}
+
+	return matchingPairStack[0 : len(matchingPairStack)-1]
 }
