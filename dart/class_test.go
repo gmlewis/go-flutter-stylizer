@@ -456,10 +456,24 @@ func TestMultipleDecorators(t *testing.T) {
   test_initializer_literal_map_untyped_empty() async {
     fail('times out.');
   }
+
+	@Deprecated('do not use this')
+  @failingTest
+	@override
+  test_initializer_literal_map_untyped_empty() async {
+    fail('times out.');
+  }
 }`
 
 	want := []EntityType{
 		Unknown,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		OverrideMethod,
+		BlankLine,
+		OverrideMethod,
 		OverrideMethod,
 		OverrideMethod,
 		OverrideMethod,
