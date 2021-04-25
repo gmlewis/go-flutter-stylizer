@@ -18,6 +18,8 @@ package dart
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"strings"
 )
 
@@ -210,6 +212,14 @@ func (c *Class) FindFeatures() error {
 		}
 	}
 
+	// if c.e.Verbose {
+	// 	c.e.logf("\n\nBEFORE IDENTIFICATION:")
+	// 	for i := 0; i < len(c.lines); i++ {
+	// 		line := c.lines[i]
+	// 		c.e.logf("line #%v type=%v: %v", i+1, line.entityType, line.line)
+	// 	}
+	// }
+
 	// c.identifyMultiLineComments()  // This step is not needed, as the editor marked these already.
 	if err := c.identifyDeprecatedAsComments(); err != nil {
 		return fmt.Errorf("identifyDeprecatedAsComments: %v", err)
@@ -242,11 +252,11 @@ func (c *Class) identifyDeprecatedAsComments() error {
 
 	for i := 1; i < len(c.lines); i++ {
 		line := c.lines[i]
-		if line.entityType != Unknown || line.isCommentOrString {
+		if line.entityType != Unknown || line.isCommentOrString || line.classLevelText == "" {
 			continue
 		}
 
-		lower := strings.ToLower(line.stripped)
+		lower := strings.ToLower(line.classLevelText)
 		if !strings.HasPrefix(lower, depStr[0:len(depStr)-1]) {
 			continue
 		}
@@ -262,13 +272,14 @@ func (c *Class) identifyMainConstructor() error {
 	className := c.className + "("
 	for i := 1; i < len(c.lines); i++ {
 		line := c.lines[i]
-		if line.entityType != Unknown || line.isCommentOrString {
+		if line.entityType != Unknown || line.isCommentOrString || line.classLevelText == "" {
 			continue
 		}
-		offset := strings.Index(line.stripped, className)
+
+		offset := strings.Index(line.classLevelText, className)
 		if offset >= 0 {
 			if offset > 0 {
-				char := line.stripped[offset-1 : offset]
+				char := line.classLevelText[offset-1 : offset]
 				if char != " " && char != "\t" {
 					continue
 				}
@@ -298,69 +309,121 @@ func (c *Class) identifyNamedConstructors() error {
 	className := c.className + "."
 	for i := 1; i < len(c.lines); i++ {
 		line := c.lines[i]
-		if line.entityType != Unknown || line.isCommentOrString {
+		if line.entityType != Unknown || line.isCommentOrString || line.classLevelText == "" {
 			continue
 		}
 
 		lineNum := i
 
-		features, cursor, err := c.findNext(lineNum, ";", "(")
-		if err != nil || len(features) == 0 {
-			// An error here is OK... it just means this line can be skipped.
-			continue
+		features, lineIndex, lastCharAbsOffset, err := c.findNext(lineNum, "=", "{", ";", "(")
+		if err != nil {
+			// An error here is OK... it just means we reached EOF.
+			return nil
 		}
 
-		ss := strings.Join(features, "")
-		ssi := strings.Index(ss, className)
-		if ssi < 0 {
-			continue
-		}
-		leadingText := ss[0:ssi]
-		c.e.logf("identifyNamedConstructors: leadingText=%q, ssi=%v, ss=%q, cursor=%v", leadingText, ssi, ss, cursor)
-		if strings.Contains(leadingText, "=") {
-			// A named constructor is being used in a variable assignment; skip.
-			for i < len(c.lines) && c.lines[i].originalIndex < cursor.lineIndex {
+		advanceToNextLineIndex := func() {
+			for i+1 < len(c.lines) && i <= lineIndex {
 				i++
 			}
+		}
+
+		if !strings.HasSuffix(features, "(") {
+			advanceToNextLineIndex()
 			continue
 		}
 
-		offset := strings.Index(line.stripped, className)
-		if offset >= 0 {
-			if offset > 0 {
-				char := line.stripped[offset-1 : offset]
-				if line.stripped[0] == '?' || line.stripped[0] == ':' || (char != " " && char != "\t") {
-					continue
-				}
-			}
-			openParenOffset := offset + strings.Index(line.stripped[offset:], "(")
-			namedConstructor := line.stripped[offset : openParenOffset+1] // Include open parenthesis.
-			if namedConstructor == "" {
-				continue
-			}
+		if c.e.fullBuf[lastCharAbsOffset] != '(' {
+			return fmt.Errorf("programming error: expected fullBuf[%v]='(' but got '%c'", lastCharAbsOffset, c.e.fullBuf[lastCharAbsOffset])
+		}
 
-			if c.lines[i].entityType >= MainConstructor && c.lines[i].entityType != NamedConstructor {
-				if err := c.repairIncorrectlyLabeledLine(i); err != nil {
-					return err
-				}
-			}
-			c.e.logf("identifyNamedConstructors: marking line %v as type NamedConstructor", i+1)
-			c.lines[i].entityType = NamedConstructor
+		classNameIndex := strings.Index(features, className)
+		if classNameIndex < 0 {
+			advanceToNextLineIndex()
+			continue
+		}
 
-			c.e.logf("identifyNamedConstructor: calling markMethod(line #%v, namedConstructor=%q, NamedConstructor)", i+1, namedConstructor)
-			entity, err := c.markMethod(i, namedConstructor, NamedConstructor, -1)
-			if err != nil {
+		leadingText := features[0:classNameIndex]
+		namedConstructor := features[classNameIndex:]
+		c.e.logf("identifyNamedConstructors: leadingText=%q, classNameIndex=%v, namedConstructor=%q, lastCharAbsOffset=%v, features=%q", leadingText, classNameIndex, namedConstructor, lastCharAbsOffset, features)
+		// if strings.Contains(leadingText, "=") {
+		// 	// A named constructor is being used in a variable assignment; skip.
+		// 	for i < len(c.lines) && c.lines[i].originalIndex < lineIndex {
+		// 		i++
+		// 	}
+		// 	continue
+		// }
+
+		// offset := strings.Index(line.stripped, className)
+		// if offset < 0 {
+		// 	continue
+		// }
+
+		// if offset > 0 {
+		// 	char := line.stripped[offset-1 : offset]
+		// 	if line.stripped[0] == '?' || line.stripped[0] == ':' || (char != " " && char != "\t") {
+		// 		continue
+		// 	}
+		// }
+
+		// openParenOffset := offset + strings.Index(line.stripped[offset:], "(")
+		// namedConstructor := line.stripped[offset : openParenOffset+1] // Include open parenthesis.
+		// if namedConstructor == "" {
+		// 	continue
+		// }
+
+		if c.lines[i].entityType >= MainConstructor && c.lines[i].entityType != NamedConstructor {
+			if err := c.repairIncorrectlyLabeledLine(i); err != nil {
 				return err
 			}
-			c.namedConstructors = append(c.namedConstructors, entity)
 		}
+		c.e.logf("identifyNamedConstructors: marking line %v as type NamedConstructor", i+1)
+		c.lines[i].entityType = NamedConstructor
+
+		c.e.logf("identifyNamedConstructor: calling markMethod(line #%v, namedConstructor=%q, NamedConstructor)", i+1, namedConstructor)
+		entity, err := c.markMethod(i, namedConstructor, NamedConstructor, lastCharAbsOffset)
+		if err != nil {
+			return err
+		}
+		c.namedConstructors = append(c.namedConstructors, entity)
 	}
 
 	return nil
 }
 
-func (c *Class) findNext(lineNum int, searchFor ...string) ([]string, *Cursor, error) {
-	// startLine := c.lines[lineNum]
+// findNext finds the next occurrence of one of the searchFor terms
+// within the classLevelText (possibly spanning multiple lines).
+//
+// It returns a "features" string which is all class-level text up to
+// and including the searched-for string.
+//
+// It also returns the absolute offset index (into the editor.fullBuf)
+// of the last character returned.
+//
+// If no search terms can be found, the error io.EOF is returned.
+func (c *Class) findNext(lineNum int, searchFor ...string) (string, int, int, error) {
+	var features string
+
+	for ; lineNum < len(c.lines); lineNum++ {
+		line := c.lines[lineNum]
+		features += line.classLevelText
+		for _, s := range searchFor {
+			if classLevelIndex := strings.Index(line.classLevelText, s); classLevelIndex >= 0 {
+				if i := strings.Index(features, s); i > 0 {
+					features = features[0 : i+len(s)]
+				}
+
+				if classLevelIndex >= len(line.classLevelOffsets) {
+					log.Fatalf("programming error: classLevelIndex = %v but should be less than %v, line=%#v", classLevelIndex, len(line.classLevelOffsets), line)
+				}
+
+				absOffsetIndex := line.classLevelOffsets[classLevelIndex]
+
+				return features, lineNum, absOffsetIndex, nil
+			}
+		}
+		features += " " // instead of newline.
+	}
+
 	// cursor := &Cursor{
 	// 	e:         c.e,
 	// 	absOffset: startLine.startOffset + startLine.strippedOffset,
@@ -378,7 +441,7 @@ func (c *Class) findNext(lineNum int, searchFor ...string) ([]string, *Cursor, e
 	// c.e.logf("findNext(%v, %#v): AFTER: cursor=%v, features=%v", lineNum+1, searchFor, cursor, strings.Join(features, ""))
 
 	// return features, cursor, nil
-	return nil, nil, nil
+	return "", 0, 0, io.EOF
 }
 
 func (c *Class) identifyOverrideMethodsAndVars() error {
@@ -576,78 +639,78 @@ func (c *Class) identifyOthers() error {
 func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 	entity := &Entity{}
 
-	sequence, lineCount, leadingText, err := c.findSequence(lineNum)
-	if err != nil {
-		return nil, err
-	}
-	c.e.logf("scanMethod(line=#%v), sequence=%v, lineCount=%v, leadingText=%q", lineNum+1, sequence, lineCount, leadingText)
+	// sequence, lineCount, leadingText, err := c.findSequence(lineNum)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// c.e.logf("scanMethod(line=#%v), sequence=%v, lineCount=%v, leadingText=%q", lineNum+1, sequence, lineCount, leadingText)
 
-	nameParts := strings.Split(leadingText, " ")
-	var staticKeyword bool
-	var privateVar bool
-	if len(nameParts) > 0 {
-		entity.name = nameParts[len(nameParts)-1]
-		if strings.HasPrefix(entity.name, "_") {
-			privateVar = true
-		}
-		if nameParts[0] == "static" {
-			staticKeyword = true
-		}
-	}
+	// nameParts := strings.Split(leadingText, " ")
+	// var staticKeyword bool
+	// var privateVar bool
+	// if len(nameParts) > 0 {
+	// 	entity.name = nameParts[len(nameParts)-1]
+	// 	if strings.HasPrefix(entity.name, "_") {
+	// 		privateVar = true
+	// 	}
+	// 	if nameParts[0] == "static" {
+	// 		staticKeyword = true
+	// 	}
+	// }
 
-	entity.entityType = InstanceVariable
-	switch true {
-	case privateVar && staticKeyword:
-		entity.entityType = StaticPrivateVariable
-	case staticKeyword:
-		entity.entityType = StaticVariable
-	case privateVar:
-		entity.entityType = PrivateInstanceVariable
-	}
+	// entity.entityType = InstanceVariable
+	// switch true {
+	// case privateVar && staticKeyword:
+	// 	entity.entityType = StaticPrivateVariable
+	// case staticKeyword:
+	// 	entity.entityType = StaticVariable
+	// case privateVar:
+	// 	entity.entityType = PrivateInstanceVariable
+	// }
 
-	switch sequence {
-	case "(){}":
-		entity.entityType = OtherMethod
+	// switch sequence {
+	// case "(){}":
+	// 	entity.entityType = OtherMethod
 
-	case "();": // instance variable or abstract method.
-		if !strings.HasSuffix(leadingText, " Function") {
-			entity.entityType = OtherMethod
-		}
+	// case "();": // instance variable or abstract method.
+	// 	if !strings.HasSuffix(leadingText, " Function") {
+	// 		entity.entityType = OtherMethod
+	// 	}
 
-	case "=(){}":
-		entity.entityType = OtherMethod
+	// case "=(){}":
+	// 	entity.entityType = OtherMethod
 
-	default:
-		if strings.Index(sequence, "=>") >= 0 {
-			entity.entityType = OtherMethod
-		}
-	}
+	// default:
+	// 	if strings.Index(sequence, "=>") >= 0 {
+	// 		entity.entityType = OtherMethod
+	// 	}
+	// }
 
-	// Force getters to be methods.
-	if strings.Index(leadingText, " get ") >= 0 {
-		if c.groupAndSortGetterMethods {
-			entity.entityType = GetterMethod
-		} else {
-			entity.entityType = OtherMethod
-		}
-	}
+	// // Force getters to be methods.
+	// if strings.Index(leadingText, " get ") >= 0 {
+	// 	if c.groupAndSortGetterMethods {
+	// 		entity.entityType = GetterMethod
+	// 	} else {
+	// 		entity.entityType = OtherMethod
+	// 	}
+	// }
 
-	for i := 0; i <= lineCount; i++ {
-		if lineNum+i >= len(c.lines) {
-			break
-		}
+	// for i := 0; i <= lineCount; i++ {
+	// 	if lineNum+i >= len(c.lines) {
+	// 		break
+	// 	}
 
-		if c.lines[lineNum+i].entityType >= MainConstructor && c.lines[lineNum+i].entityType != entity.entityType {
-			c.e.logf("scanMethod: Changing line #%v from type %v to type %v", lineNum+i+1, c.lines[lineNum+i].entityType, entity.entityType)
-			if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
-				return nil, err
-			}
-		}
+	// 	if c.lines[lineNum+i].entityType >= MainConstructor && c.lines[lineNum+i].entityType != entity.entityType {
+	// 		c.e.logf("scanMethod: Changing line #%v from type %v to type %v", lineNum+i+1, c.lines[lineNum+i].entityType, entity.entityType)
+	// 		if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
+	// 			return nil, err
+	// 		}
+	// 	}
 
-		c.e.logf("scanMethod: marking line %v as type %v", lineNum+i+1, entity.entityType)
-		c.lines[lineNum+i].entityType = entity.entityType
-		entity.lines = append(entity.lines, c.lines[lineNum+i])
-	}
+	// 	c.e.logf("scanMethod: marking line %v as type %v", lineNum+i+1, entity.entityType)
+	// 	c.lines[lineNum+i].entityType = entity.entityType
+	// 	entity.lines = append(entity.lines, c.lines[lineNum+i])
+	// }
 
 	return entity, nil
 }
@@ -655,98 +718,98 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
 	incorrectLabel := c.lines[lineNum].entityType
 	switch incorrectLabel {
-	case MainConstructor:
-		el := c.theConstructor
-		for j := 0; j < len(el.lines); j++ {
-			line := el.lines[j]
-			if line != c.lines[lineNum] {
-				continue
-			}
-			c.theConstructor.lines = append(c.theConstructor.lines[:j], c.theConstructor.lines[j+1:]...)
-			if len(c.theConstructor.lines) == 0 {
-				c.theConstructor = nil
-			}
-			return nil
-		}
-	case NamedConstructor:
-		for i := 0; i < len(c.namedConstructors); i++ {
-			el := c.namedConstructors[i]
-			for j := 0; j < len(el.lines); j++ {
-				line := el.lines[j]
-				if line != c.lines[lineNum] {
-					continue
-				}
-				c.namedConstructors[i].lines = append(c.namedConstructors[i].lines[:j], c.namedConstructors[i].lines[j+1:]...)
-				if len(c.namedConstructors[i].lines) == 0 {
-					c.namedConstructors = append(c.namedConstructors[:i], c.namedConstructors[i+1:]...)
-				}
-				return nil
-			}
-		}
-	case OverrideMethod:
-		for i := 0; i < len(c.overrideMethods); i++ {
-			el := c.overrideMethods[i]
-			for j := 0; j < len(el.lines); j++ {
-				line := el.lines[j]
-				if line != c.lines[lineNum] {
-					continue
-				}
-				c.overrideMethods[i].lines = append(c.overrideMethods[i].lines[:j], c.overrideMethods[i].lines[j+1:]...)
-				if len(c.overrideMethods[i].lines) == 0 {
-					c.overrideMethods = append(c.overrideMethods[:i], c.overrideMethods[i+1:]...)
-				}
-				return nil
-			}
-		}
-	case OverrideVariable:
-		for i := 0; i < len(c.overrideVariables); i++ {
-			el := c.overrideVariables[i]
-			for j := 0; j < len(el.lines); j++ {
-				line := el.lines[j]
-				if line != c.lines[lineNum] {
-					continue
-				}
-				c.overrideVariables[i].lines = append(c.overrideVariables[i].lines[:j], c.overrideVariables[i].lines[j+1:]...)
-				if len(c.overrideVariables[i].lines) == 0 {
-					c.overrideVariables = append(c.overrideVariables[:i], c.overrideVariables[i+1:]...)
-				}
-				return nil
-			}
-		}
+	// case MainConstructor:
+	// 	el := c.theConstructor
+	// 	for j := 0; j < len(el.lines); j++ {
+	// 		line := el.lines[j]
+	// 		if line != c.lines[lineNum] {
+	// 			continue
+	// 		}
+	// 		c.theConstructor.lines = append(c.theConstructor.lines[:j], c.theConstructor.lines[j+1:]...)
+	// 		if len(c.theConstructor.lines) == 0 {
+	// 			c.theConstructor = nil
+	// 		}
+	// 		return nil
+	// 	}
+	// case NamedConstructor:
+	// 	for i := 0; i < len(c.namedConstructors); i++ {
+	// 		el := c.namedConstructors[i]
+	// 		for j := 0; j < len(el.lines); j++ {
+	// 			line := el.lines[j]
+	// 			if line != c.lines[lineNum] {
+	// 				continue
+	// 			}
+	// 			c.namedConstructors[i].lines = append(c.namedConstructors[i].lines[:j], c.namedConstructors[i].lines[j+1:]...)
+	// 			if len(c.namedConstructors[i].lines) == 0 {
+	// 				c.namedConstructors = append(c.namedConstructors[:i], c.namedConstructors[i+1:]...)
+	// 			}
+	// 			return nil
+	// 		}
+	// 	}
+	// case OverrideMethod:
+	// 	for i := 0; i < len(c.overrideMethods); i++ {
+	// 		el := c.overrideMethods[i]
+	// 		for j := 0; j < len(el.lines); j++ {
+	// 			line := el.lines[j]
+	// 			if line != c.lines[lineNum] {
+	// 				continue
+	// 			}
+	// 			c.overrideMethods[i].lines = append(c.overrideMethods[i].lines[:j], c.overrideMethods[i].lines[j+1:]...)
+	// 			if len(c.overrideMethods[i].lines) == 0 {
+	// 				c.overrideMethods = append(c.overrideMethods[:i], c.overrideMethods[i+1:]...)
+	// 			}
+	// 			return nil
+	// 		}
+	// 	}
+	// case OverrideVariable:
+	// for i := 0; i < len(c.overrideVariables); i++ {
+	// 	el := c.overrideVariables[i]
+	// 	for j := 0; j < len(el.lines); j++ {
+	// 		line := el.lines[j]
+	// 		if line != c.lines[lineNum] {
+	// 			continue
+	// 		}
+	// 		c.overrideVariables[i].lines = append(c.overrideVariables[i].lines[:j], c.overrideVariables[i].lines[j+1:]...)
+	// 		if len(c.overrideVariables[i].lines) == 0 {
+	// 			c.overrideVariables = append(c.overrideVariables[:i], c.overrideVariables[i+1:]...)
+	// 		}
+	// 		return nil
+	// 	}
+	// }
 	default:
 		return fmt.Errorf("repairIncorrectlyLabeledLine: line #%v, unhandled case %v. Please report on GitHub Issue Tracker with example test case.", lineNum+1, incorrectLabel)
 	}
 
-	return nil
+	// return nil
 }
 
-func (c *Class) findSequence(lineNum int) (string, int, string, error) {
-	var result []string
+// func (c *Class) findSequence(lineNum int) (string, int, string, error) {
+// 	var result []string
 
-	features, cursor, err := c.findNext(lineNum, ";", "}")
-	if err != nil || len(features) == 0 {
-		return "", 0, "", fmt.Errorf(`findNext: %v`, err)
-	}
+// 	features, cursor, err := c.findNext(lineNum, ";", "}")
+// 	if err != nil || len(features) == 0 {
+// 		return "", 0, "", fmt.Errorf(`findNext: %v`, err)
+// 	}
 
-	buildLeadingText := true
-	var buildStr []string
-	for i, f := range features {
-		if strings.ContainsAny(f, "()[]{}=;") {
-			buildLeadingText = false
-			if f == "=" && i < len(features)-1 && features[i+1] == ">" {
-				f = "=>"
-			}
-			result = append(result, f)
-		}
-		if buildLeadingText {
-			buildStr = append(buildStr, f)
-		}
-	}
-	leadingText := strings.TrimSpace(strings.Join(buildStr, ""))
-	lineCount := cursor.lineIndex - c.lines[lineNum].originalIndex
+// 	buildLeadingText := true
+// 	var buildStr []string
+// 	for i, f := range features {
+// 		if strings.ContainsAny(f, "()[]{}=;") {
+// 			buildLeadingText = false
+// 			if f == "=" && i < len(features)-1 && features[i+1] == ">" {
+// 				f = "=>"
+// 			}
+// 			result = append(result, f)
+// 		}
+// 		if buildLeadingText {
+// 			buildStr = append(buildStr, f)
+// 		}
+// 	}
+// 	leadingText := strings.TrimSpace(strings.Join(buildStr, ""))
+// 	lineCount := cursor.lineIndex - c.lines[lineNum].originalIndex
 
-	return strings.Join(result, ""), lineCount, leadingText, nil
-}
+// 	return strings.Join(result, ""), lineCount, leadingText, nil
+// }
 
 func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType, absOpenParenOffset int) (*Entity, error) {
 	if !strings.HasSuffix(methodName, "(") {

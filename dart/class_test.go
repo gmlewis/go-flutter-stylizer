@@ -152,7 +152,7 @@ with AnimationEagerListenerMixin, AnimationLocalListenersMixin, AnimationLocalSt
 		BlankLine,        // line #16:
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, &Options{Verbose: true}, source, want)
 }
 
 func TestPrivateConstructorsAreKeptIntact(t *testing.T) {
@@ -424,7 +424,7 @@ func TestOperatorOverrides(t *testing.T) {
 		BlankLine,
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, &Options{Verbose: true}, source, want)
 }
 
 func TestMarkMethodOffsetAlignment(t *testing.T) {
