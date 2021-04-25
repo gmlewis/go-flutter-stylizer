@@ -28,7 +28,7 @@ var scope_dart_txt string
 var scope_want_txt string
 
 func TestScope_GetClasses(t *testing.T) {
-	e, err := NewEditor(scope_dart_txt)
+	e, err := NewEditor(scope_dart_txt, false)
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}

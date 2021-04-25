@@ -51,7 +51,7 @@ func setupEditor(t *testing.T, searchFor, buf string) (*Editor, int, int, int) {
 		t.Fatalf("expected %q but got %q", p[lineOffset], searchFor)
 	}
 
-	e, err := NewEditor(buf)
+	e, err := NewEditor(buf, false)
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}
@@ -429,7 +429,7 @@ func TestNewEditor_with_utf8(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e, err := NewEditor(tt.buf)
+			e, err := NewEditor(tt.buf, false)
 			if err != nil {
 				t.Fatalf("NewEditor: %v", err)
 			}

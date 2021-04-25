@@ -25,14 +25,16 @@ import (
 func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType) (*Client, []*Class) {
 	t.Helper()
 
+	var verbose bool
 	testOpts := Options{MemberOrdering: defaultMemberOrdering}
 	if opts != nil {
 		testOpts.GroupAndSortGetterMethods = opts.GroupAndSortGetterMethods
 		testOpts.MemberOrdering = opts.MemberOrdering
 		testOpts.SortOtherMethods = opts.SortOtherMethods
+		verbose = opts.Verbose
 	}
 
-	e, err := NewEditor(source)
+	e, err := NewEditor(source, verbose)
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}

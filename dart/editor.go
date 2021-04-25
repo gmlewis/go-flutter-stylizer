@@ -35,10 +35,11 @@ type Editor struct {
 }
 
 // NewEditor returns a new Editor.
-func NewEditor(buf string) (*Editor, error) {
+func NewEditor(buf string, verbose bool) (*Editor, error) {
 	e := &Editor{
 		fullBuf:       buf,
 		matchingPairs: MatchingPairsMap{},
+		Verbose:       verbose,
 	}
 
 	e.fullBuf = buf

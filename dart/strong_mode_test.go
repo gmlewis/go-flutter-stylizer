@@ -28,7 +28,7 @@ var strong_mode_dart_txt string
 var strong_mode_want_txt string
 
 func TestStrongMode_GetClasses(t *testing.T) {
-	e, err := NewEditor(strong_mode_dart_txt)
+	e, err := NewEditor(strong_mode_dart_txt, false)
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}
@@ -2598,6 +2598,7 @@ func TestStrongMode_Class2(t *testing.T) {
 
 	opts := &Options{
 		MemberOrdering: defaultMemberOrdering,
+		Verbose:        true,
 	}
 
 	want := []EntityType{
