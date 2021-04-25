@@ -152,7 +152,7 @@ with AnimationEagerListenerMixin, AnimationLocalListenersMixin, AnimationLocalSt
 		BlankLine,        // line #16:
 	}
 
-	runParsePhase(t, &Options{Verbose: true}, source, want)
+	runParsePhase(t, nil, source, want)
 }
 
 func TestPrivateConstructorsAreKeptIntact(t *testing.T) {

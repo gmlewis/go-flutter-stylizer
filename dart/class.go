@@ -400,11 +400,11 @@ func (c *Class) identifyNamedConstructors() error {
 // of the last character returned.
 //
 // If no search terms can be found, the error io.EOF is returned.
-func (c *Class) findNext(lineNum int, searchFor ...string) (string, int, int, error) {
+func (c *Class) findNext(classLineNum int, searchFor ...string) (string, int, int, error) {
 	var features string
 
-	for ; lineNum < len(c.lines); lineNum++ {
-		line := c.lines[lineNum]
+	for ; classLineNum < len(c.lines); classLineNum++ {
+		line := c.lines[classLineNum]
 		features += line.classLevelText
 		for _, s := range searchFor {
 			if classLevelIndex := strings.Index(line.classLevelText, s); classLevelIndex >= 0 {
@@ -418,7 +418,7 @@ func (c *Class) findNext(lineNum int, searchFor ...string) (string, int, int, er
 
 				absOffsetIndex := line.classLevelOffsets[classLevelIndex]
 
-				return features, lineNum, absOffsetIndex, nil
+				return features, classLineNum, absOffsetIndex, nil
 			}
 		}
 		features += " " // instead of newline.
@@ -811,9 +811,9 @@ func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
 // 	return strings.Join(result, ""), lineCount, leadingText, nil
 // }
 
-func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType, absOpenParenOffset int) (*Entity, error) {
+func (c *Class) markMethod(classLineNum int, methodName string, entityType EntityType, absOpenParenOffset int) (*Entity, error) {
 	if !strings.HasSuffix(methodName, "(") {
-		return nil, fmt.Errorf("markMethod: %q must end with the open parenthesis '('", methodName)
+		return nil, fmt.Errorf("programming error: markMethod: %q must end with the open parenthesis '('", methodName)
 	}
 
 	entity := &Entity{
@@ -850,6 +850,28 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 	// 	return nil, err
 	// }
 
+	pair, ok := c.e.matchingPairs[absOpenParenOffset]
+	if !ok {
+		return nil, fmt.Errorf("programming error: expected '()' pair at absOpenParenOffset=%v, line=%#v", absOpenParenOffset, c.lines[classLineNum])
+	}
+
+	features, classLineIndex, lastCharAbsOffset, err := c.findNext(pair.closeLineIndex-c.lines[0].originalIndex, "=>", "{", ";")
+	if err != nil {
+		return nil, fmt.Errorf("expected method body starting at classLineIndex=%v: %v", pair.closeLineIndex-c.lines[0].originalIndex, err)
+	}
+
+	if strings.HasSuffix(features, "=>") {
+		features, classLineIndex, lastCharAbsOffset, err = c.findNext(pair.closeLineIndex-c.lines[0].originalIndex, "{", ";")
+	}
+
+	if strings.HasSuffix(features, "{") {
+		pair, ok = c.e.matchingPairs[lastCharAbsOffset]
+		if !ok {
+			return nil, fmt.Errorf("expected matching '}' pair at lastCharAbsOffset=%v", lastCharAbsOffset)
+		}
+		classLineIndex = pair.closeLineIndex - c.lines[0].originalIndex
+	}
+
 	// relCloseParenOffset := absCloseParenOffset - c.openCurlyOffset
 	// if c.classBody[relCloseParenOffset] != ')' {
 	// 	return nil, fmt.Errorf("expected close parenthesis at relative offset %v but got %v", relCloseParenOffset, c.classBody[relCloseParenOffset:])
@@ -883,32 +905,32 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 	// constructorBuf := c.classBody[lineOffset : nextOffset+1]
 	// c.e.logf("markMethod: constructorBuf[%v:%v]=%q", lineOffset, nextOffset+1, constructorBuf)
 	// numLines := len(strings.Split(constructorBuf, "\n"))
-	// for i := 0; i < numLines; i++ {
-	// 	if lineNum+i >= len(c.lines) {
-	// 		break
-	// 	}
+	for i := classLineNum; i <= classLineIndex; i++ {
+		if i >= len(c.lines) {
+			break
+		}
 
-	// 	if c.lines[lineNum+i].entityType >= MainConstructor && c.lines[lineNum+i].entityType != entityType {
-	// 		if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
-	// 			return nil, err
-	// 		}
-	// 	}
+		if c.lines[i].entityType >= MainConstructor && c.lines[i].entityType != entityType {
+			if err := c.repairIncorrectlyLabeledLine(i); err != nil {
+				return nil, err
+			}
+		}
 
-	// 	c.e.logf("markMethod: marking line %v as type %v", lineNum+i+1, entityType)
-	// 	c.lines[lineNum+i].entityType = entityType
-	// 	entity.lines = append(entity.lines, c.lines[lineNum+i])
-	// }
+		c.e.logf("markMethod: marking line #%v as type %v", i+1, entityType)
+		c.lines[i].entityType = entityType
+		entity.lines = append(entity.lines, c.lines[i])
+	}
 
-	// // Preserve the comment lines leading up to the method.
-	// for lineNum--; lineNum > 0; lineNum-- {
-	// 	if isComment(c.lines[lineNum]) || strings.HasPrefix(c.lines[lineNum].stripped, "@") {
-	// 		c.e.logf("markMethod: marking comment line %v as type %v", lineNum+1, entityType)
-	// 		c.lines[lineNum].entityType = entityType
-	// 		entity.lines = append([]*Line{c.lines[lineNum]}, entity.lines...)
-	// 		continue
-	// 	}
-	// 	break
-	// }
+	// Preserve the comment lines leading up to the method.
+	for classLineNum--; classLineNum > 0; classLineNum-- {
+		if isComment(c.lines[classLineNum]) || strings.HasPrefix(c.lines[classLineNum].stripped, "@") {
+			c.e.logf("markMethod: marking comment line %v as type %v", classLineNum+1, entityType)
+			c.lines[classLineNum].entityType = entityType
+			entity.lines = append([]*Line{c.lines[classLineNum]}, entity.lines...)
+			continue
+		}
+		break
+	}
 
 	return entity, nil
 }
