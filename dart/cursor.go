@@ -18,6 +18,7 @@ package dart
 
 import (
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -82,7 +83,10 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (classLineIndices []int, 
 		lastFeature = nf
 		nf, err = c.advanceToNextFeature()
 		if err != nil {
-			return nil, err
+			if err != io.EOF {
+				return nil, fmt.Errorf("advanceToNextFeature: %v", err)
+			}
+			return classLineIndices, nil
 		}
 
 		c.e.logf("nf=%q matchingPairStack=%#v, abs=%v, ind=%v, rel=%v", nf, matchingPairStack, c.absOffset, c.lineIndex, c.relStrippedOffset)
@@ -341,6 +345,9 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 	r, size, err := getRune()
 	if err != nil {
 		if err := c.advanceToNextLine(); err != nil {
+			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 || c.parenLevels > 0 || len(c.braceLevels) > 0 {
+				return "", fmt.Errorf("parse error: reached EOF, cursor=%#v", c)
+			}
 			return "", err
 		}
 		r, size, err = ' ', 1, nil // replace newline with single space
@@ -464,10 +471,11 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 }
 
 // advanceToNextLine advances the cursor to the next line.
+// It returns io.EOF when it reaches the end of the file.
 func (c *Cursor) advanceToNextLine() error {
 	c.lineIndex++
 	if c.lineIndex >= len(c.e.lines) {
-		return fmt.Errorf("advanceToNextLine went past EOF: lineIndex=%v, len(lines)=%v, cursor=%v", c.lineIndex, len(c.e.lines), c)
+		return io.EOF
 	}
 
 	c.absOffset = c.e.lines[c.lineIndex].startOffset + c.e.lines[c.lineIndex].strippedOffset
