@@ -167,31 +167,33 @@ func (c *Client) GetClasses(editor *Editor, groupAndSortGetterMethods bool) ([]*
 
 func (c *Class) FindFeatures() error {
 	for i, line := range c.lines {
-		// Change a blank line following a comment to a SingleLineComment in
+		// Change a blank line following a full-line comment to a SingleLineComment in
 		// order to keep it with the following entity.
-		if line.entityType == Unknown && len(line.stripped) == 0 {
+		if line.entityType == Unknown && line.stripped == "" {
+			c.e.logf("FindFeatures: marking line %v as type BlankLine", i+1)
 			line.entityType = BlankLine
 		}
-		if i > 1 && c.lines[i-1].entityType == BlankLine && isComment(c.lines[i-2]) {
+		if i > 1 && c.lines[i-1].entityType == BlankLine && isComment(c.lines[i-2]) && c.lines[i-2].stripped == "" {
+			c.e.logf("FindFeatures: marking line %v as type SingleLineComment", i)
 			c.lines[i-1].entityType = SingleLineComment
 		}
 	}
 
 	// c.identifyMultiLineComments()  // This step is not needed, as the editor marked these already.
 	if err := c.identifyDeprecatedAsComments(); err != nil {
-		return err
+		return fmt.Errorf("identifyDeprecatedAsComments: %v", err)
 	}
 	if err := c.identifyMainConstructor(); err != nil {
-		return err
+		return fmt.Errorf("identifyMainConstructor: %v", err)
 	}
 	if err := c.identifyNamedConstructors(); err != nil {
-		return err
+		return fmt.Errorf("identifyNamedConstructors: %v", err)
 	}
 	if err := c.identifyOverrideMethodsAndVars(); err != nil {
-		return err
+		return fmt.Errorf("identifyOverrideMethodsAndVars: %v", err)
 	}
 	if err := c.identifyOthers(); err != nil {
-		return err
+		return fmt.Errorf("identifyOthers: %v", err)
 	}
 
 	if c.e.Verbose {
@@ -218,6 +220,7 @@ func (c *Class) identifyDeprecatedAsComments() error {
 			continue
 		}
 
+		c.e.logf("identifyDeprecatedAsComments: marking line %v as type SingleLineComment", i+1)
 		c.lines[i].entityType = SingleLineComment
 		if strings.HasPrefix(lower, depStr) {
 			if _, err := c.markMethod(i, line.stripped[0:len(depStr)], SingleLineComment, -1); err != nil {
@@ -249,6 +252,7 @@ func (c *Class) identifyMainConstructor() error {
 					return err
 				}
 			}
+			c.e.logf("identifyMainConstructor: marking line %v as type MainConstructor", i+1)
 			c.lines[i].entityType = MainConstructor
 
 			c.e.logf("identifyMainConstructor: calling markMethod(line #%v, className=%q, MainConstructor)", i+1, className)
@@ -271,6 +275,30 @@ func (c *Class) identifyNamedConstructors() error {
 		if line.entityType != Unknown || line.isCommentOrString {
 			continue
 		}
+
+		lineNum := i
+
+		features, cursor, err := c.findNext(lineNum, ";", "(")
+		if err != nil || len(features) == 0 {
+			// An error here is OK... it just means this line can be skipped.
+			continue
+		}
+
+		ss := strings.Join(features, "")
+		ssi := strings.Index(ss, className)
+		if ssi < 0 {
+			continue
+		}
+		leadingText := ss[0:ssi]
+		c.e.logf("identifyNamedConstructors: leadingText=%q, ssi=%v, ss=%q, cursor=%#v", leadingText, ssi, ss, cursor)
+		if strings.Contains(leadingText, "=") {
+			// A named constructor is being used in a variable assignment; skip.
+			for i < len(c.lines) && c.lines[i].originalIndex < cursor.lineIndex {
+				i++
+			}
+			continue
+		}
+
 		offset := strings.Index(line.stripped, className)
 		if offset >= 0 {
 			if offset > 0 {
@@ -290,6 +318,7 @@ func (c *Class) identifyNamedConstructors() error {
 					return err
 				}
 			}
+			c.e.logf("identifyNamedConstructors: marking line %v as type NamedConstructor", i+1)
 			c.lines[i].entityType = NamedConstructor
 
 			c.e.logf("identifyNamedConstructor: calling markMethod(line #%v, namedConstructor=%q, NamedConstructor)", i+1, namedConstructor)
@@ -366,6 +395,7 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 					return err
 				}
 			}
+			c.e.logf("identifyOverrideMethodsAndVars: marking override line %v as type %v", i+1, entityType)
 			c.lines[i].entityType = entityType
 
 			c.e.logf("identifyOverrideMethodsAndVars: calling markMethod(line #%v, name=%q, %v), stripped=%q", lineNum+1, name, entityType, c.lines[lineNum].stripped)
@@ -385,14 +415,6 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 
 			// No open paren - could be a getter. See if it has a body.
 			if features[len(features)-1] == "{" {
-				// lineOffset := strings.Index(c.classBody, c.lines[lineNum].line)
-				// inLineOffset := strings.Index(c.lines[lineNum].line, "{")
-				// relOpenCurlyOffset := lineOffset + inLineOffset
-
-				// if c.classBody[relOpenCurlyOffset] != '{' {
-				// 	return fmt.Errorf("expected open curly bracket at relative offset %v but got %q", relOpenCurlyOffset, c.classBody[relOpenCurlyOffset:])
-				// }
-
 				absOpenCurlyOffset := cursor.absOffset - 1
 				if c.e.fullBuf[absOpenCurlyOffset] != '{' {
 					return fmt.Errorf("identifyOverrideMethodsAndVars: expected '{' at offset %v but got %c", absOpenCurlyOffset, c.e.fullBuf[absOpenCurlyOffset])
@@ -493,6 +515,7 @@ func (c *Class) identifyOthers() error {
 		// Preserve the comment lines leading up to the entity.
 		for lineNum := i - 1; lineNum > 0; lineNum-- {
 			if isComment(c.lines[lineNum]) {
+				c.e.logf("identifyOthers: marking line %v as type %v", lineNum+1, entity.entityType)
 				c.lines[lineNum].entityType = entity.entityType
 				entity.lines = append([]*Line{c.lines[lineNum]}, entity.lines...)
 				continue
@@ -549,35 +572,28 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 	switch true {
 	case privateVar && staticKeyword:
 		entity.entityType = StaticPrivateVariable
-		break
 	case staticKeyword:
 		entity.entityType = StaticVariable
-		break
 	case privateVar:
 		entity.entityType = PrivateInstanceVariable
-		break
 	}
 
 	switch sequence {
 	case "(){}":
 		entity.entityType = OtherMethod
-		break
 
 	case "();": // instance variable or abstract method.
 		if !strings.HasSuffix(leadingText, " Function") {
 			entity.entityType = OtherMethod
 		}
-		break
 
 	case "=(){}":
 		entity.entityType = OtherMethod
-		break
 
 	default:
 		if strings.Index(sequence, "=>") >= 0 {
 			entity.entityType = OtherMethod
 		}
-		break
 	}
 
 	// Force getters to be methods.
@@ -600,6 +616,8 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 				return nil, err
 			}
 		}
+
+		c.e.logf("scanMethod: marking line %v as type %v", lineNum+i+1, entity.entityType)
 		c.lines[lineNum+i].entityType = entity.entityType
 		entity.lines = append(entity.lines, c.lines[lineNum+i])
 	}
@@ -785,6 +803,7 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 				return nil, err
 			}
 		}
+
 		c.e.logf("markMethod: marking line %v as type %v", lineNum+i+1, entityType)
 		c.lines[lineNum+i].entityType = entityType
 		entity.lines = append(entity.lines, c.lines[lineNum+i])

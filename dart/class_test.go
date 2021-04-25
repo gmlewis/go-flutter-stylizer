@@ -33,6 +33,7 @@ func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType
 	}
 
 	e := NewEditor(source)
+	// e.Verbose = true
 	c := &Client{opts: testOpts}
 	got, err := c.GetClasses(e, testOpts.GroupAndSortGetterMethods)
 	if err != nil {
@@ -43,28 +44,33 @@ func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType
 		t.Errorf("GetClasses = %v, want %v", got, want)
 	}
 
-	if len(got[0].lines) != len(want) {
-		t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
-	}
+	if len(want) > 0 {
+		if len(got[0].lines) != len(want) {
+			t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
+		}
 
-	for i := 0; i < len(got[0].lines); i++ {
-		line := got[0].lines[i]
-		if line.entityType != want[i] {
-			t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+		for i := 0; i < len(got[0].lines); i++ {
+			line := got[0].lines[i]
+			// fmt.Printf("%v, // line #%v: %v\n", line.entityType, line.originalIndex+1, line.line)
+			if line.entityType != want[i] {
+				t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+			}
 		}
 	}
 
 	return c, got
 }
 
-func runFullStylizer(t *testing.T, opts *Options, source, wantSource string, want []EntityType) {
+func runFullStylizer(t *testing.T, opts *Options, source, wantSource string, want []EntityType) []*Class {
 	t.Helper()
 
 	c, got := runParsePhase(t, opts, source, want)
 
 	edits := c.generateEdits(got)
-	if want := 1; len(edits) != want {
-		t.Errorf("got %v edits, want %v", len(edits), want)
+	if len(want) > 0 {
+		if want := 1; len(edits) != want {
+			t.Errorf("got %v edits, want %v", len(edits), want)
+		}
 	}
 
 	newBuf := c.rewriteClasses(source, edits)
@@ -77,10 +83,14 @@ func runFullStylizer(t *testing.T, opts *Options, source, wantSource string, wan
 
 	for i := 0; i < len(gotLines); i++ {
 		line := strings.ReplaceAll(gotLines[i], "\r", "")
-		if line != wantLines[i] {
+		if i < len(wantLines) && line != wantLines[i] {
 			t.Errorf("line #%v: got:\n%v\nwant:\n%v", i+1, line, wantLines[i])
+		} else if i >= len(wantLines) {
+			t.Errorf("line #%v: got:\n%v", i+1, line)
 		}
 	}
+
+	return got
 }
 
 func TestClassesAreFound(t *testing.T) {
@@ -351,6 +361,8 @@ func TestGetOnSeparateLine(t *testing.T) {
 	}
 
 	runFullStylizer(t, nil, source, wantSource, want)
+	// Run again to make sure no extra blank lines are added.
+	runFullStylizer(t, nil, wantSource, wantSource, nil)
 }
 
 func TestOperatorOverrides(t *testing.T) {
@@ -472,12 +484,12 @@ func TestIssue11_RunWithDefaultMemberOrdering(t *testing.T) {
 		StaticPrivateVariable,   // line #15:   // _spv is a static private variable.
 		StaticPrivateVariable,   // line #16:   static final String _spv = 'spv';
 		BlankLine,               // line #17:
-		StaticPrivateVariable,   // line #18:   /* This is a
-		StaticPrivateVariable,   // line #19:    * random multi-
-		StaticPrivateVariable,   // line #20:    * line comment
-		StaticPrivateVariable,   // line #21:    * somewhere in the middle
-		StaticPrivateVariable,   // line #22:    * of the class */
-		StaticPrivateVariable,   // line #23:
+		MultiLineComment,        // line #18:   /* This is a
+		MultiLineComment,        // line #19:    * random multi-
+		MultiLineComment,        // line #20:    * line comment
+		MultiLineComment,        // line #21:    * somewhere in the middle
+		MultiLineComment,        // line #22:    * of the class */
+		BlankLine,               // line #23:
 		StaticPrivateVariable,   // line #24:   // _spvni is a static private variable with no initializer.
 		StaticPrivateVariable,   // line #25:   static double _spvni = 0;
 		PrivateInstanceVariable, // line #26:   int _pvini = 1;
@@ -533,12 +545,12 @@ func TestIssue11_RunWithCustomMemberOrdering(t *testing.T) {
 		StaticPrivateVariable,   // line #9:   // _spv is a static private variable.
 		StaticPrivateVariable,   // line #10:   static final String _spv = 'spv';
 		BlankLine,               // line #11:
-		StaticPrivateVariable,   // line #12:   /* This is a
-		StaticPrivateVariable,   // line #13:    * random multi-
-		StaticPrivateVariable,   // line #14:    * line comment
-		StaticPrivateVariable,   // line #15:    * somewhere in the middle
-		StaticPrivateVariable,   // line #16:    * of the class */
-		StaticPrivateVariable,   // line #17:
+		MultiLineComment,        // line #12:   /* This is a
+		MultiLineComment,        // line #13:    * random multi-
+		MultiLineComment,        // line #14:    * line comment
+		MultiLineComment,        // line #15:    * somewhere in the middle
+		MultiLineComment,        // line #16:    * of the class */
+		BlankLine,               // line #17:
 		StaticPrivateVariable,   // line #18:   // _spvni is a static private variable with no initializer.
 		StaticPrivateVariable,   // line #19:   static double _spvni = 0;
 		PrivateInstanceVariable, // line #20:   int _pvini = 1;
@@ -939,12 +951,12 @@ func TestFindFeatures_linux_mac(t *testing.T) {
 		StaticPrivateVariable,   // line #15:   // _spv is a static private variable.
 		StaticPrivateVariable,   // line #16:   static final String _spv = 'spv';
 		BlankLine,               // line #17:
-		StaticPrivateVariable,   // line #18:   /* This is a
-		StaticPrivateVariable,   // line #19:    * random multi-
-		StaticPrivateVariable,   // line #20:    * line comment
-		StaticPrivateVariable,   // line #21:    * somewhere in the middle
-		StaticPrivateVariable,   // line #22:    * of the class */
-		StaticPrivateVariable,   // line #23:
+		MultiLineComment,        // line #18:   /* This is a
+		MultiLineComment,        // line #19:    * random multi-
+		MultiLineComment,        // line #20:    * line comment
+		MultiLineComment,        // line #21:    * somewhere in the middle
+		MultiLineComment,        // line #22:    * of the class */
+		BlankLine,               // line #23:
 		StaticPrivateVariable,   // line #24:   // _spvni is a static private variable with no initializer.
 		StaticPrivateVariable,   // line #25:   static double _spvni = 0;
 		PrivateInstanceVariable, // line #26:   int _pvini = 1;
@@ -1017,12 +1029,12 @@ func TestFindFeatures_windoze(t *testing.T) {
 		StaticPrivateVariable,   // line #15:   // _spv is a static private variable.
 		StaticPrivateVariable,   // line #16:   static final String _spv = 'spv';
 		BlankLine,               // line #17:
-		StaticPrivateVariable,   // line #18:   /* This is a
-		StaticPrivateVariable,   // line #19:    * random multi-
-		StaticPrivateVariable,   // line #20:    * line comment
-		StaticPrivateVariable,   // line #21:    * somewhere in the middle
-		StaticPrivateVariable,   // line #22:    * of the class */
-		StaticPrivateVariable,   // line #23:
+		MultiLineComment,        // line #18:   /* This is a
+		MultiLineComment,        // line #19:    * random multi-
+		MultiLineComment,        // line #20:    * line comment
+		MultiLineComment,        // line #21:    * somewhere in the middle
+		MultiLineComment,        // line #22:    * of the class */
+		BlankLine,               // line #23:
 		StaticPrivateVariable,   // line #24:   // _spvni is a static private variable with no initializer.
 		StaticPrivateVariable,   // line #25:   static double _spvni = 0;
 		PrivateInstanceVariable, // line #26:   int _pvini = 1;

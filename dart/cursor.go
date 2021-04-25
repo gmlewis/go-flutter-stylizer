@@ -118,6 +118,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			// Reset the reader because we chopped off the stripped line.
 			c.reader = strings.NewReader("")
 			if afterLen == 0 {
+				c.e.logf("advanceUntil: marking line %v as type SingleLineComment", c.lineIndex+1)
 				c.e.lines[c.lineIndex].entityType = SingleLineComment
 			}
 			c.e.logf("STRIPPED MODIFIED! singleLineComment=true: stripped=%q(%v), beforeLen=%v, afterLen=%v, cursor=%v", c.e.lines[c.lineIndex].stripped, len(c.e.lines[c.lineIndex].stripped), beforeLen, afterLen, c)
@@ -127,6 +128,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 				continue
 			}
 			c.inMultiLineComment++
+			c.e.logf("advanceUntil: marking line %v as type MultiLineComment", c.lineIndex+1)
 			c.e.lines[c.lineIndex].entityType = MultiLineComment
 			c.e.logf("inMultiLineComment=%v: cursor=%v", c.inMultiLineComment, c)
 			continue
@@ -137,6 +139,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			if c.inMultiLineComment == 0 {
 				return nil, fmt.Errorf("ERROR: Found */ before /*: cursor=%v", c)
 			}
+			c.e.logf("advanceUntil: marking line %v as type MultiLineComment", c.lineIndex+1)
 			c.e.lines[c.lineIndex].entityType = MultiLineComment
 			c.inMultiLineComment--
 			c.e.logf("inMultiLineComment=%v: cursor=%v", c.inMultiLineComment, c)

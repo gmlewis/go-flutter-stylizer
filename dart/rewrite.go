@@ -69,8 +69,9 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 		}
 
 		if separateEntities != false || len(entity.lines) > 1 {
-			if len(lines) > 0 && lines[len(lines)-1] != "\n" {
+			if len(lines) > 0 && lines[len(lines)-1] != "" {
 				lines = append(lines, "")
+				c.logf("reorderClass.addEntity(%v): adding blank line #%v", entity.entityType, len(lines))
 			}
 		}
 	}
@@ -82,8 +83,9 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 		for _, e := range entities {
 			addEntity(e, separateEntities)
 		}
-		if !separateEntities && len(lines) > 0 && lines[len(lines)-1] != "\n" {
+		if !separateEntities && len(lines) > 0 && lines[len(lines)-1] != "" {
 			lines = append(lines, "")
+			c.logf("reorderClass.addEntities(%v): separateEntities=%v, adding blank line #%v", entities[0].entityType, separateEntities, len(lines))
 		}
 	}
 
@@ -98,6 +100,7 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 
 		// Strip trailing blank lines.
 		for len(lines) > 2 && lines[len(lines)-1] == "" && lines[len(lines)-2] == "" {
+			c.logf("reorderClass(el='%v'): removing blank line #%v", el, len(lines))
 			lines = lines[0 : len(lines)-1]
 		}
 

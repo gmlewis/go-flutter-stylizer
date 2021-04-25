@@ -95,7 +95,7 @@ type Line struct {
 func NewLine(line string, startOffset, originalIndex int) *Line {
 	stripped := strings.TrimSpace(line)
 	entityType := Unknown
-	if len(stripped) == 0 {
+	if stripped == "" {
 		entityType = BlankLine
 	}
 	strippedOffset := strings.Index(line, stripped)

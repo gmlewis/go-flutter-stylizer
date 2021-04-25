@@ -35,12 +35,6 @@ class Class1 {
   // _spv is a static private variable.
   static final String _spv = 'spv';
 
-  /* This is a
-   * random multi-
-   * line comment
-   * somewhere in the middle
-   * of the class */
-
   // _spvni is a static private variable with no initializer.
   static double _spvni = 0;
 
@@ -58,6 +52,12 @@ class Class1 {
   var myfunc = (int n) => n;
 
   get vv => v; // getter
+
+  /* This is a
+   * random multi-
+   * line comment
+   * somewhere in the middle
+   * of the class */
 
   @override
   build() {} // build method

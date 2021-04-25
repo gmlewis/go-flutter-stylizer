@@ -40,16 +40,16 @@ class Class1 {
 
   get vv => v; // getter
 
-  // This is a random single-line comment somewhere in the class.
-
-  // _spv is a static private variable.
-  static final String _spv = 'spv';
-
   /* This is a
    * random multi-
    * line comment
    * somewhere in the middle
    * of the class */
+
+  // This is a random single-line comment somewhere in the class.
+
+  // _spv is a static private variable.
+  static final String _spv = 'spv';
 
   // _spvni is a static private variable with no initializer.
   static double _spvni = 0;
