@@ -349,7 +349,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 	if err != nil {
 		if err := c.advanceToNextLine(); err != nil {
 			if !c.atTopOfBraceLevel(0) {
-				return "", fmt.Errorf("parse error: reached EOF, cursor=%#v", c)
+				return "", fmt.Errorf("parse error: reached EOF, cursor=%v", c)
 			}
 			return "", err
 		}

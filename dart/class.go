@@ -285,7 +285,7 @@ func (c *Class) identifyNamedConstructors() error {
 			continue
 		}
 		leadingText := ss[0:ssi]
-		c.e.logf("identifyNamedConstructors: leadingText=%q, ssi=%v, ss=%q, cursor=%#v", leadingText, ssi, ss, cursor)
+		c.e.logf("identifyNamedConstructors: leadingText=%q, ssi=%v, ss=%q, cursor=%v", leadingText, ssi, ss, cursor)
 		if strings.Contains(leadingText, "=") {
 			// A named constructor is being used in a variable assignment; skip.
 			for i < len(c.lines) && c.lines[i].originalIndex < cursor.lineIndex {
