@@ -220,13 +220,8 @@ func (c *Class) identifyDeprecatedAsComments() error {
 			continue
 		}
 
-		c.e.logf("identifyDeprecatedAsComments: marking line %v as type SingleLineComment", i+1)
+		c.e.logf("identifyDeprecatedAsComments: marking @deprecated line %v as type SingleLineComment", i+1)
 		c.lines[i].entityType = SingleLineComment
-		if strings.HasPrefix(lower, depStr) {
-			if _, err := c.markMethod(i, line.stripped[0:len(depStr)], SingleLineComment, -1); err != nil {
-				return err
-			}
-		}
 	}
 
 	return nil

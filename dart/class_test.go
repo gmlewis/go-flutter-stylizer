@@ -41,7 +41,7 @@ func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType
 	}
 
 	if want := 1; len(got) != want {
-		t.Errorf("GetClasses = %v, want %v", got, want)
+		t.Errorf("GetClasses = %v, want %v", len(got), want)
 	}
 
 	if len(want) > 0 {
