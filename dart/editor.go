@@ -24,8 +24,9 @@ import (
 
 // Editor represents a text editor that understands Dart syntax.
 type Editor struct {
-	fullBuf string
-	lines   []*Line
+	fullBuf   string
+	lines     []*Line
+	eofOffset int
 
 	matchingPairs MatchingPairsMap
 	// classLineIndices contains line indices where a class or abstract class starts.
@@ -64,9 +65,35 @@ func NewEditor(buf string, verbose bool) (*Editor, error) {
 		return nil, fmt.Errorf("parse: %v", err)
 	}
 
+	e.eofOffset = cursor.absOffset
 	e.classLineIndices = cursor.classLineIndices
 
 	return e, nil
+}
+
+// findStartOfClass returns the absolute offset of the next top-level '{' or ';'
+// starting at offset startOffset.
+//
+// Note that this class definition is valid: "class D = Object with Function;"
+func (e *Editor) findStartOfClass(startOffset int) int {
+	for startOffset < e.eofOffset {
+		if e.fullBuf[startOffset] == '{' || e.fullBuf[startOffset] == ';' {
+			return startOffset
+		}
+		if pair, ok := e.matchingPairs[startOffset]; ok {
+			startOffset = pair.closeAbsOffset + 1
+			continue
+		}
+		startOffset++
+	}
+
+	// offset := strings.Index(e.fullBuf[startOffset:], "{")
+	// if semiOffset := strings.Index(e.fullBuf[startOffset:], ";"); offset < 0 || (semiOffset >= 0 && semiOffset < offset) {
+	// 	offset = semiOffset // this is valid:
+	// }
+	// return startOffset + offset
+	log.Fatalf("programming error: findStartOfClass(%v) should not reach here", startOffset)
+	return 0
 }
 
 // // findMatchingBracket finds the matching closing "}" (for "{") or ")" (for "(")

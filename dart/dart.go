@@ -175,14 +175,6 @@ var (
 	matchClassRE = regexp.MustCompile(`^(?:abstract\s+)?class\s+(\S+).*$`)
 )
 
-func findOpenCurlyOffset(buf string, startOffset int) int {
-	offset := strings.Index(buf[startOffset:], "{")
-	if semiOffset := strings.Index(buf[startOffset:], ";"); offset < 0 || (semiOffset >= 0 && semiOffset < offset) {
-		offset = semiOffset // this is valid: class D = Object with Function;
-	}
-	return startOffset + offset
-}
-
 // logf logs the line if verbose is true.
 func (c *Client) logf(fmtStr string, args ...interface{}) {
 	if c.opts.Verbose {
