@@ -28,6 +28,8 @@ type Editor struct {
 	lines   []*Line
 
 	matchingPairs MatchingPairsMap
+	// classLineIndices contains line indices where a class or abstract class starts.
+	classLineIndices []int
 
 	Verbose bool
 }
@@ -57,9 +59,11 @@ func NewEditor(buf string) (*Editor, error) {
 		e:      e,
 		reader: strings.NewReader(e.lines[0].stripped),
 	}
-	if _, err := cursor.parse(e.matchingPairs); err != nil {
+	if err := cursor.parse(e.matchingPairs); err != nil {
 		return nil, fmt.Errorf("parse: %v", err)
 	}
+
+	e.classLineIndices = cursor.classLineIndices
 
 	return e, nil
 }

@@ -59,6 +59,9 @@ type Cursor struct {
 	// UnreadRune can not be called twice in succession, so we need to keep track
 	// of our lookahead stack ourselves.
 	runeBuf []rune
+
+	// classLineIndices keeps track of line indices where a class or abstract class starts.
+	classLineIndices []int
 }
 
 func (c *Cursor) String() string {
@@ -74,7 +77,7 @@ func (c *Cursor) String() string {
 
 // parse parses the Dart source, identifies line entity types in the source,
 // keeps track of matching pairs, and returns a list of class line indices.
-func (c *Cursor) parse(matchingPairs MatchingPairsMap) (classLineIndices []int, err error) {
+func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 	var lastFeature string
 	var nf string // nextFeature
 	var matchingPairStack []*MatchingPair
@@ -84,9 +87,9 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (classLineIndices []int, 
 		nf, err = c.advanceToNextFeature()
 		if err != nil {
 			if err != io.EOF {
-				return nil, fmt.Errorf("advanceToNextFeature: %v", err)
+				return fmt.Errorf("advanceToNextFeature: %v", err)
 			}
-			return classLineIndices, nil
+			return nil
 		}
 
 		c.e.logf("nf=%q matchingPairStack=%#v, abs=%v, ind=%v, rel=%v", nf, matchingPairStack, c.absOffset, c.lineIndex, c.relStrippedOffset)
@@ -125,7 +128,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (classLineIndices []int, 
 				continue
 			}
 			if c.inMultiLineComment == 0 {
-				return nil, fmt.Errorf("ERROR: Found */ before /*: cursor=%v", c)
+				return fmt.Errorf("ERROR: Found */ before /*: cursor=%v", c)
 			}
 			c.e.logf("advanceUntil: marking line %v as type MultiLineComment", c.lineIndex+1)
 			c.e.lines[c.lineIndex].entityType = MultiLineComment
@@ -138,7 +141,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (classLineIndices []int, 
 				continue
 			}
 			if c.inSingleQuote {
-				return nil, fmt.Errorf("ERROR: Found ''' after ': cursor=%v", c)
+				return fmt.Errorf("ERROR: Found ''' after ': cursor=%v", c)
 			}
 			if c.inDoubleQuote || c.inTripleDouble {
 				continue
@@ -161,7 +164,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (classLineIndices []int, 
 				continue
 			}
 			if c.inDoubleQuote {
-				return nil, fmt.Errorf(`ERROR: Found """ after ": cursor=%v`, c)
+				return fmt.Errorf(`ERROR: Found """ after ": cursor=%v`, c)
 			}
 			if c.inSingleQuote || c.inTripleSingle {
 				continue
@@ -215,7 +218,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (classLineIndices []int, 
 				c.e.logf("${: inTripleDouble: cursor=%v", c)
 				matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 			default:
-				return nil, fmt.Errorf("ERROR: Found ${ outside of a string: cursor=%v", c)
+				return fmt.Errorf("ERROR: Found ${ outside of a string: cursor=%v", c)
 			}
 			continue
 		case "'":
@@ -284,7 +287,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (classLineIndices []int, 
 				continue
 			}
 			if len(c.braceLevels) == 0 {
-				return nil, fmt.Errorf("ERROR: Found } before {: cursor=%v", c)
+				return fmt.Errorf("ERROR: Found } before {: cursor=%v", c)
 			}
 			braceLevel := c.braceLevels[len(c.braceLevels)-1]
 			c.braceLevels = c.braceLevels[:len(c.braceLevels)-1]
@@ -299,7 +302,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (classLineIndices []int, 
 			case BraceTripleDouble:
 				c.inTripleDouble = true
 			default:
-				return nil, fmt.Errorf("ERROR: Unknown braceLevel %v: cursor=%v", braceLevel, c)
+				return fmt.Errorf("ERROR: Unknown braceLevel %v: cursor=%v", braceLevel, c)
 			}
 			c.e.logf("}: cursor=%v", c)
 			c.CloseMatchingPair(nf, matchingPairStack)
@@ -345,7 +348,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 	r, size, err := getRune()
 	if err != nil {
 		if err := c.advanceToNextLine(); err != nil {
-			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 || c.parenLevels > 0 || len(c.braceLevels) > 0 {
+			if !c.atTopOfBraceLevel(0) {
 				return "", fmt.Errorf("parse error: reached EOF, cursor=%#v", c)
 			}
 			return "", err
@@ -470,12 +473,29 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 	return string(r), nil
 }
 
+func (c *Cursor) atTopOfBraceLevel(braceLevel int) bool {
+	if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 || c.parenLevels > 0 {
+		return false
+	}
+	return len(c.braceLevels) == braceLevel
+}
+
 // advanceToNextLine advances the cursor to the next line.
 // It returns io.EOF when it reaches the end of the file.
+//
+// It also detects the start of class lines.
 func (c *Cursor) advanceToNextLine() error {
+	if c.lineIndex == 0 && matchClassRE.FindStringSubmatch(c.e.lines[c.lineIndex].line) != nil {
+		c.classLineIndices = append(c.classLineIndices, c.lineIndex)
+	}
+
 	c.lineIndex++
 	if c.lineIndex >= len(c.e.lines) {
 		return io.EOF
+	}
+
+	if c.atTopOfBraceLevel(0) && matchClassRE.FindStringSubmatch(c.e.lines[c.lineIndex].line) != nil {
+		c.classLineIndices = append(c.classLineIndices, c.lineIndex)
 	}
 
 	c.absOffset = c.e.lines[c.lineIndex].startOffset + c.e.lines[c.lineIndex].strippedOffset

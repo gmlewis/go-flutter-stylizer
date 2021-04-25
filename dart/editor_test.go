@@ -419,7 +419,7 @@ func TestNewEditor_with_utf8(t *testing.T) {
 			buf:  utf8Text,
 			want: []*Line{
 				{line: "abstract class ElementImpl implements Element {", stripped: "abstract class ElementImpl implements Element {", strippedOffset: 0, originalIndex: 0, startOffset: 0, endOffset: 47, entityType: 0},
-				{line: "  /// An Unicode right arrow.", stripped: "/// An Unicode right arrow.", strippedOffset: 2, originalIndex: 1, startOffset: 48, endOffset: 77, entityType: 0},
+				{line: "  /// An Unicode right arrow.", stripped: "", strippedOffset: 2, originalIndex: 1, startOffset: 48, endOffset: 77, entityType: SingleLineComment},
 				{line: "  @deprecated", stripped: "@deprecated", strippedOffset: 2, originalIndex: 2, startOffset: 78, endOffset: 91, entityType: 0},
 				{line: "  static final String RIGHT_ARROW = \" \\u2192 \";", stripped: "static final String RIGHT_ARROW = \" \\u2192 \";", strippedOffset: 2, originalIndex: 3, startOffset: 92, endOffset: 139, entityType: 0},
 				{line: "}", stripped: "}", strippedOffset: 0, originalIndex: 4, startOffset: 140, endOffset: 141, entityType: 0},
