@@ -80,7 +80,11 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 		buf = string(b)
 	}
 
-	e := NewEditor(buf)
+	e, err := NewEditor(buf)
+	if err != nil {
+		return false, fmt.Errorf("NewEditor: %v", err)
+	}
+
 	e.Verbose = c.opts.Verbose
 	classes, err := c.GetClasses(e, c.opts.GroupAndSortGetterMethods)
 	if err != nil {

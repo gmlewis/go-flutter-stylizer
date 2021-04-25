@@ -106,61 +106,61 @@ func NewClass(editor *Editor, className string,
 func (c *Client) GetClasses(editor *Editor, groupAndSortGetterMethods bool) ([]*Class, error) {
 	var classes []*Class
 
-	for _, line := range editor.lines {
-		if (strings.HasPrefix(line.line, "void main(") || strings.HasPrefix(line.line, "main(")) && strings.HasSuffix(line.line, ") {") {
-			// Find the end of main, marking sections as comments or strings to avoid them below.
-			openCurlyOffset := findOpenCurlyOffset(editor.fullBuf, line.startOffset)
-			editor.findMatchingBracket(openCurlyOffset)
-			continue
-		}
+	// for _, line := range editor.lines {
+	// 	if (strings.HasPrefix(line.line, "void main(") || strings.HasPrefix(line.line, "main(")) && strings.HasSuffix(line.line, ") {") {
+	// 		// Find the end of main, marking sections as comments or strings to avoid them below.
+	// 		openCurlyOffset := findOpenCurlyOffset(editor.fullBuf, line.startOffset)
+	// 		editor.findMatchingBracket(openCurlyOffset)
+	// 		continue
+	// 	}
 
-		mm := matchClassRE.FindStringSubmatch(line.line)
-		if len(mm) != 2 {
-			continue
-		}
+	// 	mm := matchClassRE.FindStringSubmatch(line.line)
+	// 	if len(mm) != 2 {
+	// 		continue
+	// 	}
 
-		className := mm[1]
-		classOffset := line.startOffset
-		openCurlyOffset := findOpenCurlyOffset(editor.fullBuf, classOffset)
+	// 	className := mm[1]
+	// 	classOffset := line.startOffset
+	// 	openCurlyOffset := findOpenCurlyOffset(editor.fullBuf, classOffset)
 
-		if editor.fullBuf[openCurlyOffset] == ';' {
-			continue
-		}
+	// 	if editor.fullBuf[openCurlyOffset] == ';' {
+	// 		continue
+	// 	}
 
-		if openCurlyOffset <= classOffset {
-			return nil, fmt.Errorf(`expected "{" after "class" at offset %v`, classOffset)
-		}
+	// 	if openCurlyOffset <= classOffset {
+	// 		return nil, fmt.Errorf(`expected "{" after "class" at offset %v`, classOffset)
+	// 	}
 
-		if line.entityType != Unknown || line.isCommentOrString {
-			editor.logf("\n\nSkipping new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v due to entityType/comment/string", className, classOffset, openCurlyOffset, line)
-			continue
-		}
+	// 	if line.entityType != Unknown || line.isCommentOrString {
+	// 		editor.logf("\n\nSkipping new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v due to entityType/comment/string", className, classOffset, openCurlyOffset, line)
+	// 		continue
+	// 	}
 
-		// This is a hack, but helps with files like `localizations_utils.dart` in
-		// the Flutter distribution.
-		if strings.ContainsAny(line.stripped, "$'") {
-			editor.logf("\n\nSkipping new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v due to appearance of $ or '", className, classOffset, openCurlyOffset, line)
-			continue
-		}
+	// 	// This is a hack, but helps with files like `localizations_utils.dart` in
+	// 	// the Flutter distribution.
+	// 	if strings.ContainsAny(line.stripped, "$'") {
+	// 		editor.logf("\n\nSkipping new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v due to appearance of $ or '", className, classOffset, openCurlyOffset, line)
+	// 		continue
+	// 	}
 
-		editor.logf("\n\nFound new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v", className, classOffset, openCurlyOffset, line)
-		closeCurlyOffset, err := editor.findMatchingBracket(openCurlyOffset)
-		if err != nil {
-			return nil, err
-		}
+	// 	editor.logf("\n\nFound new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v", className, classOffset, openCurlyOffset, line)
+	// 	closeCurlyOffset, err := editor.findMatchingBracket(openCurlyOffset)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 
-		if closeCurlyOffset <= openCurlyOffset {
-			return nil, fmt.Errorf(`expected "}" after "{" at offset %v`, openCurlyOffset)
-		}
-		editor.logf("\n\nFound end of class %q at closeCurlyOffset=%v", className, closeCurlyOffset)
+	// 	if closeCurlyOffset <= openCurlyOffset {
+	// 		return nil, fmt.Errorf(`expected "}" after "{" at offset %v`, openCurlyOffset)
+	// 	}
+	// 	editor.logf("\n\nFound end of class %q at closeCurlyOffset=%v", className, closeCurlyOffset)
 
-		dartClass := NewClass(editor, className, openCurlyOffset, closeCurlyOffset, groupAndSortGetterMethods)
-		if err := dartClass.FindFeatures(); err != nil {
-			return nil, err
-		}
+	// 	dartClass := NewClass(editor, className, openCurlyOffset, closeCurlyOffset, groupAndSortGetterMethods)
+	// 	if err := dartClass.FindFeatures(); err != nil {
+	// 		return nil, err
+	// 	}
 
-		classes = append(classes, dartClass)
-	}
+	// 	classes = append(classes, dartClass)
+	// }
 
 	return classes, nil
 }
@@ -329,164 +329,165 @@ func (c *Class) identifyNamedConstructors() error {
 }
 
 func (c *Class) findNext(lineNum int, searchFor ...string) ([]string, *Cursor, error) {
-	startLine := c.lines[lineNum]
-	cursor := &Cursor{
-		e:         c.e,
-		absOffset: startLine.startOffset + startLine.strippedOffset,
-		lineIndex: startLine.originalIndex,
+	// startLine := c.lines[lineNum]
+	// cursor := &Cursor{
+	// 	e:         c.e,
+	// 	absOffset: startLine.startOffset + startLine.strippedOffset,
+	// 	lineIndex: startLine.originalIndex,
 
-		relStrippedOffset: 0,
+	// 	relStrippedOffset: 0,
 
-		reader: strings.NewReader(c.e.lines[startLine.originalIndex].stripped),
-	}
-	c.e.logf("findNext(%v, %#v): %#v, BEFORE: cursor=%v", lineNum+1, searchFor, startLine, cursor)
-	features, err := cursor.advanceUntil(searchFor...)
-	if err != nil || len(features) == 0 {
-		return nil, nil, fmt.Errorf(`advanceUntil(%#v): %v`, searchFor, err)
-	}
-	c.e.logf("findNext(%v, %#v): AFTER: cursor=%v, features=%v", lineNum+1, searchFor, cursor, strings.Join(features, ""))
+	// 	reader: strings.NewReader(c.e.lines[startLine.originalIndex].stripped),
+	// }
+	// c.e.logf("findNext(%v, %#v): %#v, BEFORE: cursor=%v", lineNum+1, searchFor, startLine, cursor)
+	// features, err := cursor.advanceUntil(searchFor...)
+	// if err != nil || len(features) == 0 {
+	// 	return nil, nil, fmt.Errorf(`advanceUntil(%#v): %v`, searchFor, err)
+	// }
+	// c.e.logf("findNext(%v, %#v): AFTER: cursor=%v, features=%v", lineNum+1, searchFor, cursor, strings.Join(features, ""))
 
-	return features, cursor, nil
+	// return features, cursor, nil
+	return nil, nil, nil
 }
 
 func (c *Class) identifyOverrideMethodsAndVars() error {
-	for i := 1; i < len(c.lines); i++ {
-		if c.lines[i].entityType != Unknown || c.lines[i].isCommentOrString {
-			continue
-		}
+	// for i := 1; i < len(c.lines); i++ {
+	// 	if c.lines[i].entityType != Unknown || c.lines[i].isCommentOrString {
+	// 		continue
+	// 	}
 
-		if !strings.HasPrefix(c.lines[i].stripped, "@override") || i >= len(c.lines)-1 {
-			continue
-		}
+	// 	if !strings.HasPrefix(c.lines[i].stripped, "@override") || i >= len(c.lines)-1 {
+	// 		continue
+	// 	}
 
-		lineNum := i + 1
+	// 	lineNum := i + 1
 
-		features, cursor, err := c.findNext(lineNum, "=", "{", "(", ";")
-		if err != nil || len(features) == 0 {
-			return fmt.Errorf(`findNext: %v`, err)
-		}
+	// 	features, cursor, err := c.findNext(lineNum, "=", "{", "(", ";")
+	// 	if err != nil || len(features) == 0 {
+	// 		return fmt.Errorf(`findNext: %v`, err)
+	// 	}
 
-		if fs := strings.Join(features, ""); strings.HasPrefix(fs, "operator") || strings.Contains(fs, " operator") {
-			// redo the search, but don't include "=" since "operator" is
-			// a reserved keyword and must be an OverrideMethod.
-			features, cursor, err = c.findNext(lineNum, "{", "(", ";")
-			if err != nil || len(features) == 0 {
-				return fmt.Errorf(`findNext: %v`, err)
-			}
-		}
+	// 	if fs := strings.Join(features, ""); strings.HasPrefix(fs, "operator") || strings.Contains(fs, " operator") {
+	// 		// redo the search, but don't include "=" since "operator" is
+	// 		// a reserved keyword and must be an OverrideMethod.
+	// 		features, cursor, err = c.findNext(lineNum, "{", "(", ";")
+	// 		if err != nil || len(features) == 0 {
+	// 			return fmt.Errorf(`findNext: %v`, err)
+	// 		}
+	// 	}
 
-		if features[len(features)-1] == "(" {
-			// Include open paren in name.
-			ss := strings.Join(features, "")
-			// Search for beginning of method name.
-			nameOffset := strings.LastIndex(ss, " ") + 1
-			name := ss[nameOffset:]
-			entityType := OverrideMethod
-			if name == "build(" {
-				entityType = BuildMethod
-			}
-			if c.lines[i].entityType >= MainConstructor && c.lines[i].entityType != entityType {
-				if err := c.repairIncorrectlyLabeledLine(i); err != nil {
-					return err
-				}
-			}
-			c.e.logf("identifyOverrideMethodsAndVars: marking override line %v as type %v", i+1, entityType)
-			c.lines[i].entityType = entityType
+	// 	if features[len(features)-1] == "(" {
+	// 		// Include open paren in name.
+	// 		ss := strings.Join(features, "")
+	// 		// Search for beginning of method name.
+	// 		nameOffset := strings.LastIndex(ss, " ") + 1
+	// 		name := ss[nameOffset:]
+	// 		entityType := OverrideMethod
+	// 		if name == "build(" {
+	// 			entityType = BuildMethod
+	// 		}
+	// 		if c.lines[i].entityType >= MainConstructor && c.lines[i].entityType != entityType {
+	// 			if err := c.repairIncorrectlyLabeledLine(i); err != nil {
+	// 				return err
+	// 			}
+	// 		}
+	// 		c.e.logf("identifyOverrideMethodsAndVars: marking override line %v as type %v", i+1, entityType)
+	// 		c.lines[i].entityType = entityType
 
-			c.e.logf("identifyOverrideMethodsAndVars: calling markMethod(line #%v, name=%q, %v), stripped=%q", lineNum+1, name, entityType, c.lines[lineNum].stripped)
-			entity, err := c.markMethod(lineNum, name, entityType, cursor.absOffset-1)
-			if err != nil {
-				return err
-			}
-			if name == "build(" {
-				c.buildMethod = entity
-			} else {
-				c.overrideMethods = append(c.overrideMethods, entity)
-			}
-		} else {
-			entity := &Entity{
-				entityType: OverrideMethod,
-			}
+	// 		c.e.logf("identifyOverrideMethodsAndVars: calling markMethod(line #%v, name=%q, %v), stripped=%q", lineNum+1, name, entityType, c.lines[lineNum].stripped)
+	// 		entity, err := c.markMethod(lineNum, name, entityType, cursor.absOffset-1)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		if name == "build(" {
+	// 			c.buildMethod = entity
+	// 		} else {
+	// 			c.overrideMethods = append(c.overrideMethods, entity)
+	// 		}
+	// 	} else {
+	// 		entity := &Entity{
+	// 			entityType: OverrideMethod,
+	// 		}
 
-			// No open paren - could be a getter. See if it has a body.
-			if features[len(features)-1] == "{" {
-				absOpenCurlyOffset := cursor.absOffset - 1
-				if c.e.fullBuf[absOpenCurlyOffset] != '{' {
-					return fmt.Errorf("identifyOverrideMethodsAndVars: expected '{' at offset %v but got %c", absOpenCurlyOffset, c.e.fullBuf[absOpenCurlyOffset])
-				}
+	// 		// No open paren - could be a getter. See if it has a body.
+	// 		if features[len(features)-1] == "{" {
+	// 			absOpenCurlyOffset := cursor.absOffset - 1
+	// 			if c.e.fullBuf[absOpenCurlyOffset] != '{' {
+	// 				return fmt.Errorf("identifyOverrideMethodsAndVars: expected '{' at offset %v but got %c", absOpenCurlyOffset, c.e.fullBuf[absOpenCurlyOffset])
+	// 			}
 
-				c.e.logf("identifyOverrideMethodsAndVars: calling findMatchingBracket(%v)", absOpenCurlyOffset)
-				absCloseCurlyOffset, err := c.e.findMatchingBracket(absOpenCurlyOffset)
-				if err != nil {
-					return err
-				}
+	// 			c.e.logf("identifyOverrideMethodsAndVars: calling findMatchingBracket(%v)", absOpenCurlyOffset)
+	// 			absCloseCurlyOffset, err := c.e.findMatchingBracket(absOpenCurlyOffset)
+	// 			if err != nil {
+	// 				return err
+	// 			}
 
-				relCloseCurlyOffset := absCloseCurlyOffset - c.openCurlyOffset
+	// 			relCloseCurlyOffset := absCloseCurlyOffset - c.openCurlyOffset
 
-				if c.classBody[relCloseCurlyOffset] != '}' {
-					return fmt.Errorf("expected '}' at relative offset %v but got %c: %q", relCloseCurlyOffset, c.classBody[relCloseCurlyOffset], c.classBody[relCloseCurlyOffset:])
-				}
+	// 			if c.classBody[relCloseCurlyOffset] != '}' {
+	// 				return fmt.Errorf("expected '}' at relative offset %v but got %c: %q", relCloseCurlyOffset, c.classBody[relCloseCurlyOffset], c.classBody[relCloseCurlyOffset:])
+	// 			}
 
-				lineOffset := c.lines[lineNum].startOffset - c.openCurlyOffset
-				bodyBuf := c.classBody[lineOffset : relCloseCurlyOffset+1]
-				numLines := len(strings.Split(bodyBuf, "\n"))
-				for j := 0; j < numLines; j++ {
-					if c.lines[lineNum+j].entityType >= MainConstructor && c.lines[lineNum+j].entityType != entity.entityType {
-						if err := c.repairIncorrectlyLabeledLine(lineNum + j); err != nil {
-							return err
-						}
-					}
-					c.e.logf("identifyOverrideMethodsAndVars: marking body line %v as type %v", lineNum+j+1, entity.entityType)
-					c.lines[lineNum+j].entityType = entity.entityType
-					entity.lines = append(entity.lines, c.lines[lineNum+j])
-				}
-			} else {
-				// Does not have a body - if it has no fat arrow, it is a variable.
-				if features[len(features)-1] != "=" ||
-					(cursor.absOffset < len(c.e.fullBuf) && c.e.fullBuf[cursor.absOffset] != '>') {
-					entity.entityType = OverrideVariable
-				}
+	// 			lineOffset := c.lines[lineNum].startOffset - c.openCurlyOffset
+	// 			bodyBuf := c.classBody[lineOffset : relCloseCurlyOffset+1]
+	// 			numLines := len(strings.Split(bodyBuf, "\n"))
+	// 			for j := 0; j < numLines; j++ {
+	// 				if c.lines[lineNum+j].entityType >= MainConstructor && c.lines[lineNum+j].entityType != entity.entityType {
+	// 					if err := c.repairIncorrectlyLabeledLine(lineNum + j); err != nil {
+	// 						return err
+	// 					}
+	// 				}
+	// 				c.e.logf("identifyOverrideMethodsAndVars: marking body line %v as type %v", lineNum+j+1, entity.entityType)
+	// 				c.lines[lineNum+j].entityType = entity.entityType
+	// 				entity.lines = append(entity.lines, c.lines[lineNum+j])
+	// 			}
+	// 		} else {
+	// 			// Does not have a body - if it has no fat arrow, it is a variable.
+	// 			if features[len(features)-1] != "=" ||
+	// 				(cursor.absOffset < len(c.e.fullBuf) && c.e.fullBuf[cursor.absOffset] != '>') {
+	// 				entity.entityType = OverrideVariable
+	// 			}
 
-				features, cursor, err := c.findNext(lineNum, ";")
-				if err != nil || len(features) == 0 {
-					return fmt.Errorf(`findNext: %v`, err)
-				}
+	// 			features, cursor, err := c.findNext(lineNum, ";")
+	// 			if err != nil || len(features) == 0 {
+	// 				return fmt.Errorf(`findNext: %v`, err)
+	// 			}
 
-				numLines := cursor.lineIndex - c.lines[lineNum].originalIndex
-				for j := lineNum; j <= lineNum+numLines; j++ {
-					if j >= len(c.lines) {
-						continue
-					}
+	// 			numLines := cursor.lineIndex - c.lines[lineNum].originalIndex
+	// 			for j := lineNum; j <= lineNum+numLines; j++ {
+	// 				if j >= len(c.lines) {
+	// 					continue
+	// 				}
 
-					if c.lines[j].entityType >= MainConstructor && c.lines[j].entityType != entity.entityType {
-						if err := c.repairIncorrectlyLabeledLine(j); err != nil {
-							return err
-						}
-					}
-					c.e.logf("identifyOverrideMethodsAndVars: marking line %v as type %v", j+1, entity.entityType)
-					c.lines[j].entityType = entity.entityType
-					entity.lines = append(entity.lines, c.lines[j])
-				}
-			}
+	// 				if c.lines[j].entityType >= MainConstructor && c.lines[j].entityType != entity.entityType {
+	// 					if err := c.repairIncorrectlyLabeledLine(j); err != nil {
+	// 						return err
+	// 					}
+	// 				}
+	// 				c.e.logf("identifyOverrideMethodsAndVars: marking line %v as type %v", j+1, entity.entityType)
+	// 				c.lines[j].entityType = entity.entityType
+	// 				entity.lines = append(entity.lines, c.lines[j])
+	// 			}
+	// 		}
 
-			// Preserve the comment lines leading up to the method.
-			for lineNum--; lineNum > 0; lineNum-- {
-				if isComment(c.lines[lineNum]) || strings.HasPrefix(c.lines[lineNum].stripped, "@") {
-					c.e.logf("identifyOverrideMethodsAndVars: marking comment line %v as type %v", lineNum+1, entity.entityType)
-					c.lines[lineNum].entityType = entity.entityType
-					entity.lines = append([]*Line{c.lines[lineNum]}, entity.lines...)
-					continue
-				}
-				break
-			}
+	// 		// Preserve the comment lines leading up to the method.
+	// 		for lineNum--; lineNum > 0; lineNum-- {
+	// 			if isComment(c.lines[lineNum]) || strings.HasPrefix(c.lines[lineNum].stripped, "@") {
+	// 				c.e.logf("identifyOverrideMethodsAndVars: marking comment line %v as type %v", lineNum+1, entity.entityType)
+	// 				c.lines[lineNum].entityType = entity.entityType
+	// 				entity.lines = append([]*Line{c.lines[lineNum]}, entity.lines...)
+	// 				continue
+	// 			}
+	// 			break
+	// 		}
 
-			if entity.entityType == OverrideVariable {
-				c.overrideVariables = append(c.overrideVariables, entity)
-			} else {
-				c.overrideMethods = append(c.overrideMethods, entity)
-			}
-		}
-	}
+	// 		if entity.entityType == OverrideVariable {
+	// 			c.overrideVariables = append(c.overrideVariables, entity)
+	// 		} else {
+	// 			c.overrideMethods = append(c.overrideMethods, entity)
+	// 		}
+	// 	}
+	// }
 
 	return nil
 }
@@ -726,94 +727,94 @@ func (c *Class) markMethod(lineNum int, methodName string, entityType EntityType
 		entityType: entityType,
 	}
 
-	line := c.lines[lineNum]
-	lineOffset := line.startOffset - c.openCurlyOffset
+	// line := c.lines[lineNum]
+	// lineOffset := line.startOffset - c.openCurlyOffset
 
-	if absOpenParenOffset < 0 {
-		for {
-			index := strings.Index(line.line, methodName)
-			if index >= 0 {
-				break
-			}
-			lineNum++
-			if lineNum >= len(c.lines) {
-				return nil, fmt.Errorf("expected to find methodName=%q, but ran out of lines", methodName)
-			}
-			line = c.lines[lineNum]
-		}
-		absOpenParenOffset = line.startOffset + strings.Index(line.line, methodName) + len(methodName) - 1
+	// if absOpenParenOffset < 0 {
+	// 	for {
+	// 		index := strings.Index(line.line, methodName)
+	// 		if index >= 0 {
+	// 			break
+	// 		}
+	// 		lineNum++
+	// 		if lineNum >= len(c.lines) {
+	// 			return nil, fmt.Errorf("expected to find methodName=%q, but ran out of lines", methodName)
+	// 		}
+	// 		line = c.lines[lineNum]
+	// 	}
+	// 	absOpenParenOffset = line.startOffset + strings.Index(line.line, methodName) + len(methodName) - 1
 
-		c.e.logf("markMethod(line #%v, methodName=%q, entityType=%v): absOpenParenOffset=%v, lineOffset=%v, calling findMatchingBracket(absOpenParenOffset=%v), line=%q", lineNum+1, methodName, entityType, absOpenParenOffset, lineOffset, absOpenParenOffset, line.line)
-	}
+	// 	c.e.logf("markMethod(line #%v, methodName=%q, entityType=%v): absOpenParenOffset=%v, lineOffset=%v, calling findMatchingBracket(absOpenParenOffset=%v), line=%q", lineNum+1, methodName, entityType, absOpenParenOffset, lineOffset, absOpenParenOffset, line.line)
+	// }
 
-	if c.e.fullBuf[absOpenParenOffset] != '(' {
-		return nil, fmt.Errorf("expected absOpenParenOffset=%v to be '(' but got '%c': line=%q", absOpenParenOffset, c.e.fullBuf[absOpenParenOffset], line.line)
-	}
+	// if c.e.fullBuf[absOpenParenOffset] != '(' {
+	// 	return nil, fmt.Errorf("expected absOpenParenOffset=%v to be '(' but got '%c': line=%q", absOpenParenOffset, c.e.fullBuf[absOpenParenOffset], line.line)
+	// }
 
-	absCloseParenOffset, err := c.e.findMatchingBracket(absOpenParenOffset)
-	if err != nil {
-		return nil, err
-	}
+	// absCloseParenOffset, err := c.e.findMatchingBracket(absOpenParenOffset)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	relCloseParenOffset := absCloseParenOffset - c.openCurlyOffset
-	if c.classBody[relCloseParenOffset] != ')' {
-		return nil, fmt.Errorf("expected close parenthesis at relative offset %v but got %v", relCloseParenOffset, c.classBody[relCloseParenOffset:])
-	}
+	// relCloseParenOffset := absCloseParenOffset - c.openCurlyOffset
+	// if c.classBody[relCloseParenOffset] != ')' {
+	// 	return nil, fmt.Errorf("expected close parenthesis at relative offset %v but got %v", relCloseParenOffset, c.classBody[relCloseParenOffset:])
+	// }
 
-	fatArrowOffset := strings.Index(c.classBody[relCloseParenOffset:], "=>")
-	curlyDeltaOffset := strings.Index(c.classBody[relCloseParenOffset:], "{")
-	semicolonOffset := strings.Index(c.classBody[relCloseParenOffset:], ";")
-	c.e.logf("fatArrowOffset=%v, curlyDeltaOffset=%v, semicolonOffset=%v", fatArrowOffset, curlyDeltaOffset, semicolonOffset)
+	// fatArrowOffset := strings.Index(c.classBody[relCloseParenOffset:], "=>")
+	// curlyDeltaOffset := strings.Index(c.classBody[relCloseParenOffset:], "{")
+	// semicolonOffset := strings.Index(c.classBody[relCloseParenOffset:], ";")
+	// c.e.logf("fatArrowOffset=%v, curlyDeltaOffset=%v, semicolonOffset=%v", fatArrowOffset, curlyDeltaOffset, semicolonOffset)
 
-	var nextOffset int
-	if curlyDeltaOffset < 0 ||
-		(curlyDeltaOffset >= 0 && fatArrowOffset >= 0 && semicolonOffset >= 0 && fatArrowOffset < curlyDeltaOffset && fatArrowOffset < semicolonOffset) ||
-		(curlyDeltaOffset >= 0 && semicolonOffset >= 0 && semicolonOffset < curlyDeltaOffset) { // no curly-braced body.
-		nextOffset = relCloseParenOffset + semicolonOffset
-	} else {
-		absOpenCurlyOffset := absCloseParenOffset + curlyDeltaOffset
-		c.e.logf("markMethod: calling findMatchingBracket(absOpenCurlyOffset=%v)", absOpenCurlyOffset)
-		absCloseCurlyOffset, err := c.e.findMatchingBracket(absOpenCurlyOffset)
-		if err != nil {
-			return nil, err
-		}
+	// var nextOffset int
+	// if curlyDeltaOffset < 0 ||
+	// 	(curlyDeltaOffset >= 0 && fatArrowOffset >= 0 && semicolonOffset >= 0 && fatArrowOffset < curlyDeltaOffset && fatArrowOffset < semicolonOffset) ||
+	// 	(curlyDeltaOffset >= 0 && semicolonOffset >= 0 && semicolonOffset < curlyDeltaOffset) { // no curly-braced body.
+	// 	nextOffset = relCloseParenOffset + semicolonOffset
+	// } else {
+	// 	absOpenCurlyOffset := absCloseParenOffset + curlyDeltaOffset
+	// 	c.e.logf("markMethod: calling findMatchingBracket(absOpenCurlyOffset=%v)", absOpenCurlyOffset)
+	// 	absCloseCurlyOffset, err := c.e.findMatchingBracket(absOpenCurlyOffset)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 
-		nextOffset = absCloseCurlyOffset - c.openCurlyOffset
-	}
+	// 	nextOffset = absCloseCurlyOffset - c.openCurlyOffset
+	// }
 
-	if nextOffset+1 > len(c.classBody) {
-		nextOffset = len(c.classBody) - 1
-	}
+	// if nextOffset+1 > len(c.classBody) {
+	// 	nextOffset = len(c.classBody) - 1
+	// }
 
-	constructorBuf := c.classBody[lineOffset : nextOffset+1]
-	c.e.logf("markMethod: constructorBuf[%v:%v]=%q", lineOffset, nextOffset+1, constructorBuf)
-	numLines := len(strings.Split(constructorBuf, "\n"))
-	for i := 0; i < numLines; i++ {
-		if lineNum+i >= len(c.lines) {
-			break
-		}
+	// constructorBuf := c.classBody[lineOffset : nextOffset+1]
+	// c.e.logf("markMethod: constructorBuf[%v:%v]=%q", lineOffset, nextOffset+1, constructorBuf)
+	// numLines := len(strings.Split(constructorBuf, "\n"))
+	// for i := 0; i < numLines; i++ {
+	// 	if lineNum+i >= len(c.lines) {
+	// 		break
+	// 	}
 
-		if c.lines[lineNum+i].entityType >= MainConstructor && c.lines[lineNum+i].entityType != entityType {
-			if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
-				return nil, err
-			}
-		}
+	// 	if c.lines[lineNum+i].entityType >= MainConstructor && c.lines[lineNum+i].entityType != entityType {
+	// 		if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
+	// 			return nil, err
+	// 		}
+	// 	}
 
-		c.e.logf("markMethod: marking line %v as type %v", lineNum+i+1, entityType)
-		c.lines[lineNum+i].entityType = entityType
-		entity.lines = append(entity.lines, c.lines[lineNum+i])
-	}
+	// 	c.e.logf("markMethod: marking line %v as type %v", lineNum+i+1, entityType)
+	// 	c.lines[lineNum+i].entityType = entityType
+	// 	entity.lines = append(entity.lines, c.lines[lineNum+i])
+	// }
 
-	// Preserve the comment lines leading up to the method.
-	for lineNum--; lineNum > 0; lineNum-- {
-		if isComment(c.lines[lineNum]) || strings.HasPrefix(c.lines[lineNum].stripped, "@") {
-			c.e.logf("markMethod: marking comment line %v as type %v", lineNum+1, entityType)
-			c.lines[lineNum].entityType = entityType
-			entity.lines = append([]*Line{c.lines[lineNum]}, entity.lines...)
-			continue
-		}
-		break
-	}
+	// // Preserve the comment lines leading up to the method.
+	// for lineNum--; lineNum > 0; lineNum-- {
+	// 	if isComment(c.lines[lineNum]) || strings.HasPrefix(c.lines[lineNum].stripped, "@") {
+	// 		c.e.logf("markMethod: marking comment line %v as type %v", lineNum+1, entityType)
+	// 		c.lines[lineNum].entityType = entityType
+	// 		entity.lines = append([]*Line{c.lines[lineNum]}, entity.lines...)
+	// 		continue
+	// 	}
+	// 	break
+	// }
 
 	return entity, nil
 }

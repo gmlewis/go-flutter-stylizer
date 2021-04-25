@@ -71,15 +71,12 @@ func (c *Cursor) String() string {
 		c.inSingleQuote, c.inDoubleQuote, c.inTripleSingle, c.inTripleDouble, c.inMultiLineComment, c.parenLevels, c.braceLevels)
 }
 
-// advanceUntil searches for one of the provided strings, stepping through
-// the Dart source code (and obeying its grammatical nuances) until found.
-//
-// It also adds a list of "interesting" top-level features encountered as it
-// processes the data, effectively filtering out the contents of
-// strings, bodies, and comments.
-func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error) {
+// parse parses the Dart source, identifies line entity types in the source,
+// keeps track of matching pairs, and returns a list of class line indices.
+func (c *Cursor) parse(matchingPairs MatchingPairsMap) (classLineIndices []int, err error) {
 	var lastFeature string
-	var nf string
+	var nf string // nextFeature
+	var matchingPairStack []*MatchingPair
 
 	for {
 		lastFeature = nf
@@ -88,21 +85,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			return nil, err
 		}
 
-		c.e.logf("nf=%q searchFor=%#v, abs=%v, ind=%v, rel=%v", nf, searchFor, c.absOffset, c.lineIndex, c.relStrippedOffset)
-		var foundIt bool
-		for _, sf := range searchFor {
-			if nf == sf {
-				foundIt = true
-				break
-			}
-		}
-
-		if foundIt &&
-			!c.inSingleQuote && !c.inDoubleQuote && !c.inTripleSingle && !c.inTripleDouble &&
-			c.parenLevels == 0 &&
-			len(c.braceLevels) == 0 {
-			return append(features, nf), nil
-		}
+		c.e.logf("nf=%q matchingPairStack=%#v, abs=%v, ind=%v, rel=%v", nf, matchingPairStack, c.absOffset, c.lineIndex, c.relStrippedOffset)
 
 		switch nf {
 		case "//":
@@ -115,22 +98,23 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.e.lines[c.lineIndex].stripped = strings.TrimSpace(c.e.lines[c.lineIndex].stripped[0:c.relStrippedOffset])
 			afterLen := len(c.e.lines[c.lineIndex].stripped)
 			c.absOffset -= beforeLen - afterLen
-			// Reset the reader because we chopped off the stripped line.
+			// Reset the reader because we chopped off the stripped line and have no more to parse on this line.
 			c.reader = strings.NewReader("")
 			if afterLen == 0 {
-				c.e.logf("advanceUntil: marking line %v as type SingleLineComment", c.lineIndex+1)
+				c.e.logf("parse: marking line #%v as type SingleLineComment", c.lineIndex+1)
 				c.e.lines[c.lineIndex].entityType = SingleLineComment
 			}
-			c.e.logf("STRIPPED MODIFIED! singleLineComment=true: stripped=%q(%v), beforeLen=%v, afterLen=%v, cursor=%v", c.e.lines[c.lineIndex].stripped, len(c.e.lines[c.lineIndex].stripped), beforeLen, afterLen, c)
+			// c.e.logf("STRIPPED MODIFIED! singleLineComment=true: stripped=%q(%v), beforeLen=%v, afterLen=%v, cursor=%v", c.e.lines[c.lineIndex].stripped, len(c.e.lines[c.lineIndex].stripped), beforeLen, afterLen, c)
 			continue
 		case "/*":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble {
 				continue
 			}
 			c.inMultiLineComment++
-			c.e.logf("advanceUntil: marking line %v as type MultiLineComment", c.lineIndex+1)
+			c.e.logf("advanceUntil: marking line #%v as type MultiLineComment", c.lineIndex+1)
 			c.e.lines[c.lineIndex].entityType = MultiLineComment
 			c.e.logf("inMultiLineComment=%v: cursor=%v", c.inMultiLineComment, c)
+			matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 			continue
 		case "*/":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble {
@@ -143,6 +127,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.e.lines[c.lineIndex].entityType = MultiLineComment
 			c.inMultiLineComment--
 			c.e.logf("inMultiLineComment=%v: cursor=%v", c.inMultiLineComment, c)
+			c.CloseMatchingPair(nf, matchingPairStack)
 			continue
 		case "'''":
 			if c.inMultiLineComment > 0 {
@@ -157,6 +142,15 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.inTripleSingle = !c.inTripleSingle
 			c.stringIsRaw = c.inTripleSingle && lastFeature == "r"
 			c.e.logf("inTripleSingle: cursor=%v", c)
+			if c.inTripleSingle {
+				if c.stringIsRaw {
+					matchingPairStack = c.NewMatchingPair("r'''", matchingPairs, matchingPairStack)
+				} else {
+					matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
+				}
+			} else {
+				c.CloseMatchingPair(nf, matchingPairStack)
+			}
 			continue
 		case `"""`:
 			if c.inMultiLineComment > 0 {
@@ -171,6 +165,15 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.inTripleDouble = !c.inTripleDouble
 			c.stringIsRaw = c.inTripleDouble && lastFeature == "r"
 			c.e.logf("inTripleDouble: cursor=%v", c)
+			if c.inTripleDouble {
+				if c.stringIsRaw {
+					matchingPairStack = c.NewMatchingPair(`r"""`, matchingPairs, matchingPairStack)
+				} else {
+					matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
+				}
+			} else {
+				c.CloseMatchingPair(nf, matchingPairStack)
+			}
 			continue
 		case "${":
 			switch {
@@ -182,6 +185,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 				c.inSingleQuote = false
 				c.braceLevels = append(c.braceLevels, BraceSingle)
 				c.e.logf("${: inSingleQuote: cursor=%v", c)
+				matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 			case c.inDoubleQuote:
 				if c.stringIsRaw {
 					continue
@@ -189,6 +193,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 				c.inDoubleQuote = false
 				c.braceLevels = append(c.braceLevels, BraceDouble)
 				c.e.logf("${: inDoubleQuote: cursor=%v", c)
+				matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 			case c.inTripleSingle:
 				if c.stringIsRaw {
 					continue
@@ -196,6 +201,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 				c.inTripleSingle = false
 				c.braceLevels = append(c.braceLevels, BraceTripleSingle)
 				c.e.logf("${: inTripleSingle: cursor=%v", c)
+				matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 			case c.inTripleDouble:
 				if c.stringIsRaw {
 					continue
@@ -203,6 +209,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 				c.inTripleDouble = false
 				c.braceLevels = append(c.braceLevels, BraceTripleDouble)
 				c.e.logf("${: inTripleDouble: cursor=%v", c)
+				matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 			default:
 				return nil, fmt.Errorf("ERROR: Found ${ outside of a string: cursor=%v", c)
 			}
@@ -214,6 +221,15 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.inSingleQuote = !c.inSingleQuote
 			c.stringIsRaw = c.inSingleQuote && lastFeature == "r"
 			c.e.logf("inSingleQuote: lastFeature=%q, cursor=%v", lastFeature, c)
+			if c.inSingleQuote {
+				if c.stringIsRaw {
+					matchingPairStack = c.NewMatchingPair("r'", matchingPairs, matchingPairStack)
+				} else {
+					matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
+				}
+			} else {
+				c.CloseMatchingPair(nf, matchingPairStack)
+			}
 			continue
 		case `"`:
 			if c.inSingleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
@@ -222,31 +238,43 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.inDoubleQuote = !c.inDoubleQuote
 			c.stringIsRaw = c.inDoubleQuote && lastFeature == "r"
 			c.e.logf("inDoubleQuote: cursor=%v", c)
+			if c.inDoubleQuote {
+				if c.stringIsRaw {
+					matchingPairStack = c.NewMatchingPair(`r"`, matchingPairs, matchingPairStack)
+				} else {
+					matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
+				}
+			} else {
+				c.CloseMatchingPair(nf, matchingPairStack)
+			}
 			continue
 		case "(":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
 				continue
 			}
-			if c.parenLevels == 0 && len(c.braceLevels) == 0 {
-				features = append(features, nf)
-			}
+			// if c.parenLevels == 0 && len(c.braceLevels) == 0 {
+			// 	features = append(features, nf)
+			// }
 			c.parenLevels++
 			c.e.logf("parenLevels++: cursor=%v", c)
+			matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 		case ")":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
 				continue
 			}
 			c.parenLevels--
 			c.e.logf("parenLevels--: cursor=%v", c)
+			c.CloseMatchingPair(nf, matchingPairStack)
 		case "{":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 {
 				continue
 			}
-			if c.parenLevels == 0 && len(c.braceLevels) == 0 {
-				features = append(features, nf)
-			}
+			// if c.parenLevels == 0 && len(c.braceLevels) == 0 {
+			// 	features = append(features, nf)
+			// }
 			c.braceLevels = append(c.braceLevels, BraceNormal)
 			c.e.logf("{: cursor=%v", c)
+			matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 		case "}":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 {
 				continue
@@ -270,16 +298,17 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 				return nil, fmt.Errorf("ERROR: Unknown braceLevel %v: cursor=%v", braceLevel, c)
 			}
 			c.e.logf("}: cursor=%v", c)
+			c.CloseMatchingPair(nf, matchingPairStack)
 		}
 
-		if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 || c.parenLevels > 0 || len(c.braceLevels) > 0 {
-			continue
-		}
-		features = append(features, nf) // all top-level characters captured here.
+		// if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 || c.parenLevels > 0 || len(c.braceLevels) > 0 {
+		// 	continue
+		// }
+		// features = append(features, nf) // all top-level characters captured here.
 
-		if foundIt && len(searchFor) > 1 {
-			return features, nil
-		}
+		// if foundIt && len(searchFor) > 1 {
+		// 	return features, nil
+		// }
 	}
 }
 
