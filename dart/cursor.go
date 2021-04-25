@@ -501,6 +501,10 @@ func (c *Cursor) advanceToNextLine() error {
 	c.absOffset = c.e.lines[c.lineIndex].startOffset + c.e.lines[c.lineIndex].strippedOffset
 	c.relStrippedOffset = 0
 
+	if c.e.lines[c.lineIndex].stripped != "" && c.e.fullBuf[c.absOffset] != c.e.lines[c.lineIndex].stripped[0] {
+		return fmt.Errorf("programming error: fullBuf[%v]=%c, want %c", c.absOffset, c.e.fullBuf[c.absOffset], c.e.lines[c.lineIndex].stripped[0])
+	}
+
 	c.reader = strings.NewReader(c.e.lines[c.lineIndex].stripped)
 	if c.inMultiLineComment > 0 {
 		c.e.logf("advanceToNextLine: marking line #%v as MultiLineComment", c.lineIndex+1)

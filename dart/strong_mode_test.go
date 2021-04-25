@@ -2593,12 +2593,19 @@ func TestStrongMode_Class1(t *testing.T) {
 }
 
 func TestStrongMode_Class2(t *testing.T) {
-	source := strong_mode_dart_txt[91956:129066]
+	source := strong_mode_dart_txt[91956 : 129066+12] // extra utf8 bytes
 	// wantSource := strong_mode_want_txt[560:769]
+
+	if source[0] != '@' {
+		t.Fatalf("source[0] = %c, want @", source[0])
+	}
+	if source[len(source)-1] != '\n' {
+		t.Fatalf("source[%v] = %c, want newline", len(source)-1, source[len(source)-1])
+	}
 
 	opts := &Options{
 		MemberOrdering: defaultMemberOrdering,
-		Verbose:        true,
+		// Verbose:        true,
 	}
 
 	want := []EntityType{
@@ -2615,8 +2622,15 @@ func TestStrongMode_Class2(t *testing.T) {
 }
 
 func TestStrongMode_Class3(t *testing.T) {
-	source := strong_mode_dart_txt[129066:134946]
+	source := strong_mode_dart_txt[129066+12 : 134946+12]
 	// wantSource := strong_mode_want_txt[1027:2248]
+
+	if source[0] != '@' {
+		t.Fatalf("source[0] = %c, want @", source[0])
+	}
+	if source[len(source)-1] != '\n' {
+		t.Fatalf("source[%v] = %c, want newline", len(source)-1, source[len(source)-1])
+	}
 
 	opts := &Options{
 		MemberOrdering: defaultMemberOrdering,
