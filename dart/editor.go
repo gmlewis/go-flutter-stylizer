@@ -19,6 +19,7 @@ package dart
 import (
 	"fmt"
 	"log"
+	"runtime/debug"
 	"strings"
 )
 
@@ -92,6 +93,8 @@ func (e *Editor) findStartOfClass(startOffset int) int {
 	// 	offset = semiOffset // this is valid:
 	// }
 	// return startOffset + offset
+
+	debug.PrintStack()
 	log.Fatalf("programming error: findStartOfClass(%v) should not reach here", startOffset)
 	return 0
 }

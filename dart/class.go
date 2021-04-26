@@ -19,7 +19,6 @@ package dart
 import (
 	"fmt"
 	"io"
-	"log"
 	"strings"
 )
 
@@ -80,7 +79,7 @@ func NewClass(editor *Editor, className string,
 		entityType:        classLines[0].entityType,
 		isCommentOrString: classLines[0].isCommentOrString,
 	}
-	// log.Printf("p[%v]=%q(%v), closeCurlyOffset=%v, len(classBody)=%v, last classLine=%#v", len(p)-1, p[len(p)-1], len(p[len(p)-1]), closeCurlyOffset, len(classBody), classLines[len(classLines)-1])
+	// c.e.logf("p[%v]=%q(%v), closeCurlyOffset=%v, len(classBody)=%v, last classLine=%#v", len(p)-1, p[len(p)-1], len(p[len(p)-1]), closeCurlyOffset, len(classBody), classLines[len(classLines)-1])
 
 	// Replace last line for truncated classBody:
 	ll := classLines[len(classLines)-1]
@@ -291,7 +290,7 @@ func (c *Class) findNext(lineNum int, searchFor ...string) (features string, cla
 			}
 
 			if classLevelIndex >= len(line.classLevelTextOffsets) {
-				log.Fatalf("programming error: classLevelIndex = %v but should be less than %v, line=%#v", classLevelIndex, len(line.classLevelTextOffsets), line)
+				return "", 0, 0, fmt.Errorf("programming error: classLevelIndex = %v but should be less than %v, line=%#v", classLevelIndex, len(line.classLevelTextOffsets), line)
 			}
 
 			absOffsetIndex := line.classLevelTextOffsets[classLevelIndex]
@@ -319,21 +318,29 @@ func (c *Class) identifyDecoratorsAsComments() error {
 			continue
 		}
 
-		features, lineIndex, _, err := c.findNext(i, " ", "=", ";", "{", "(")
-		if err != nil {
-			lineIndex = i // Not an error, just reached EOF.
-		}
-
-		if strings.HasSuffix(features, "(") { // decorator includes args after '('
+		// Making the simplifying assumption here that if a decorator has arguments,
+		// they should start on the same line as the decorator.
+		lineIndex := i
+		if strings.Contains(lineText, "(") {
+			var features string
 			var err error
-			_, lineIndex, _, err = c.findNext(i, ")")
+			features, lineIndex, _, err = c.findNext(i, " ", "=", ";", "{", "(")
 			if err != nil {
-				return fmt.Errorf("unable to find end of decorator ')' with args from line #%v", c.lines[0].originalIndex+i+1)
+				lineIndex = i // Not an error, just reached EOF.
+			}
+
+			p := strings.Split(features, " ")
+			if strings.HasSuffix(features, "(") && (len(p) == 1 || p[1] == "(") { // decorator includes args after '('
+				var err error
+				_, lineIndex, _, err = c.findNext(i, ")")
+				if err != nil {
+					return fmt.Errorf("unable to find end of decorator ')' with args from line #%v", c.lines[0].originalIndex+i+1)
+				}
 			}
 		}
 
 		for i <= lineIndex {
-			c.e.logf("identifyDecoratorsAsComments: marking decorator line %v as type SingleLineComment", i+1)
+			c.e.logf("identifyDecoratorsAsComments: marking decorator line #%v as type SingleLineComment", i+1)
 			c.lines[i].entityType = SingleLineComment
 			i++
 		}
@@ -836,10 +843,15 @@ func (c *Class) markMethod(classLineNum int, methodName string, entityType Entit
 		for classLineIndex < len(c.lines)-1 && !strings.HasSuffix(c.lines[classLineIndex].classLevelText, " {") && !strings.HasSuffix(c.lines[classLineIndex].classLevelText, "}") {
 			classLineIndex++
 		}
-		c.e.logf("markMethod %q: after move past initializers: classLineIndex #%v, classLevelText=%v", methodName, classLineIndex+c.lines[0].originalIndex+1, c.lines[classLineIndex].classLevelText)
-		if v := len(c.lines[classLineIndex].classLevelTextOffsets); v > 0 {
+		v := len(c.lines[classLineIndex].classLevelTextOffsets)
+		if v != len(c.lines[classLineIndex].classLevelText) {
+			return nil, fmt.Errorf("programming error: line #%v: classLevelText=%v != classLevelTextOffsets=%v", classLineIndex+1, len(c.e.lines[classLineIndex].classLevelText), len(c.e.lines[classLineIndex].classLevelTextOffsets))
+		}
+		if v > 0 {
 			lastCharAbsOffset = c.lines[classLineIndex].classLevelTextOffsets[v-1]
 		}
+
+		c.e.logf("markMethod %q: after move past initializers: lastCharAbsOffset=%v, classLineIndex #%v, classLevelText=%v", methodName, lastCharAbsOffset, classLineIndex+c.lines[0].originalIndex+1, c.lines[classLineIndex].classLevelText)
 	}
 
 	if strings.HasSuffix(features, "=>") {
@@ -855,19 +867,23 @@ func (c *Class) classCloseLineIndex(pair *MatchingPair) int {
 }
 
 // markBody marks an entire body with the same entityType.
-// classLineNum is the starting class line index of the body.
-// classLineIndex is the ending class line index of the body (if ";" was used).
+// startClassLineNum is the starting class line index of the body.
+// endClassLineNum is the ending class line index of the body (if ";" was used).
 // lastCharAbsOffset must either point to the body's opening "{" or to its ending ";".
-func (c *Class) markBody(entity *Entity, classLineNum int, entityType EntityType, classLineIndex, lastCharAbsOffset int) (*Entity, error) {
+func (c *Class) markBody(entity *Entity, startClassLineNum int, entityType EntityType, endClassLineNum, lastCharAbsOffset int) (*Entity, error) {
 	if c.e.fullBuf[lastCharAbsOffset] == '{' {
 		pair, ok := c.e.matchingPairs[lastCharAbsOffset]
 		if !ok {
 			return nil, fmt.Errorf("expected matching '}' pair at lastCharAbsOffset=%v", lastCharAbsOffset)
 		}
-		classLineIndex = c.classCloseLineIndex(pair)
+		if pair.open != "{" || pair.close != "}" {
+			return nil, fmt.Errorf("programming error: expected '{' but got pair=%#v", pair)
+		}
+		endClassLineNum = c.classCloseLineIndex(pair)
 	}
 
-	for i := classLineNum; i <= classLineIndex; i++ {
+	c.e.logf("markBody marking lines #%v-%v as %v ...", startClassLineNum+1, endClassLineNum+1, entityType)
+	for i := startClassLineNum; i <= endClassLineNum; i++ {
 		if i >= len(c.lines) {
 			break
 		}
@@ -884,11 +900,11 @@ func (c *Class) markBody(entity *Entity, classLineNum int, entityType EntityType
 	}
 
 	// Preserve the comment lines leading up to the method.
-	for classLineNum--; classLineNum > 0; classLineNum-- {
-		if isComment(c.lines[classLineNum]) || strings.HasPrefix(c.lines[classLineNum].stripped, "@") {
-			c.e.logf("markMethod: marking comment line %v as type %v", classLineNum+1, entityType)
-			c.lines[classLineNum].entityType = entityType
-			entity.lines = append([]*Line{c.lines[classLineNum]}, entity.lines...)
+	for startClassLineNum--; startClassLineNum > 0; startClassLineNum-- {
+		if isComment(c.lines[startClassLineNum]) || strings.HasPrefix(c.lines[startClassLineNum].stripped, "@") {
+			c.e.logf("markMethod: marking comment line %v as type %v", startClassLineNum+1, entityType)
+			c.lines[startClassLineNum].entityType = entityType
+			entity.lines = append([]*Line{c.lines[startClassLineNum]}, entity.lines...)
 			continue
 		}
 		break

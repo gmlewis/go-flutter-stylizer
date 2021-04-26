@@ -16,7 +16,10 @@ limitations under the License.
 
 package dart
 
-import "log"
+import (
+	"log"
+	"runtime/debug"
+)
 
 // MatchingPairsMap represents a map of matching pairs keyed by
 // the openAbsOffset value.
@@ -53,6 +56,7 @@ func (c *Cursor) NewMatchingPair(open string, matchingPairs MatchingPairsMap, ma
 	}
 
 	if got := c.e.fullBuf[pair.openAbsOffset : pair.openAbsOffset+len(open)]; got != open {
+		debug.PrintStack()
 		log.Fatalf("programming error: openAbsOffset = %q, want %q", got, open)
 	}
 
@@ -75,6 +79,7 @@ func (c *Cursor) CloseMatchingPair(close string, matchingPairStack []*MatchingPa
 	pair.closeRelStrippedOffset = c.relStrippedOffset
 
 	if got := c.e.fullBuf[pair.closeAbsOffset : pair.closeAbsOffset+len(close)]; got != close {
+		debug.PrintStack()
 		log.Fatalf("programming error: closeAbsOffset = %q, want %q", got, close)
 	}
 

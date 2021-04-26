@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode"
 )
 
 // BraceLevel represents the current brace level the cursor is within.
@@ -510,6 +511,25 @@ func (c *Cursor) advanceToNextLine() error {
 	}
 
 	// c.e.lines[c.lineIndex].classLevelText = strings.TrimSpace(c.e.lines[c.lineIndex].classLevelText)
+	c.e.lines[c.lineIndex].classLevelText = strings.TrimLeftFunc(c.e.lines[c.lineIndex].classLevelText, func(r rune) bool {
+		if !unicode.IsSpace(r) {
+			return false
+		}
+		c.e.lines[c.lineIndex].classLevelTextOffsets = c.e.lines[c.lineIndex].classLevelTextOffsets[1:]
+		return true
+	})
+
+	c.e.lines[c.lineIndex].classLevelText = strings.TrimRightFunc(c.e.lines[c.lineIndex].classLevelText, func(r rune) bool {
+		if !unicode.IsSpace(r) {
+			return false
+		}
+		c.e.lines[c.lineIndex].classLevelTextOffsets = c.e.lines[c.lineIndex].classLevelTextOffsets[:len(c.e.lines[c.lineIndex].classLevelTextOffsets)-1]
+		return true
+	})
+
+	if len(c.e.lines[c.lineIndex].classLevelText) != len(c.e.lines[c.lineIndex].classLevelTextOffsets) {
+		return fmt.Errorf("programming error: line #%v: classLevelText=%v != classLevelTextOffsets=%v", c.lineIndex+1, len(c.e.lines[c.lineIndex].classLevelText), len(c.e.lines[c.lineIndex].classLevelTextOffsets))
+	}
 
 	c.lineIndex++
 	if c.lineIndex >= len(c.e.lines) {

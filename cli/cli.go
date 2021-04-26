@@ -60,23 +60,23 @@ var rootCmd = &cobra.Command{
 func rootRunE(cmd *cobra.Command, args []string) error {
 	diff, err := cmd.Flags().GetBool("diff")
 	if err != nil {
-		log.Fatalf("diff: %v", err)
+		return fmt.Errorf("diff: %v", err)
 	}
 	list, err := cmd.Flags().GetBool("list")
 	if err != nil {
-		log.Fatalf("list: %v", err)
+		return fmt.Errorf("list: %v", err)
 	}
 	write, err := cmd.Flags().GetBool("write")
 	if err != nil {
-		log.Fatalf("write: %v", err)
+		return fmt.Errorf("write: %v", err)
 	}
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
-		log.Fatalf("verbose: %v", err)
+		return fmt.Errorf("verbose: %v", err)
 	}
 	quiet, err := cmd.Flags().GetBool("quiet")
 	if err != nil {
-		log.Fatalf("quiet: %v", err)
+		return fmt.Errorf("quiet: %v", err)
 	}
 
 	var flagCount int
@@ -91,7 +91,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	f(write)
 
 	if flagCount > 1 {
-		log.Fatalf("Must supply only one of --diff (-d), --list (-l), and --write (-w).")
+		return fmt.Errorf("Must supply only one of --diff (-d), --list (-l), and --write (-w).")
 	}
 
 	vp := viper.GetViper()
@@ -114,7 +114,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	c := dart.New(opts)
 
 	if len(args) == 0 {
-		log.Fatalf("Must supply at least one filename or './...' to process all files in directory tree.")
+		return fmt.Errorf("Must supply at least one filename or './...' to process all files in directory tree.")
 	}
 
 	var newArgs []string
@@ -127,7 +127,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		newArgs = append(newArgs, args[i])
 	}
 	if len(newArgs) == 0 {
-		log.Fatalf("No *.dart files found.")
+		return fmt.Errorf("No *.dart files found.")
 	}
 
 	if !quiet {
@@ -142,13 +142,13 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		}
 		diffs, err := c.StylizeFile(arg)
 		if err != nil {
-			log.Fatalf("StylizeFile(%q): %v", arg, err)
+			return fmt.Errorf("StylizeFile(%q): %v", arg, err)
 		}
 		anyDiffs = anyDiffs || diffs
 	}
 
 	if anyDiffs && (opts.Diff || opts.List) {
-		log.Fatalf("Differences were found. Exit code 1.")
+		return fmt.Errorf("Differences were found. Exit code 1.")
 	}
 
 	if !quiet {

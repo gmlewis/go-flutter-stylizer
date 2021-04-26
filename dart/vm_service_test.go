@@ -18,6 +18,7 @@ package dart
 
 import (
 	_ "embed"
+	"strings"
 	"testing"
 )
 
@@ -57,8 +58,8 @@ func TestVMService_Source(t *testing.T) {
 }
 
 func TestVMService_Class96(t *testing.T) {
-	source := vm_service_dart_txt[218716:]
-	wantSource := vm_service_want_txt[218643:]
+	source := vm_service_dart_txt[strings.Index(vm_service_dart_txt, "class VM "):]
+	wantSource := vm_service_want_txt[strings.Index(vm_service_want_txt, "class VM "):]
 
 	opts := &Options{
 		MemberOrdering: defaultMemberOrdering,
@@ -282,9 +283,15 @@ func TestVMService_Class96(t *testing.T) {
 	runFullStylizer(t, opts, wantSource, wantSource, nil)
 }
 
+func getClass(src, from, to string) string {
+	start := strings.Index(src, from)
+	end := strings.Index(src, to)
+	return src[start:end]
+}
+
 func TestVMService_RPCErrorClass(t *testing.T) {
-	source := vm_service_dart_txt[75657:77223]
-	wantSource := vm_service_want_txt[75653:77153]
+	source := getClass(vm_service_dart_txt, "class RPCError ", "class SentinelException ")
+	wantSource := getClass(vm_service_want_txt, "class RPCError ", "class SentinelException ")
 
 	opts := &Options{
 		MemberOrdering: defaultMemberOrdering,
