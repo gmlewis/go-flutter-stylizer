@@ -221,8 +221,8 @@ func (c *Class) FindFeatures() error {
 	// }
 
 	// c.identifyMultiLineComments()  // This step is not needed, as the editor marked these already.
-	if err := c.identifyDeprecatedAsComments(); err != nil {
-		return fmt.Errorf("identifyDeprecatedAsComments: %v", err)
+	if err := c.identifyDecoratorsAsComments(); err != nil {
+		return fmt.Errorf("identifyDecoratorsAsComments: %v", err)
 	}
 	if err := c.identifyMainConstructor(); err != nil {
 		return fmt.Errorf("identifyMainConstructor: %v", err)
@@ -247,41 +247,6 @@ func (c *Class) FindFeatures() error {
 	return nil
 }
 
-func (c *Class) identifyDeprecatedAsComments() error {
-	const depStr = "@deprecated("
-
-	for i := 1; i < len(c.lines); i++ {
-		line := c.lines[i]
-		if line.entityType != Unknown || line.isCommentOrString || line.classLevelText == "" {
-			continue
-		}
-
-		lower := strings.TrimSpace(strings.ToLower(line.classLevelText))
-		if !strings.HasPrefix(lower, depStr[0:len(depStr)-1]) {
-			continue
-		}
-
-		lineIndex := i
-
-		if strings.HasPrefix(lower, depStr) { // includes deprecation message after '('
-			var err error
-			_, lineIndex, _, err = c.findNext(i, ")")
-			if err != nil {
-				return fmt.Errorf("unable to find end of @deprecated from line #%v", c.lines[0].originalIndex+i+1)
-			}
-		}
-
-		for i <= lineIndex {
-			c.e.logf("identifyDeprecatedAsComments: marking @deprecated line %v as type SingleLineComment", i+1)
-			c.lines[i].entityType = SingleLineComment
-			i++
-		}
-		i--
-	}
-
-	return nil
-}
-
 // findNext finds the next occurrence of one of the searchFor terms
 // within the classLevelText (possibly spanning multiple lines).
 //
@@ -292,6 +257,7 @@ func (c *Class) identifyDeprecatedAsComments() error {
 // of the last character returned.
 //
 // If no search terms can be found, the error io.EOF is returned.
+
 func (c *Class) findNext(lineNum int, searchFor ...string) (features string, classLineNum int, absOffsetIndex int, err error) {
 	classLineNum = lineNum
 
@@ -305,10 +271,12 @@ func (c *Class) findNext(lineNum int, searchFor ...string) (features string, cla
 			if i < 0 {
 				continue
 			}
-			if si == 0 || classLevelIndex < 0 || i < classLevelIndex {
-				classLevelIndex = i
-				s = ss
+			if si != 0 && classLevelIndex >= 0 && i >= classLevelIndex {
+				continue
 			}
+
+			classLevelIndex = i
+			s = ss
 		}
 
 		if classLevelIndex >= 0 {
@@ -329,6 +297,44 @@ func (c *Class) findNext(lineNum int, searchFor ...string) (features string, cla
 	}
 
 	return "", 0, 0, io.EOF
+}
+
+func (c *Class) identifyDecoratorsAsComments() error {
+	const override = "@override"
+
+	for i := 1; i < len(c.lines); i++ {
+		line := c.lines[i]
+		if line.entityType != Unknown || line.isCommentOrString || line.classLevelText == "" {
+			continue
+		}
+
+		lineText := strings.TrimSpace(line.classLevelText)
+		if !strings.HasPrefix(lineText, "@") || strings.HasPrefix(lineText, override) {
+			continue
+		}
+
+		features, lineIndex, _, err := c.findNext(i, " ", "=", ";", "{", "(")
+		if err != nil {
+			lineIndex = i // Not an error, just reached EOF.
+		}
+
+		if strings.HasSuffix(features, "(") { // decorator includes args after '('
+			var err error
+			_, lineIndex, _, err = c.findNext(i, ")")
+			if err != nil {
+				return fmt.Errorf("unable to find end of decorator ')' with args from line #%v", c.lines[0].originalIndex+i+1)
+			}
+		}
+
+		for i <= lineIndex {
+			c.e.logf("identifyDecoratorsAsComments: marking decorator line %v as type SingleLineComment", i+1)
+			c.lines[i].entityType = SingleLineComment
+			i++
+		}
+		i--
+	}
+
+	return nil
 }
 
 func (c *Class) identifyMainConstructor() error {
@@ -817,6 +823,15 @@ func (c *Class) markMethod(classLineNum int, methodName string, entityType Entit
 	features, classLineIndex, lastCharAbsOffset, err := c.findNext(classCloseLineIndex, "=>", "{", ";")
 	if err != nil {
 		return nil, fmt.Errorf("expected method body starting at classCloseLineIndex=%v: %v", classCloseLineIndex, err)
+	}
+
+	if strings.HasSuffix(features, " const {") {
+		c.e.logf("markMethod %q: moving past initializers: classLineIndex #%v, features=%v", methodName, classLineIndex+c.lines[0].originalIndex+1, features)
+		for classLineIndex < len(c.lines)-1 && !strings.HasSuffix(c.lines[classLineIndex].classLevelText, " {") {
+			classLineIndex++
+		}
+		c.e.logf("markMethod %q: after move past initializers: classLineIndex #%v, classLevelText=%v", methodName, classLineIndex+c.lines[0].originalIndex+1, c.lines[classLineIndex].classLevelText)
+		lastCharAbsOffset = c.lines[classLineIndex].classLevelTextOffsets[len(c.lines[classLineIndex].classLevelTextOffsets)-1]
 	}
 
 	if strings.HasSuffix(features, "=>") {

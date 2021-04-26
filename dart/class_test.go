@@ -58,7 +58,7 @@ func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType
 			line := got[0].lines[i]
 			// fmt.Printf("%v, // line #%v: %v\n", line.entityType, line.originalIndex+1, line.line)
 			if line.entityType != want[i] {
-				t.Errorf("line #%v: got entityType %v, want %v: %v", i+1, line.entityType, want[i], line.line)
+				t.Errorf("line #%v: got entityType %v, want %v: %v", line.originalIndex+1, line.entityType, want[i], line.line)
 			}
 		}
 	}
@@ -561,16 +561,16 @@ func TestMultipleDecorators(t *testing.T) {
 	source := `class MultipleDecorators {
   @override
   @failingTest
-	@deprecated
+  @deprecated
   test_initializer_literal_map_untyped_empty() async {
     fail('times out.');
   }
 
-	@override _TransformationsDemoState createState() => _TransformationsDemoState();
+  @override _TransformationsDemoState createState() => _TransformationsDemoState();
 
-	@Deprecated('do not use this')
+  @Deprecated('do not use this')
   @failingTest
-	@override
+  @override
   test_initializer_literal_map_untyped_empty() async {
     fail('times out.');
   }
