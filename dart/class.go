@@ -449,8 +449,12 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 		f := func(i int) string {
 			v := strings.TrimSpace(features[:i])
 			nameOffset := strings.LastIndex(v, " ")
-			return features[nameOffset:]
+			if nameOffset >= 0 {
+				return features[nameOffset:]
+			}
+			return features
 		}
+
 		var name string
 		// Search for beginning of method name.
 		if strings.HasSuffix(features, "=>") {

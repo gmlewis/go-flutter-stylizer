@@ -309,7 +309,7 @@ static PGDateTime parse(String formattedString) =>
 		BlankLine,
 	}
 
-	runParsePhase(t, &Options{Verbose: true}, source, want)
+	runParsePhase(t, nil, source, want)
 }
 
 func TestGetOnSeparateLine(t *testing.T) {
