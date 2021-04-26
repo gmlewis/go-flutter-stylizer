@@ -27,7 +27,7 @@ type Line struct {
 	strippedOffset int    // offset to start of stripped line, compared to 'line'
 	classLevelText string // preserved text at braceLevel==1 - Note that this is untrimmed.
 
-	classLevelOffsets []int // absolute offsets for each character within classLevelText.
+	classLevelTextOffsets []int // absolute offsets for each character within classLevelText.
 
 	originalIndex int
 

@@ -284,17 +284,18 @@ func (c *Class) identifyMainConstructor() error {
 					continue
 				}
 			}
-			if c.lines[i].entityType > MainConstructor {
+			if line.entityType > MainConstructor {
 				if err := c.repairIncorrectlyLabeledLine(i); err != nil {
 					return err
 				}
 			}
 			c.e.logf("identifyMainConstructor: marking line %v as type MainConstructor", i+1)
-			c.lines[i].entityType = MainConstructor
+			line.entityType = MainConstructor
 
+			absOpenParenOffset := line.classLevelTextOffsets[offset+len(className)-1]
 			c.e.logf("identifyMainConstructor: calling markMethod(line #%v, className=%q, MainConstructor)", i+1, className)
 			var err error
-			c.theConstructor, err = c.markMethod(i, className, MainConstructor, -1)
+			c.theConstructor, err = c.markMethod(i, className, MainConstructor, absOpenParenOffset)
 			if err != nil {
 				return err
 			}
@@ -318,8 +319,8 @@ func (c *Class) identifyMainConstructor() error {
 //
 // Note: if searching for both a string and a substring, the longer one
 // must be listed first (e.g. "=>", "=").
-func (c *Class) findNext(classLineNum int, searchFor ...string) (string, int, int, error) {
-	var features string
+func (c *Class) findNext(lineNum int, searchFor ...string) (features string, classLineNum int, absOffsetIndex int, err error) {
+	classLineNum = lineNum
 
 	for ; classLineNum < len(c.lines); classLineNum++ {
 		line := c.lines[classLineNum]
@@ -330,11 +331,11 @@ func (c *Class) findNext(classLineNum int, searchFor ...string) (string, int, in
 					features = features[0 : i+len(s)]
 				}
 
-				if classLevelIndex >= len(line.classLevelOffsets) {
-					log.Fatalf("programming error: classLevelIndex = %v but should be less than %v, line=%#v", classLevelIndex, len(line.classLevelOffsets), line)
+				if classLevelIndex >= len(line.classLevelTextOffsets) {
+					log.Fatalf("programming error: classLevelIndex = %v but should be less than %v, line=%#v", classLevelIndex, len(line.classLevelTextOffsets), line)
 				}
 
-				absOffsetIndex := line.classLevelOffsets[classLevelIndex]
+				absOffsetIndex := line.classLevelTextOffsets[classLevelIndex]
 
 				return features, classLineNum, absOffsetIndex, nil
 			}
@@ -522,7 +523,7 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 func (c *Class) identifyOthers() error {
 	for i := 1; i < len(c.lines); i++ {
 		line := c.lines[i]
-		if line.entityType != Unknown || line.isCommentOrString {
+		if line.entityType != Unknown || line.isCommentOrString || line.classLevelText == "" {
 			continue
 		}
 
@@ -572,78 +573,78 @@ func (c *Class) identifyOthers() error {
 func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 	entity := &Entity{}
 
-	// sequence, lineCount, leadingText, err := c.findSequence(lineNum)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// c.e.logf("scanMethod(line=#%v), sequence=%v, lineCount=%v, leadingText=%q", lineNum+1, sequence, lineCount, leadingText)
+	sequence, lineCount, leadingText, err := c.findSequence(lineNum)
+	if err != nil {
+		return nil, err
+	}
+	c.e.logf("scanMethod(line=#%v), sequence=%v, lineCount=%v, leadingText=%q", lineNum+1, sequence, lineCount, leadingText)
 
-	// nameParts := strings.Split(leadingText, " ")
-	// var staticKeyword bool
-	// var privateVar bool
-	// if len(nameParts) > 0 {
-	// 	entity.name = nameParts[len(nameParts)-1]
-	// 	if strings.HasPrefix(entity.name, "_") {
-	// 		privateVar = true
-	// 	}
-	// 	if nameParts[0] == "static" {
-	// 		staticKeyword = true
-	// 	}
-	// }
+	nameParts := strings.Split(leadingText, " ")
+	var staticKeyword bool
+	var privateVar bool
+	if len(nameParts) > 0 {
+		entity.name = nameParts[len(nameParts)-1]
+		if strings.HasPrefix(entity.name, "_") {
+			privateVar = true
+		}
+		if nameParts[0] == "static" {
+			staticKeyword = true
+		}
+	}
 
-	// entity.entityType = InstanceVariable
-	// switch true {
-	// case privateVar && staticKeyword:
-	// 	entity.entityType = StaticPrivateVariable
-	// case staticKeyword:
-	// 	entity.entityType = StaticVariable
-	// case privateVar:
-	// 	entity.entityType = PrivateInstanceVariable
-	// }
+	entity.entityType = InstanceVariable
+	switch true {
+	case privateVar && staticKeyword:
+		entity.entityType = StaticPrivateVariable
+	case staticKeyword:
+		entity.entityType = StaticVariable
+	case privateVar:
+		entity.entityType = PrivateInstanceVariable
+	}
 
-	// switch sequence {
-	// case "(){}":
-	// 	entity.entityType = OtherMethod
+	switch sequence {
+	case "(){}":
+		entity.entityType = OtherMethod
 
-	// case "();": // instance variable or abstract method.
-	// 	if !strings.HasSuffix(leadingText, " Function") {
-	// 		entity.entityType = OtherMethod
-	// 	}
+	case "();": // instance variable or abstract method.
+		if !strings.HasSuffix(leadingText, " Function") {
+			entity.entityType = OtherMethod
+		}
 
-	// case "=(){}":
-	// 	entity.entityType = OtherMethod
+	case "=(){}":
+		entity.entityType = OtherMethod
 
-	// default:
-	// 	if strings.Index(sequence, "=>") >= 0 {
-	// 		entity.entityType = OtherMethod
-	// 	}
-	// }
+	default:
+		if strings.Index(sequence, "=>") >= 0 {
+			entity.entityType = OtherMethod
+		}
+	}
 
-	// // Force getters to be methods.
-	// if strings.Index(leadingText, " get ") >= 0 {
-	// 	if c.groupAndSortGetterMethods {
-	// 		entity.entityType = GetterMethod
-	// 	} else {
-	// 		entity.entityType = OtherMethod
-	// 	}
-	// }
+	// Force getters to be methods.
+	if strings.Index(leadingText, " get ") >= 0 {
+		if c.groupAndSortGetterMethods {
+			entity.entityType = GetterMethod
+		} else {
+			entity.entityType = OtherMethod
+		}
+	}
 
-	// for i := 0; i <= lineCount; i++ {
-	// 	if lineNum+i >= len(c.lines) {
-	// 		break
-	// 	}
+	for i := 0; i <= lineCount; i++ {
+		if lineNum+i >= len(c.lines) {
+			break
+		}
 
-	// 	if c.lines[lineNum+i].entityType >= MainConstructor && c.lines[lineNum+i].entityType != entity.entityType {
-	// 		c.e.logf("scanMethod: Changing line #%v from type %v to type %v", lineNum+i+1, c.lines[lineNum+i].entityType, entity.entityType)
-	// 		if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
-	// 			return nil, err
-	// 		}
-	// 	}
+		if c.lines[lineNum+i].entityType >= MainConstructor && c.lines[lineNum+i].entityType != entity.entityType {
+			c.e.logf("scanMethod: Changing line #%v from type %v to type %v", lineNum+i+1, c.lines[lineNum+i].entityType, entity.entityType)
+			if err := c.repairIncorrectlyLabeledLine(lineNum + i); err != nil {
+				return nil, err
+			}
+		}
 
-	// 	c.e.logf("scanMethod: marking line %v as type %v", lineNum+i+1, entity.entityType)
-	// 	c.lines[lineNum+i].entityType = entity.entityType
-	// 	entity.lines = append(entity.lines, c.lines[lineNum+i])
-	// }
+		c.e.logf("scanMethod: marking line %v as type %v", lineNum+i+1, entity.entityType)
+		c.lines[lineNum+i].entityType = entity.entityType
+		entity.lines = append(entity.lines, c.lines[lineNum+i])
+	}
 
 	return entity, nil
 }
@@ -716,33 +717,34 @@ func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
 	// return nil
 }
 
-// func (c *Class) findSequence(lineNum int) (string, int, string, error) {
-// 	var result []string
+func (c *Class) findSequence(lineNum int) (string, int, string, error) {
+	var result string
 
-// 	features, cursor, err := c.findNext(lineNum, ";", "}")
-// 	if err != nil || features == "" {
-// 		return "", 0, "", fmt.Errorf(`findNext: %v`, err)
-// 	}
+	features, lineIndex, _, err := c.findNext(lineNum, ";", "}")
+	if err != nil || features == "" {
+		return "", 0, "", fmt.Errorf(`findNext: %v`, err)
+	}
 
-// 	buildLeadingText := true
-// 	var buildStr []string
-// 	for i, f := range features {
-// 		if strings.ContainsAny(f, "()[]{}=;") {
-// 			buildLeadingText = false
-// 			if f == "=" && i < len(features)-1 && features[i+1] == ">" {
-// 				f = "=>"
-// 			}
-// 			result = append(result, f)
-// 		}
-// 		if buildLeadingText {
-// 			buildStr = append(buildStr, f)
-// 		}
-// 	}
-// 	leadingText := strings.TrimSpace(strings.Join(buildStr, ""))
-// 	lineCount := cursor.lineIndex - c.lines[lineNum].originalIndex
+	buildLeadingText := true
+	var buildStr string
+	for i, f := range features {
+		if strings.ContainsAny(string(f), "()[]{}=;") {
+			buildLeadingText = false
+			if f == '=' && i < len(features)-1 && features[i+1] == '>' {
+				result += "=>"
+				continue
+			}
+			result += string(f)
+		}
+		if buildLeadingText {
+			buildStr += string(f)
+		}
+	}
+	leadingText := strings.TrimSpace(buildStr)
+	lineCount := lineIndex - lineNum + 1
 
-// 	return strings.Join(result, ""), lineCount, leadingText, nil
-// }
+	return result, lineCount, leadingText, nil
+}
 
 // markMethod marks an entire method with the same entityType.
 // methodName must end with "(" and absOpenParenOffset must point to that open paren.

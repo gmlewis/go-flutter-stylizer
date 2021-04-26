@@ -157,7 +157,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			}
 			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
 				c.e.lines[c.lineIndex].classLevelText += nf
-				c.e.lines[c.lineIndex].classLevelOffsets = append(c.e.lines[c.lineIndex].classLevelOffsets, c.absOffset-1, c.absOffset, c.absOffset+1)
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1, c.absOffset, c.absOffset+1)
 			}
 		case `"""`:
 			if c.inMultiLineComment > 0 {
@@ -183,7 +183,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			}
 			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
 				c.e.lines[c.lineIndex].classLevelText += nf
-				c.e.lines[c.lineIndex].classLevelOffsets = append(c.e.lines[c.lineIndex].classLevelOffsets, c.absOffset-1, c.absOffset, c.absOffset+1)
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1, c.absOffset, c.absOffset+1)
 			}
 		case "${":
 			switch {
@@ -241,7 +241,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			}
 			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
 				c.e.lines[c.lineIndex].classLevelText += nf
-				c.e.lines[c.lineIndex].classLevelOffsets = append(c.e.lines[c.lineIndex].classLevelOffsets, c.absOffset-1)
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
 			}
 		case `"`:
 			if c.inSingleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
@@ -261,7 +261,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			}
 			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
 				c.e.lines[c.lineIndex].classLevelText += nf
-				c.e.lines[c.lineIndex].classLevelOffsets = append(c.e.lines[c.lineIndex].classLevelOffsets, c.absOffset-1)
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
 			}
 		case "(":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
@@ -269,7 +269,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			}
 			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
 				c.e.lines[c.lineIndex].classLevelText += nf
-				c.e.lines[c.lineIndex].classLevelOffsets = append(c.e.lines[c.lineIndex].classLevelOffsets, c.absOffset-1)
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
 			}
 			c.parenLevels++
 			c.e.logf("parenLevels++: cursor=%v", c)
@@ -283,7 +283,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
 			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
 				c.e.lines[c.lineIndex].classLevelText += nf
-				c.e.lines[c.lineIndex].classLevelOffsets = append(c.e.lines[c.lineIndex].classLevelOffsets, c.absOffset-1)
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
 			}
 		case "{":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 {
@@ -291,7 +291,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			}
 			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
 				c.e.lines[c.lineIndex].classLevelText += nf
-				c.e.lines[c.lineIndex].classLevelOffsets = append(c.e.lines[c.lineIndex].classLevelOffsets, c.absOffset-1)
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
 			}
 			c.braceLevels = append(c.braceLevels, BraceNormal)
 			c.e.logf("{: cursor=%v", c)
@@ -322,12 +322,12 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
 			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
 				c.e.lines[c.lineIndex].classLevelText += nf
-				c.e.lines[c.lineIndex].classLevelOffsets = append(c.e.lines[c.lineIndex].classLevelOffsets, c.absOffset-1)
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
 			}
 		default:
 			if c.atTopOfBraceLevel(1) {
 				c.e.lines[c.lineIndex].classLevelText += nf
-				c.e.lines[c.lineIndex].classLevelOffsets = append(c.e.lines[c.lineIndex].classLevelOffsets, c.absOffset-1)
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
 			}
 		}
 	}

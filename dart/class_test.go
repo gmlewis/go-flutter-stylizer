@@ -424,7 +424,7 @@ func TestOperatorOverrides(t *testing.T) {
 		BlankLine,
 	}
 
-	runParsePhase(t, &Options{Verbose: true}, source, want)
+	runParsePhase(t, nil, source, want)
 }
 
 func TestMarkMethodOffsetAlignment(t *testing.T) {
