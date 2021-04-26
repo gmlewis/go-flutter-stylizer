@@ -233,6 +233,19 @@ incorporate the fix into the repo.
   line is not supported. Unusual code like this will most likely not ever be
   supported even though the Dart compiler can handle it.
 
+## Release Notes
+
+### 0.1.1
+
+- Initial release. This version was run on the Flutter code base and
+  should be ready for use.
+
+### 0.0.20-broken
+
+- This was a port of the VSCode `flutter-stylizer` extension that
+  I wrote in TypeScript. It turns out that the port had a lot of
+  problems. Please disregard and don't use.
+
 ----------------------------------------------------------------------
 
 **Enjoy!**
