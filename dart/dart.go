@@ -30,6 +30,7 @@ import (
 
 // Options represents the configuration options for the Dart processor.
 type Options struct {
+	Debug   bool
 	Diff    bool
 	List    bool
 	Quiet   bool
@@ -91,12 +92,12 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if !c.opts.Quiet && len(classes) > 0 {
+	if !c.opts.Quiet && c.opts.Verbose && len(classes) > 0 {
 		log.Printf("Found %v classes in file %v", len(classes), filename)
 	}
 
 	edits := c.generateEdits(classes)
-	if !c.opts.Quiet {
+	if !c.opts.Quiet && c.opts.Verbose {
 		log.Printf("%v classes need rewriting.", len(edits))
 	}
 
@@ -178,9 +179,9 @@ var (
 	matchClassRE = regexp.MustCompile(`^(?:abstract\s+)?class\s+(\S+).*$`)
 )
 
-// logf logs the line if verbose is true.
+// logf logs the line if debug is true.
 func (c *Client) logf(fmtStr string, args ...interface{}) {
-	if c.opts.Verbose {
+	if c.opts.Debug {
 		log.Printf(fmtStr, args...)
 	}
 }

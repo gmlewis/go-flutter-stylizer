@@ -32,7 +32,7 @@ import (
 
 // This version string should stay in sync with the VSCode plugin
 // to reduce confusion.
-const VERSION = "0.0.20"
+const VERSION = "0.1.0"
 
 var cfgFile string
 
@@ -58,6 +58,10 @@ var rootCmd = &cobra.Command{
 }
 
 func rootRunE(cmd *cobra.Command, args []string) error {
+	debug, err := cmd.Flags().GetBool("debug")
+	if err != nil {
+		return fmt.Errorf("debug: %v", err)
+	}
 	diff, err := cmd.Flags().GetBool("diff")
 	if err != nil {
 		return fmt.Errorf("diff: %v", err)
@@ -99,7 +103,12 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	memberOrdering := vp.GetStringSlice("memberOrdering")
 	sortOtherMethods := vp.GetBool("sortOtherMethods")
 
+	if !quiet && (len(memberOrdering) > 0 || groupAndSortGetterMethods || sortOtherMethods) {
+		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	}
+
 	opts := dart.Options{
+		Debug:   debug,
 		Diff:    diff,
 		List:    list,
 		Quiet:   quiet,
@@ -171,6 +180,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.flutter-stylizer.yaml)")
+	rootCmd.Flags().Bool("debug", false, "dump insane levels of details to debug what is going on")
 	rootCmd.Flags().BoolP("diff", "d", false, "display diffs (cannot be used with -l or -w); exit code 1 on diffs")
 	rootCmd.Flags().BoolP("list", "l", false, "list files whose formatting differs from flutter-stylizer's (cannot be used with -d or -w); exit code 1 on diffs")
 	rootCmd.Flags().BoolP("write", "w", false, "write result to (source) file instead of stdout (cannot be used with -d or -l); exit code 0 on diffs")
@@ -199,7 +209,5 @@ func initConfig() {
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
+	viper.ReadInConfig()
 }

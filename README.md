@@ -12,12 +12,45 @@ Bitbucket, or other CI/CD pipelines, to maintain Flutter code repositories.
 
 ## Status
 
-This is a fun side-project that is still experimental and
-not yet ready to try out.
+This has been run on the Flutter source code base (consisting of 7772 *.dart
+files) located here (on Linux):
+https://flutter.dev/docs/get-started/install/linux
+and produces no further changes after the initial run.
+
+```
+$ cd ~/development
+$ time tar xf ~/Downloads/flutter_linux_2.0.5-stable.tar.xz
+
+real	0m21.166s
+user	0m20.610s
+sys	0m4.915s
+
+$ time flutter-stylizer -q -w ./...
+
+real	0m11.595s
+user	0m14.547s
+sys	0m0.881s
+
+$ time flutter-stylizer -q -d ./...
+
+real	0m10.531s
+user	0m13.120s
+sys	0m0.718s
+```
 
 ## Installation
 
 `flutter-stylizer` runs on Mac, Windows, and Linux.
+
+### Option 1 (for non-Go devs or CI/CD pipelines)
+
+* Download the appropriate precompiled statically-linked binary
+  executable for your platform of the latest release, located here:
+  https://github.com/gmlewis/go-flutter-stylizer/releases
+* On Mac and Linux, make the file executable:
+  * `chmod a+x flutter-stylizer`
+
+### Option 2 (for Go devs or to build from source)
 
 * One-time setup for using Go on your system:
   * Install Go from https://golang.org
