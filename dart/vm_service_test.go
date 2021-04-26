@@ -281,3 +281,139 @@ func TestVMService_Class96(t *testing.T) {
 	runParsePhase(t, opts, wantSource, wantAfter)
 	runFullStylizer(t, opts, wantSource, wantSource, nil)
 }
+
+func TestVMService_RPCErrorClass(t *testing.T) {
+	source := vm_service_dart_txt[75657:77223]
+	wantSource := vm_service_want_txt[75653:77153]
+
+	opts := &Options{
+		MemberOrdering: defaultMemberOrdering,
+	}
+
+	want := []EntityType{
+		Unknown,          // line #1: {
+		StaticVariable,   // line #2:   /// Application specific error codes.
+		StaticVariable,   // line #3:   static const int kServerError = -32000;
+		BlankLine,        // line #4:
+		StaticVariable,   // line #5:   /// The JSON sent is not a valid Request object.
+		StaticVariable,   // line #6:   static const int kInvalidRequest = -32600;
+		BlankLine,        // line #7:
+		StaticVariable,   // line #8:   /// The method does not exist or is not available.
+		StaticVariable,   // line #9:   static const int kMethodNotFound = -32601;
+		BlankLine,        // line #10:
+		StaticVariable,   // line #11:   /// Invalid method parameter(s), such as a mismatched type.
+		StaticVariable,   // line #12:   static const int kInvalidParams = -32602;
+		BlankLine,        // line #13:
+		StaticVariable,   // line #14:   /// Internal JSON-RPC error.
+		StaticVariable,   // line #15:   static const int kInternalError = -32603;
+		BlankLine,        // line #16:
+		OtherMethod,      // line #17:   static RPCError parse(String callingMethod, dynamic json) {
+		OtherMethod,      // line #18:     return RPCError(callingMethod, json['code'], json['message'], json['data']);
+		OtherMethod,      // line #19:   }
+		BlankLine,        // line #20:
+		InstanceVariable, // line #21:   final String callingMethod;
+		InstanceVariable, // line #22:   final int code;
+		InstanceVariable, // line #23:   final String message;
+		InstanceVariable, // line #24:   final Map data;
+		BlankLine,        // line #25:
+		MainConstructor,  // line #26:   RPCError(this.callingMethod, this.code, this.message, [this.data]);
+		BlankLine,        // line #27:
+		NamedConstructor, // line #28:   RPCError.withDetails(this.callingMethod, this.code, this.message,
+		NamedConstructor, // line #29:       {Object details})
+		NamedConstructor, // line #30:       : data = details == null ? null : <String, dynamic>{} {
+		NamedConstructor, // line #31:     if (details != null) {
+		NamedConstructor, // line #32:       data['details'] = details;
+		NamedConstructor, // line #33:     }
+		NamedConstructor, // line #34:   }
+		BlankLine,        // line #35:
+		OtherMethod,      // line #36:   String get details => data == null ? null : data['details'];
+		BlankLine,        // line #37:
+		OtherMethod,      // line #38:   /// Return a map representation of this error suitable for converstion to
+		OtherMethod,      // line #39:   /// json.
+		OtherMethod,      // line #40:   Map<String, dynamic> toMap() {
+		OtherMethod,      // line #41:     Map<String, dynamic> map = {
+		OtherMethod,      // line #42:       'code': code,
+		OtherMethod,      // line #43:       'message': message,
+		OtherMethod,      // line #44:     };
+		OtherMethod,      // line #45:     if (data != null) {
+		OtherMethod,      // line #46:       map['data'] = data;
+		OtherMethod,      // line #47:     }
+		OtherMethod,      // line #48:     return map;
+		OtherMethod,      // line #49:   }
+		BlankLine,        // line #50:
+		OtherMethod,      // line #51:   String toString() {
+		OtherMethod,      // line #52:     if (details == null) {
+		OtherMethod,      // line #53:       return '$callingMethod: ($code) $message';
+		OtherMethod,      // line #54:     } else {
+		OtherMethod,      // line #55:       return '$callingMethod: ($code) $message\n$details';
+		OtherMethod,      // line #56:     }
+		OtherMethod,      // line #57:   }
+		BlankLine,        // line #58:
+	}
+
+	runFullStylizer(t, opts, source, wantSource, want)
+
+	// wantAfter := []EntityType{
+	// 	Unknown,          // line #1: {
+	// 	StaticVariable,   // line #2:   /// Application specific error codes.
+	// 	StaticVariable,   // line #3:   static const int kServerError = -32000;
+	// 	BlankLine,        // line #4:
+	// 	StaticVariable,   // line #5:   /// The JSON sent is not a valid Request object.
+	// 	StaticVariable,   // line #6:   static const int kInvalidRequest = -32600;
+	// 	BlankLine,        // line #7:
+	// 	StaticVariable,   // line #8:   /// The method does not exist or is not available.
+	// 	StaticVariable,   // line #9:   static const int kMethodNotFound = -32601;
+	// 	BlankLine,        // line #10:
+	// 	StaticVariable,   // line #11:   /// Invalid method parameter(s), such as a mismatched type.
+	// 	StaticVariable,   // line #12:   static const int kInvalidParams = -32602;
+	// 	BlankLine,        // line #13:
+	// 	StaticVariable,   // line #14:   /// Internal JSON-RPC error.
+	// 	StaticVariable,   // line #15:   static const int kInternalError = -32603;
+	// 	BlankLine,        // line #16:
+	// 	OtherMethod,      // line #17:   static RPCError parse(String callingMethod, dynamic json) {
+	// 	OtherMethod,      // line #18:     return RPCError(callingMethod, json['code'], json['message'], json['data']);
+	// 	OtherMethod,      // line #19:   }
+	// 	BlankLine,        // line #20:
+	// 	InstanceVariable, // line #21:   final String callingMethod;
+	// 	InstanceVariable, // line #22:   final int code;
+	// 	InstanceVariable, // line #23:   final String message;
+	// 	InstanceVariable, // line #24:   final Map data;
+	// 	BlankLine,        // line #25:
+	// 	MainConstructor,  // line #26:   RPCError(this.callingMethod, this.code, this.message, [this.data]);
+	// 	BlankLine,        // line #27:
+	// 	NamedConstructor, // line #28:   RPCError.withDetails(this.callingMethod, this.code, this.message,
+	// 	NamedConstructor, // line #29:       {Object details})
+	// 	NamedConstructor, // line #30:       : data = details == null ? null : <String, dynamic>{} {
+	// 	NamedConstructor,          // line #31:     if (details != null) {
+	// 	NamedConstructor,          // line #32:       data['details'] = details;
+	// 	NamedConstructor,          // line #33:     }
+	// 	InstanceVariable, // line #34:   }
+	// 	BlankLine,        // line #35:
+	// 	OtherMethod,      // line #36:   String get details => data == null ? null : data['details'];
+	// 	BlankLine,        // line #37:
+	// 	OtherMethod,      // line #38:   /// Return a map representation of this error suitable for converstion to
+	// 	OtherMethod,      // line #39:   /// json.
+	// 	OtherMethod,      // line #40:   Map<String, dynamic> toMap() {
+	// 	OtherMethod,      // line #41:     Map<String, dynamic> map = {
+	// 	OtherMethod,      // line #42:       'code': code,
+	// 	OtherMethod,      // line #43:       'message': message,
+	// 	OtherMethod,      // line #44:     };
+	// 	OtherMethod,      // line #45:     if (data != null) {
+	// 	OtherMethod,      // line #46:       map['data'] = data;
+	// 	OtherMethod,      // line #47:     }
+	// 	OtherMethod,      // line #48:     return map;
+	// 	OtherMethod,      // line #49:   }
+	// 	BlankLine,        // line #50:
+	// 	OtherMethod,      // line #51:   String toString() {
+	// 	OtherMethod,      // line #52:     if (details == null) {
+	// 	OtherMethod,      // line #53:       return '$callingMethod: ($code) $message';
+	// 	OtherMethod,      // line #54:     } else {
+	// 	OtherMethod,      // line #55:       return '$callingMethod: ($code) $message\n$details';
+	// 	OtherMethod,      // line #56:     }
+	// 	OtherMethod,      // line #57:   }
+	// 	BlankLine,        // line #58:
+	// }
+
+	// runParsePhase(t, opts, wantSource, wantAfter)
+	// runFullStylizer(t, opts, wantSource, wantSource, nil)
+}

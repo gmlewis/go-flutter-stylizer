@@ -238,9 +238,15 @@ func (c *Class) FindFeatures() error {
 	}
 
 	if c.e.Verbose {
-		for i := 0; i < len(c.lines); i++ {
-			line := c.lines[i]
+		for i, line := range c.lines {
 			c.e.logf("line #%v type=%v: %v", i+1, line.entityType, line.line)
+		}
+	}
+
+	// sanity check... better to catch errors early.
+	for i, line := range c.lines {
+		if i > 0 && line.entityType == Unknown {
+			return fmt.Errorf("programming error: unhandled line #%v: %v", i+1, line.line)
 		}
 	}
 
@@ -825,13 +831,15 @@ func (c *Class) markMethod(classLineNum int, methodName string, entityType Entit
 		return nil, fmt.Errorf("expected method body starting at classCloseLineIndex=%v: %v", classCloseLineIndex, err)
 	}
 
-	if strings.HasSuffix(features, " const {") {
+	if strings.HasSuffix(features, "{") {
 		c.e.logf("markMethod %q: moving past initializers: classLineIndex #%v, features=%v", methodName, classLineIndex+c.lines[0].originalIndex+1, features)
-		for classLineIndex < len(c.lines)-1 && !strings.HasSuffix(c.lines[classLineIndex].classLevelText, " {") {
+		for classLineIndex < len(c.lines)-1 && !strings.HasSuffix(c.lines[classLineIndex].classLevelText, " {") && !strings.HasSuffix(c.lines[classLineIndex].classLevelText, "}") {
 			classLineIndex++
 		}
 		c.e.logf("markMethod %q: after move past initializers: classLineIndex #%v, classLevelText=%v", methodName, classLineIndex+c.lines[0].originalIndex+1, c.lines[classLineIndex].classLevelText)
-		lastCharAbsOffset = c.lines[classLineIndex].classLevelTextOffsets[len(c.lines[classLineIndex].classLevelTextOffsets)-1]
+		if v := len(c.lines[classLineIndex].classLevelTextOffsets); v > 0 {
+			lastCharAbsOffset = c.lines[classLineIndex].classLevelTextOffsets[v-1]
+		}
 	}
 
 	if strings.HasSuffix(features, "=>") {

@@ -197,6 +197,14 @@ class C {
       /*nonNullable*/ x;
     }
   }
+
+  C.withDetails(this.callingMethod, this.code, this.message,
+      {Object details})
+      : data = details == null ? null : <String, dynamic>{} {
+    if (details != null) {
+      data['details'] = details;
+    }
+  }
 }`
 
 	want := []EntityType{
@@ -214,6 +222,14 @@ class C {
 		NamedConstructor, // line #13:       x;
 		NamedConstructor, // line #14:     } else {
 		NamedConstructor, // line #15:       /*nonNullable*/ x;
+		NamedConstructor, // line #16:     }
+		NamedConstructor, // line #17:   }
+		BlankLine,        // line #18:
+		NamedConstructor, // line #11:   C.withDetails(this.callingMethod, this.code, this.message,
+		NamedConstructor, // line #12:       {Object details})
+		NamedConstructor, // line #13:       : data = details == null ? null : <String, dynamic>{} {
+		NamedConstructor, // line #14:     if (details != null) {
+		NamedConstructor, // line #15:       data['details'] = details;
 		NamedConstructor, // line #16:     }
 		NamedConstructor, // line #17:   }
 		BlankLine,        // line #18:

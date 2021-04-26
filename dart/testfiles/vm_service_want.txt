@@ -2135,6 +2135,10 @@ class RPCError implements Exception {
   RPCError.withDetails(this.callingMethod, this.code, this.message,
       {Object details})
       : data = details == null ? null : <String, dynamic>{} {
+    if (details != null) {
+      data['details'] = details;
+    }
+  }
 
   /// Internal JSON-RPC error.
   static const int kInternalError = -32603;
@@ -2151,7 +2155,6 @@ class RPCError implements Exception {
   /// Application specific error codes.
   static const int kServerError = -32000;
 
-  }
   final String callingMethod;
   final int code;
   final Map data;
