@@ -82,7 +82,8 @@ Flags:
   -l, --list            list files whose formatting differs from flutter-stylizer's (cannot be used with -d or -w); exit code 1 on diffs
   -q, --quiet           don't print unless there are errors
   -v, --verbose         write progress details to stderr
-  -w, --write           write result to (source) file instead of stdout (cannot be used with -d or -l); exit code 0 on diffs```
+  -w, --write           write result to (source) file instead of stdout (cannot be used with -d or -l); exit code 0 on diffs
+```
 
 ## Examples:
 
