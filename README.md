@@ -76,13 +76,13 @@ Usage:
 
 Flags:
       --config string   config file (default is $HOME/.flutter-stylizer.yaml)
+      --debug           dump insane levels of details to debug what is going on
   -d, --diff            display diffs (cannot be used with -l or -w); exit code 1 on diffs
   -h, --help            help for flutter-stylizer
   -l, --list            list files whose formatting differs from flutter-stylizer's (cannot be used with -d or -w); exit code 1 on diffs
   -q, --quiet           don't print unless there are errors
   -v, --verbose         write progress details to stderr
-  -w, --write           write result to (source) file instead of stdout (cannot be used with -d or -l); exit code 0 on diffs
-```
+  -w, --write           write result to (source) file instead of stdout (cannot be used with -d or -l); exit code 0 on diffs```
 
 ## Examples:
 
