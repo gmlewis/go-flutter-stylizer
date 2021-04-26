@@ -307,6 +307,10 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			c.braceLevels = c.braceLevels[:len(c.braceLevels)-1]
 			switch braceLevel {
 			case BraceNormal:
+				if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+					c.e.lines[c.lineIndex].classLevelText += nf
+					c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
+				}
 			case BraceSingle:
 				c.inSingleQuote = true
 			case BraceDouble:
@@ -320,10 +324,6 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			}
 			c.e.logf("}: cursor=%v", c)
 			matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
-			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
-				c.e.lines[c.lineIndex].classLevelText += nf
-				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
-			}
 		default:
 			if c.atTopOfBraceLevel(1) {
 				c.e.lines[c.lineIndex].classLevelText += nf

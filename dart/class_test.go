@@ -543,7 +543,7 @@ func TestIssue11_RunWithDefaultMemberOrdering(t *testing.T) {
 		BlankLine,               // line #54: }
 	}
 
-	runFullStylizer(t, nil, source, wantSource, want)
+	runFullStylizer(t, &Options{Verbose: true}, source, wantSource, want)
 }
 
 //go:embed testfiles/basic_classes_custom_order.txt
