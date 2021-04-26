@@ -153,6 +153,49 @@ class ScannerErrorCode extends ErrorCode {
 	runParsePhase(t, nil, source, want)
 }
 
+func TestNamedConstructor(t *testing.T) {
+	const source = `// test.dart
+class C {
+  void method_if_then_else(int? x) {
+    if (x == null) {
+      x;
+    } else {
+      /*nonNullable*/ x;
+    }
+  }
+
+  C.constructor_if_then_else(int? x) {
+    if (x == null) {
+      x;
+    } else {
+      /*nonNullable*/ x;
+    }
+  }
+}`
+
+	want := []EntityType{
+		Unknown,          // line #2: {
+		OtherMethod,      // line #3:   void method_if_then_else(int? x) {
+		OtherMethod,      // line #4:     if (x == null) {
+		OtherMethod,      // line #5:       x;
+		OtherMethod,      // line #6:     } else {
+		OtherMethod,      // line #7:       /*nonNullable*/ x;
+		OtherMethod,      // line #8:     }
+		OtherMethod,      // line #9:   }
+		BlankLine,        // line #10:
+		NamedConstructor, // line #11:   C.constructor_if_then_else(int? x) {
+		NamedConstructor, // line #12:     if (x == null) {
+		NamedConstructor, // line #13:       x;
+		NamedConstructor, // line #14:     } else {
+		NamedConstructor, // line #15:       /*nonNullable*/ x;
+		NamedConstructor, // line #16:     }
+		NamedConstructor, // line #17:   }
+		BlankLine,        // line #18:
+	}
+
+	runParsePhase(t, nil, source, want)
+}
+
 func TestNamedConstructorsAreKeptIntact(t *testing.T) {
 	const source = `class AnimationController extends Animation<double>
 with AnimationEagerListenerMixin, AnimationLocalListenersMixin, AnimationLocalStatusListenersMixin {

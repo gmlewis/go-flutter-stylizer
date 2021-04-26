@@ -268,75 +268,6 @@ func (c *Class) identifyDeprecatedAsComments() error {
 	return nil
 }
 
-func (c *Class) identifyMainConstructor() error {
-	className := c.className + "("
-	for i := 1; i < len(c.lines); i++ {
-		line := c.lines[i]
-		if line.entityType != Unknown || line.isCommentOrString || line.classLevelText == "" {
-			continue
-		}
-
-		features, lineIndex, lastCharAbsOffset, err := c.findNext(i, "=", "{", ";", "(")
-		if err != nil {
-			// An error here is OK... it just means we reached EOF.
-			return nil
-		}
-
-		advanceToNextLineIndex := func() {
-			for i+1 < len(c.lines) && i+1 <= lineIndex {
-				i++
-			}
-		}
-
-		if !strings.HasSuffix(features, "(") {
-			if strings.HasSuffix(features, "=") || strings.HasSuffix(features, "{") {
-				features, lineIndex, lastCharAbsOffset, err = c.findNext(i, "}", ";")
-				if err != nil {
-					// An error here is OK... it just means we reached EOF.
-					return nil
-				}
-			}
-			advanceToNextLineIndex()
-			continue
-		}
-
-		if c.e.fullBuf[lastCharAbsOffset] != '(' {
-			return fmt.Errorf("programming error: expected fullBuf[%v]='(' but got '%c'", lastCharAbsOffset, c.e.fullBuf[lastCharAbsOffset])
-		}
-
-		classNameIndex := strings.Index(features, className)
-		if classNameIndex < 0 {
-			advanceToNextLineIndex()
-			continue
-		}
-
-		if classNameIndex > 0 {
-			char := features[classNameIndex-1 : classNameIndex]
-			if char != " " && char != "\t" {
-				advanceToNextLineIndex()
-				continue
-			}
-		}
-
-		if line.entityType > MainConstructor {
-			if err := c.repairIncorrectlyLabeledLine(i); err != nil {
-				return err
-			}
-		}
-		c.e.logf("identifyMainConstructor: marking line %v as type MainConstructor", i+1)
-		line.entityType = MainConstructor
-
-		c.e.logf("identifyMainConstructor: calling markMethod(line #%v, className=%q, MainConstructor)", i+1, className)
-		c.theConstructor, err = c.markMethod(i, className, MainConstructor, lastCharAbsOffset)
-		if err != nil {
-			return err
-		}
-		break
-	}
-
-	return nil
-}
-
 // findNext finds the next occurrence of one of the searchFor terms
 // within the classLevelText (possibly spanning multiple lines).
 //
@@ -386,6 +317,75 @@ func (c *Class) findNext(lineNum int, searchFor ...string) (features string, cla
 	return "", 0, 0, io.EOF
 }
 
+func (c *Class) identifyMainConstructor() error {
+	className := c.className + "("
+	for i := 1; i < len(c.lines); i++ {
+		line := c.lines[i]
+		if line.entityType != Unknown || line.isCommentOrString || line.classLevelText == "" {
+			continue
+		}
+
+		features, lineIndex, lastCharAbsOffset, err := c.findNext(i, "=", "{", ";", "(")
+		if err != nil {
+			// An error here is OK... it just means we reached EOF.
+			return nil
+		}
+
+		advanceToNextLineIndex := func() {
+			if !strings.HasSuffix(features, "}") && !strings.HasSuffix(features, ";") {
+				features, lineIndex, lastCharAbsOffset, err = c.findNext(i, "}", ";")
+				if err != nil {
+					// An error here is OK... it just means we reached EOF.
+					return
+				}
+			}
+			for i+1 < len(c.lines) && i+1 <= lineIndex {
+				i++
+			}
+		}
+
+		if !strings.HasSuffix(features, "(") {
+			advanceToNextLineIndex()
+			continue
+		}
+
+		if c.e.fullBuf[lastCharAbsOffset] != '(' {
+			return fmt.Errorf("programming error: expected fullBuf[%v]='(' but got '%c'", lastCharAbsOffset, c.e.fullBuf[lastCharAbsOffset])
+		}
+
+		classNameIndex := strings.Index(features, className)
+		if classNameIndex < 0 {
+			advanceToNextLineIndex()
+			continue
+		}
+
+		if classNameIndex > 0 {
+			char := features[classNameIndex-1 : classNameIndex]
+			if char != " " && char != "\t" {
+				advanceToNextLineIndex()
+				continue
+			}
+		}
+
+		if line.entityType > MainConstructor {
+			if err := c.repairIncorrectlyLabeledLine(i); err != nil {
+				return err
+			}
+		}
+		c.e.logf("identifyMainConstructor: marking line %v as type MainConstructor", i+1)
+		line.entityType = MainConstructor
+
+		c.e.logf("identifyMainConstructor: calling markMethod(line #%v, className=%q, MainConstructor)", i+1, className)
+		c.theConstructor, err = c.markMethod(i, className, MainConstructor, lastCharAbsOffset)
+		if err != nil {
+			return err
+		}
+		break
+	}
+
+	return nil
+}
+
 func (c *Class) identifyNamedConstructors() error {
 	className := c.className + "."
 	for i := 1; i < len(c.lines); i++ {
@@ -403,7 +403,14 @@ func (c *Class) identifyNamedConstructors() error {
 		}
 
 		advanceToNextLineIndex := func() {
-			for i+1 < len(c.lines) && i <= lineIndex {
+			if !strings.HasSuffix(features, "}") && !strings.HasSuffix(features, ";") {
+				features, lineIndex, lastCharAbsOffset, err = c.findNext(i, "}", ";")
+				if err != nil {
+					// An error here is OK... it just means we reached EOF.
+					return
+				}
+			}
+			for i+1 < len(c.lines) && i+1 <= lineIndex {
 				i++
 			}
 		}
