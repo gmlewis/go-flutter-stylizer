@@ -316,30 +316,39 @@ func (c *Class) identifyMainConstructor() error {
 // of the last character returned.
 //
 // If no search terms can be found, the error io.EOF is returned.
-//
-// Note: if searching for both a string and a substring, the longer one
-// must be listed first (e.g. "=>", "=").
 func (c *Class) findNext(lineNum int, searchFor ...string) (features string, classLineNum int, absOffsetIndex int, err error) {
 	classLineNum = lineNum
 
 	for ; classLineNum < len(c.lines); classLineNum++ {
 		line := c.lines[classLineNum]
 		features += line.classLevelText
-		for _, s := range searchFor {
-			if classLevelIndex := strings.Index(line.classLevelText, s); classLevelIndex >= 0 {
-				if i := strings.Index(features, s); i > 0 {
-					features = features[0 : i+len(s)]
-				}
-
-				if classLevelIndex >= len(line.classLevelTextOffsets) {
-					log.Fatalf("programming error: classLevelIndex = %v but should be less than %v, line=%#v", classLevelIndex, len(line.classLevelTextOffsets), line)
-				}
-
-				absOffsetIndex := line.classLevelTextOffsets[classLevelIndex]
-
-				return features, classLineNum, absOffsetIndex, nil
+		classLevelIndex := -1
+		var s string
+		for si, ss := range searchFor {
+			i := strings.Index(line.classLevelText, ss)
+			if i < 0 {
+				continue
+			}
+			if si == 0 || classLevelIndex < 0 || i < classLevelIndex {
+				classLevelIndex = i
+				s = ss
 			}
 		}
+
+		if classLevelIndex >= 0 {
+			if i := strings.Index(features, s); i > 0 {
+				features = features[0 : i+len(s)]
+			}
+
+			if classLevelIndex >= len(line.classLevelTextOffsets) {
+				log.Fatalf("programming error: classLevelIndex = %v but should be less than %v, line=%#v", classLevelIndex, len(line.classLevelTextOffsets), line)
+			}
+
+			absOffsetIndex := line.classLevelTextOffsets[classLevelIndex]
+
+			return features, classLineNum, absOffsetIndex, nil
+		}
+
 		features += " " // instead of newline.
 	}
 
@@ -386,6 +395,11 @@ func (c *Class) identifyNamedConstructors() error {
 		leadingText := features[0:classNameIndex]
 		namedConstructor := features[classNameIndex:]
 		c.e.logf("identifyNamedConstructors: leadingText=%q, classNameIndex=%v, namedConstructor=%q, lastCharAbsOffset=%v, features=%q", leadingText, classNameIndex, namedConstructor, lastCharAbsOffset, features)
+
+		if strings.ContainsAny(leadingText, "?:") {
+			advanceToNextLineIndex()
+			continue
+		}
 
 		if c.lines[i].entityType >= MainConstructor && c.lines[i].entityType != NamedConstructor {
 			if err := c.repairIncorrectlyLabeledLine(i); err != nil {
@@ -629,7 +643,7 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 		}
 	}
 
-	for i := 0; i <= lineCount; i++ {
+	for i := 0; i < lineCount; i++ {
 		if lineNum+i >= len(c.lines) {
 			break
 		}
