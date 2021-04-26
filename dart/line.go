@@ -20,67 +20,14 @@ import (
 	"strings"
 )
 
-// EntityType represents a type of Dart Line.
-type EntityType int
-
-const (
-	Unknown EntityType = iota
-	BlankLine
-	SingleLineComment
-	MultiLineComment
-	MainConstructor
-	NamedConstructor
-	StaticVariable
-	InstanceVariable
-	OverrideVariable
-	StaticPrivateVariable
-	PrivateInstanceVariable
-	OverrideMethod
-	OtherMethod
-	BuildMethod
-	GetterMethod
-)
-
-func (e EntityType) String() string {
-	switch e {
-	default:
-		return "Unknown"
-	case BlankLine:
-		return "BlankLine"
-	case SingleLineComment:
-		return "SingleLineComment"
-	case MultiLineComment:
-		return "MultiLineComment"
-	case MainConstructor:
-		return "MainConstructor"
-	case NamedConstructor:
-		return "NamedConstructor"
-	case StaticVariable:
-		return "StaticVariable"
-	case InstanceVariable:
-		return "InstanceVariable"
-	case OverrideVariable:
-		return "OverrideVariable"
-	case StaticPrivateVariable:
-		return "StaticPrivateVariable"
-	case PrivateInstanceVariable:
-		return "PrivateInstanceVariable"
-	case OverrideMethod:
-		return "OverrideMethod"
-	case OtherMethod:
-		return "OtherMethod"
-	case BuildMethod:
-		return "BuildMethod"
-	case GetterMethod:
-		return "GetterMethod"
-	}
-}
-
 // Line represents a line of Dart code.
 type Line struct {
-	line           string
-	stripped       string
-	strippedOffset int
+	line           string // original, unmodified line
+	stripped       string // removes comments and surrounding whitespace
+	strippedOffset int    // offset to start of stripped line, compared to 'line'
+	classLevelText string // preserved text at braceLevel==1 - Note that this is untrimmed.
+
+	classLevelTextOffsets []int // absolute offsets for each character within classLevelText.
 
 	originalIndex int
 

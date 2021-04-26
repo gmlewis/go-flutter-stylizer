@@ -32,7 +32,7 @@ import (
 
 // This version string should stay in sync with the VSCode plugin
 // to reduce confusion.
-const VERSION = "0.0.20"
+const VERSION = "0.1.0"
 
 var cfgFile string
 
@@ -58,25 +58,29 @@ var rootCmd = &cobra.Command{
 }
 
 func rootRunE(cmd *cobra.Command, args []string) error {
+	debug, err := cmd.Flags().GetBool("debug")
+	if err != nil {
+		return fmt.Errorf("debug: %v", err)
+	}
 	diff, err := cmd.Flags().GetBool("diff")
 	if err != nil {
-		log.Fatalf("diff: %v", err)
+		return fmt.Errorf("diff: %v", err)
 	}
 	list, err := cmd.Flags().GetBool("list")
 	if err != nil {
-		log.Fatalf("list: %v", err)
+		return fmt.Errorf("list: %v", err)
 	}
 	write, err := cmd.Flags().GetBool("write")
 	if err != nil {
-		log.Fatalf("write: %v", err)
+		return fmt.Errorf("write: %v", err)
 	}
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
-		log.Fatalf("verbose: %v", err)
+		return fmt.Errorf("verbose: %v", err)
 	}
 	quiet, err := cmd.Flags().GetBool("quiet")
 	if err != nil {
-		log.Fatalf("quiet: %v", err)
+		return fmt.Errorf("quiet: %v", err)
 	}
 
 	var flagCount int
@@ -91,7 +95,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	f(write)
 
 	if flagCount > 1 {
-		log.Fatalf("Must supply only one of --diff (-d), --list (-l), and --write (-w).")
+		return fmt.Errorf("Must supply only one of --diff (-d), --list (-l), and --write (-w).")
 	}
 
 	vp := viper.GetViper()
@@ -99,7 +103,12 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	memberOrdering := vp.GetStringSlice("memberOrdering")
 	sortOtherMethods := vp.GetBool("sortOtherMethods")
 
+	if !quiet && (len(memberOrdering) > 0 || groupAndSortGetterMethods || sortOtherMethods) {
+		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	}
+
 	opts := dart.Options{
+		Debug:   debug,
 		Diff:    diff,
 		List:    list,
 		Quiet:   quiet,
@@ -114,7 +123,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	c := dart.New(opts)
 
 	if len(args) == 0 {
-		log.Fatalf("Must supply at least one filename or './...' to process all files in directory tree.")
+		return fmt.Errorf("Must supply at least one filename or './...' to process all files in directory tree.")
 	}
 
 	var newArgs []string
@@ -127,7 +136,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		newArgs = append(newArgs, args[i])
 	}
 	if len(newArgs) == 0 {
-		log.Fatalf("No *.dart files found.")
+		return fmt.Errorf("No *.dart files found.")
 	}
 
 	if !quiet {
@@ -142,13 +151,13 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		}
 		diffs, err := c.StylizeFile(arg)
 		if err != nil {
-			log.Fatalf("StylizeFile(%q): %v", arg, err)
+			return fmt.Errorf("StylizeFile(%q): %v", arg, err)
 		}
 		anyDiffs = anyDiffs || diffs
 	}
 
 	if anyDiffs && (opts.Diff || opts.List) {
-		log.Fatalf("Differences were found. Exit code 1.")
+		return fmt.Errorf("Differences were found. Exit code 1.")
 	}
 
 	if !quiet {
@@ -171,6 +180,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.flutter-stylizer.yaml)")
+	rootCmd.Flags().Bool("debug", false, "dump insane levels of details to debug what is going on")
 	rootCmd.Flags().BoolP("diff", "d", false, "display diffs (cannot be used with -l or -w); exit code 1 on diffs")
 	rootCmd.Flags().BoolP("list", "l", false, "list files whose formatting differs from flutter-stylizer's (cannot be used with -d or -w); exit code 1 on diffs")
 	rootCmd.Flags().BoolP("write", "w", false, "write result to (source) file instead of stdout (cannot be used with -d or -l); exit code 0 on diffs")
@@ -199,7 +209,5 @@ func initConfig() {
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
+	viper.ReadInConfig()
 }

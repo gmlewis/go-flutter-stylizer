@@ -8,16 +8,49 @@ https://github.com/gmlewis/flutter-stylizer) but is
 written in Go instead of TypeScript.
 
 This makes it particularly well-suited to be used in GitHub Actions,
-Bitbucket pipelines, etc., to maintain Flutter code repositories.
+Bitbucket, or other CI/CD pipelines, to maintain Flutter code repositories.
 
 ## Status
 
-This is a fun side-project that is still experimental and
-not yet ready to try out.
+This has been run on the Flutter source code base (consisting of 7772 *.dart
+files) located here (on Linux):
+https://flutter.dev/docs/get-started/install/linux
+and produces no further changes after the initial run.
+
+```
+$ cd ~/development
+$ time tar xf ~/Downloads/flutter_linux_2.0.5-stable.tar.xz
+
+real	0m21.166s
+user	0m20.610s
+sys	0m4.915s
+
+$ time flutter-stylizer -q -w ./...
+
+real	0m11.595s
+user	0m14.547s
+sys	0m0.881s
+
+$ time flutter-stylizer -q -d ./...
+
+real	0m10.531s
+user	0m13.120s
+sys	0m0.718s
+```
 
 ## Installation
 
 `flutter-stylizer` runs on Mac, Windows, and Linux.
+
+### Option 1 (for non-Go devs or CI/CD pipelines)
+
+* Download the appropriate precompiled statically-linked binary
+  executable for your platform of the latest release, located here:
+  https://github.com/gmlewis/go-flutter-stylizer/releases
+* On Mac and Linux, make the file executable:
+  * `chmod a+x flutter-stylizer`
+
+### Option 2 (for Go devs or to build from source)
 
 * One-time setup for using Go on your system:
   * Install Go from https://golang.org
@@ -26,7 +59,7 @@ not yet ready to try out.
     * `PATH=${PATH}:${HOME}/go/bin`
   * Create a directory for the Go executables: `mkdir -p ${GOPATH}/bin`
 
-* Install `flutter-stylizer`:
+* To install `flutter-stylizer`, run from a bash-like shell or terminal:
 
 ```
 $ go get -u github.com/gmlewis/go-flutter-stylizer/cmd/flutter-stylizer
@@ -43,13 +76,13 @@ Usage:
 
 Flags:
       --config string   config file (default is $HOME/.flutter-stylizer.yaml)
+      --debug           dump insane levels of details to debug what is going on
   -d, --diff            display diffs (cannot be used with -l or -w); exit code 1 on diffs
   -h, --help            help for flutter-stylizer
   -l, --list            list files whose formatting differs from flutter-stylizer's (cannot be used with -d or -w); exit code 1 on diffs
   -q, --quiet           don't print unless there are errors
   -v, --verbose         write progress details to stderr
-  -w, --write           write result to (source) file instead of stdout (cannot be used with -d or -l); exit code 0 on diffs
-```
+  -w, --write           write result to (source) file instead of stdout (cannot be used with -d or -l); exit code 0 on diffs```
 
 ## Examples:
 
@@ -199,6 +232,19 @@ incorporate the fix into the repo.
 * Code that follows the end of a multiline comment on the same
   line is not supported. Unusual code like this will most likely not ever be
   supported even though the Dart compiler can handle it.
+
+## Release Notes
+
+### 0.1.1
+
+- Initial release. This version was run on the Flutter code base and
+  should be ready for use.
+
+### 0.0.20-broken
+
+- This was a port of the VSCode `flutter-stylizer` extension that
+  I wrote in TypeScript. It turns out that the port had a lot of
+  problems. Please disregard and don't use.
 
 ----------------------------------------------------------------------
 

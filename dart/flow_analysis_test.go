@@ -25,7 +25,10 @@ import (
 var flowAnalysis string
 
 func TestFlowAnalysis_GetClasses(t *testing.T) {
-	e := NewEditor(flowAnalysis)
+	e, err := NewEditor(flowAnalysis, false)
+	if err != nil {
+		t.Fatalf("NewEditor: %v", err)
+	}
 
 	c := &Client{}
 	classes, err := c.GetClasses(e, false)
@@ -34,6 +37,6 @@ func TestFlowAnalysis_GetClasses(t *testing.T) {
 	}
 
 	if got, want := len(classes), 22; got != want {
-		t.Errorf("got %v classes", len(classes))
+		t.Errorf("got %v classes, want %v", len(classes), want)
 	}
 }

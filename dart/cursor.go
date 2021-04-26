@@ -18,7 +18,9 @@ package dart
 
 import (
 	"fmt"
+	"io"
 	"strings"
+	"unicode"
 )
 
 // BraceLevel represents the current brace level the cursor is within.
@@ -58,6 +60,9 @@ type Cursor struct {
 	// UnreadRune can not be called twice in succession, so we need to keep track
 	// of our lookahead stack ourselves.
 	runeBuf []rune
+
+	// classLineIndices keeps track of line indices where a class or abstract class starts.
+	classLineIndices []int
 }
 
 func (c *Cursor) String() string {
@@ -71,38 +76,24 @@ func (c *Cursor) String() string {
 		c.inSingleQuote, c.inDoubleQuote, c.inTripleSingle, c.inTripleDouble, c.inMultiLineComment, c.parenLevels, c.braceLevels)
 }
 
-// advanceUntil searches for one of the provided strings, stepping through
-// the Dart source code (and obeying its grammatical nuances) until found.
-//
-// It also adds a list of "interesting" top-level features encountered as it
-// processes the data, effectively filtering out the contents of
-// strings, bodies, and comments.
-func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error) {
+// parse parses the Dart source, identifies line entity types in the source,
+// keeps track of matching pairs, and returns a list of class line indices.
+func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 	var lastFeature string
-	var nf string
+	var nf string // nextFeature
+	var matchingPairStack []*MatchingPair
 
 	for {
 		lastFeature = nf
 		nf, err = c.advanceToNextFeature()
 		if err != nil {
-			return nil, err
-		}
-
-		c.e.logf("nf=%q searchFor=%#v, abs=%v, ind=%v, rel=%v", nf, searchFor, c.absOffset, c.lineIndex, c.relStrippedOffset)
-		var foundIt bool
-		for _, sf := range searchFor {
-			if nf == sf {
-				foundIt = true
-				break
+			if err != io.EOF {
+				return fmt.Errorf("advanceToNextFeature: %v", err)
 			}
+			return nil
 		}
 
-		if foundIt &&
-			!c.inSingleQuote && !c.inDoubleQuote && !c.inTripleSingle && !c.inTripleDouble &&
-			c.parenLevels == 0 &&
-			len(c.braceLevels) == 0 {
-			return append(features, nf), nil
-		}
+		c.e.logf("nf=%q matchingPairStack=%v, abs=%v, ind=%v, rel=%v", nf, len(matchingPairStack), c.absOffset, c.lineIndex, c.relStrippedOffset)
 
 		switch nf {
 		case "//":
@@ -115,41 +106,46 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.e.lines[c.lineIndex].stripped = strings.TrimSpace(c.e.lines[c.lineIndex].stripped[0:c.relStrippedOffset])
 			afterLen := len(c.e.lines[c.lineIndex].stripped)
 			c.absOffset -= beforeLen - afterLen
-			// Reset the reader because we chopped off the stripped line.
+			// Reset the reader because we chopped off the stripped line and have no more to parse on this line.
 			c.reader = strings.NewReader("")
 			if afterLen == 0 {
-				c.e.logf("advanceUntil: marking line %v as type SingleLineComment", c.lineIndex+1)
+				c.e.logf("parse: marking line #%v as type SingleLineComment", c.lineIndex+1)
 				c.e.lines[c.lineIndex].entityType = SingleLineComment
 			}
-			c.e.logf("STRIPPED MODIFIED! singleLineComment=true: stripped=%q(%v), beforeLen=%v, afterLen=%v, cursor=%v", c.e.lines[c.lineIndex].stripped, len(c.e.lines[c.lineIndex].stripped), beforeLen, afterLen, c)
-			continue
+			// c.e.logf("STRIPPED MODIFIED! singleLineComment=true: stripped=%q(%v), beforeLen=%v, afterLen=%v, cursor=%v", c.e.lines[c.lineIndex].stripped, len(c.e.lines[c.lineIndex].stripped), beforeLen, afterLen, c)
 		case "/*":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble {
 				continue
 			}
 			c.inMultiLineComment++
-			c.e.logf("advanceUntil: marking line %v as type MultiLineComment", c.lineIndex+1)
-			c.e.lines[c.lineIndex].entityType = MultiLineComment
+			// do NOT mark an entire line as MultiLineCommand unless there is not other top-level text on the line.
+			if strings.TrimSpace(c.e.lines[c.lineIndex].classLevelText) == "" {
+				c.e.logf("advanceUntil: marking line #%v as type MultiLineComment", c.lineIndex+1)
+				c.e.lines[c.lineIndex].entityType = MultiLineComment
+			}
 			c.e.logf("inMultiLineComment=%v: cursor=%v", c.inMultiLineComment, c)
-			continue
+			matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 		case "*/":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble {
 				continue
 			}
 			if c.inMultiLineComment == 0 {
-				return nil, fmt.Errorf("ERROR: Found */ before /*: cursor=%v", c)
+				return fmt.Errorf("ERROR: Found */ before /*: cursor=%v", c)
 			}
-			c.e.logf("advanceUntil: marking line %v as type MultiLineComment", c.lineIndex+1)
-			c.e.lines[c.lineIndex].entityType = MultiLineComment
+			// do NOT mark an entire line as MultiLineCommand unless there is not other top-level text on the line.
+			if strings.TrimSpace(c.e.lines[c.lineIndex].classLevelText) == "" {
+				c.e.logf("advanceUntil: marking line %v as type MultiLineComment", c.lineIndex+1)
+				c.e.lines[c.lineIndex].entityType = MultiLineComment
+			}
 			c.inMultiLineComment--
 			c.e.logf("inMultiLineComment=%v: cursor=%v", c.inMultiLineComment, c)
-			continue
+			matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
 		case "'''":
 			if c.inMultiLineComment > 0 {
 				continue
 			}
 			if c.inSingleQuote {
-				return nil, fmt.Errorf("ERROR: Found ''' after ': cursor=%v", c)
+				return fmt.Errorf("ERROR: Found ''' after ': cursor=%v", c)
 			}
 			if c.inDoubleQuote || c.inTripleDouble {
 				continue
@@ -157,13 +153,25 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.inTripleSingle = !c.inTripleSingle
 			c.stringIsRaw = c.inTripleSingle && lastFeature == "r"
 			c.e.logf("inTripleSingle: cursor=%v", c)
-			continue
+			if c.inTripleSingle {
+				if c.stringIsRaw {
+					matchingPairStack = c.NewMatchingPair("r'''", matchingPairs, matchingPairStack)
+				} else {
+					matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
+				}
+			} else {
+				matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
+			}
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1, c.absOffset, c.absOffset+1)
+			}
 		case `"""`:
 			if c.inMultiLineComment > 0 {
 				continue
 			}
 			if c.inDoubleQuote {
-				return nil, fmt.Errorf(`ERROR: Found """ after ": cursor=%v`, c)
+				return fmt.Errorf(`ERROR: Found """ after ": cursor=%v`, c)
 			}
 			if c.inSingleQuote || c.inTripleSingle {
 				continue
@@ -171,7 +179,19 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.inTripleDouble = !c.inTripleDouble
 			c.stringIsRaw = c.inTripleDouble && lastFeature == "r"
 			c.e.logf("inTripleDouble: cursor=%v", c)
-			continue
+			if c.inTripleDouble {
+				if c.stringIsRaw {
+					matchingPairStack = c.NewMatchingPair(`r"""`, matchingPairs, matchingPairStack)
+				} else {
+					matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
+				}
+			} else {
+				matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
+			}
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1, c.absOffset, c.absOffset+1)
+			}
 		case "${":
 			switch {
 			case c.inMultiLineComment > 0:
@@ -182,6 +202,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 				c.inSingleQuote = false
 				c.braceLevels = append(c.braceLevels, BraceSingle)
 				c.e.logf("${: inSingleQuote: cursor=%v", c)
+				matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 			case c.inDoubleQuote:
 				if c.stringIsRaw {
 					continue
@@ -189,6 +210,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 				c.inDoubleQuote = false
 				c.braceLevels = append(c.braceLevels, BraceDouble)
 				c.e.logf("${: inDoubleQuote: cursor=%v", c)
+				matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 			case c.inTripleSingle:
 				if c.stringIsRaw {
 					continue
@@ -196,6 +218,7 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 				c.inTripleSingle = false
 				c.braceLevels = append(c.braceLevels, BraceTripleSingle)
 				c.e.logf("${: inTripleSingle: cursor=%v", c)
+				matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 			case c.inTripleDouble:
 				if c.stringIsRaw {
 					continue
@@ -203,10 +226,10 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 				c.inTripleDouble = false
 				c.braceLevels = append(c.braceLevels, BraceTripleDouble)
 				c.e.logf("${: inTripleDouble: cursor=%v", c)
+				matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 			default:
-				return nil, fmt.Errorf("ERROR: Found ${ outside of a string: cursor=%v", c)
+				return fmt.Errorf("ERROR: Found ${ outside of a string: cursor=%v", c)
 			}
-			continue
 		case "'":
 			if c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
 				continue
@@ -214,7 +237,19 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.inSingleQuote = !c.inSingleQuote
 			c.stringIsRaw = c.inSingleQuote && lastFeature == "r"
 			c.e.logf("inSingleQuote: lastFeature=%q, cursor=%v", lastFeature, c)
-			continue
+			if c.inSingleQuote {
+				if c.stringIsRaw {
+					matchingPairStack = c.NewMatchingPair("r'", matchingPairs, matchingPairStack)
+				} else {
+					matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
+				}
+			} else {
+				matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
+			}
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
+			}
 		case `"`:
 			if c.inSingleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
 				continue
@@ -222,42 +257,67 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			c.inDoubleQuote = !c.inDoubleQuote
 			c.stringIsRaw = c.inDoubleQuote && lastFeature == "r"
 			c.e.logf("inDoubleQuote: cursor=%v", c)
-			continue
+			if c.inDoubleQuote {
+				if c.stringIsRaw {
+					matchingPairStack = c.NewMatchingPair(`r"`, matchingPairs, matchingPairStack)
+				} else {
+					matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
+				}
+			} else {
+				matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
+			}
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
+			}
 		case "(":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
 				continue
 			}
-			if c.parenLevels == 0 && len(c.braceLevels) == 0 {
-				features = append(features, nf)
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
 			}
 			c.parenLevels++
 			c.e.logf("parenLevels++: cursor=%v", c)
+			matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 		case ")":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleDouble || c.inTripleSingle || c.inMultiLineComment > 0 {
 				continue
 			}
 			c.parenLevels--
 			c.e.logf("parenLevels--: cursor=%v", c)
+			matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
+			}
 		case "{":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 {
 				continue
 			}
-			if c.parenLevels == 0 && len(c.braceLevels) == 0 {
-				features = append(features, nf)
+			if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+				c.e.lines[c.lineIndex].classLevelText += nf
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
 			}
 			c.braceLevels = append(c.braceLevels, BraceNormal)
 			c.e.logf("{: cursor=%v", c)
+			matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 		case "}":
 			if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 {
 				continue
 			}
 			if len(c.braceLevels) == 0 {
-				return nil, fmt.Errorf("ERROR: Found } before {: cursor=%v", c)
+				return fmt.Errorf("ERROR: Found } before {: cursor=%v", c)
 			}
 			braceLevel := c.braceLevels[len(c.braceLevels)-1]
 			c.braceLevels = c.braceLevels[:len(c.braceLevels)-1]
 			switch braceLevel {
 			case BraceNormal:
+				if c.parenLevels == 0 && len(c.braceLevels) == 1 {
+					c.e.lines[c.lineIndex].classLevelText += nf
+					c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
+				}
 			case BraceSingle:
 				c.inSingleQuote = true
 			case BraceDouble:
@@ -267,18 +327,15 @@ func (c *Cursor) advanceUntil(searchFor ...string) (features []string, err error
 			case BraceTripleDouble:
 				c.inTripleDouble = true
 			default:
-				return nil, fmt.Errorf("ERROR: Unknown braceLevel %v: cursor=%v", braceLevel, c)
+				return fmt.Errorf("ERROR: Unknown braceLevel %v: cursor=%v", braceLevel, c)
 			}
 			c.e.logf("}: cursor=%v", c)
-		}
-
-		if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 || c.parenLevels > 0 || len(c.braceLevels) > 0 {
-			continue
-		}
-		features = append(features, nf) // all top-level characters captured here.
-
-		if foundIt && len(searchFor) > 1 {
-			return features, nil
+			matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
+		default:
+			if c.atTopOfBraceLevel(1) {
+				c.e.lines[c.lineIndex].classLevelText += nf
+				c.e.lines[c.lineIndex].classLevelTextOffsets = append(c.e.lines[c.lineIndex].classLevelTextOffsets, c.absOffset-1)
+			}
 		}
 	}
 }
@@ -312,6 +369,9 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 	r, size, err := getRune()
 	if err != nil {
 		if err := c.advanceToNextLine(); err != nil {
+			if !c.atTopOfBraceLevel(0) {
+				return "", fmt.Errorf("parse error: reached EOF, cursor=%v", c)
+			}
 			return "", err
 		}
 		r, size, err = ' ', 1, nil // replace newline with single space
@@ -336,7 +396,7 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 		}
 		nr, _, err := getRune()
 		if err != nil {
-			return "\\", nil
+			return `\`, nil
 		}
 		return fmt.Sprintf("\\%c", nr), nil
 	case '\'':
@@ -434,15 +494,58 @@ func (c *Cursor) advanceToNextFeature() (string, error) {
 	return string(r), nil
 }
 
+func (c *Cursor) atTopOfBraceLevel(braceLevel int) bool {
+	if c.inSingleQuote || c.inDoubleQuote || c.inTripleSingle || c.inTripleDouble || c.inMultiLineComment > 0 || c.parenLevels > 0 {
+		return false
+	}
+	return len(c.braceLevels) == braceLevel
+}
+
 // advanceToNextLine advances the cursor to the next line.
+// It returns io.EOF when it reaches the end of the file.
+//
+// It also detects the start of class lines.
 func (c *Cursor) advanceToNextLine() error {
+	if c.lineIndex == 0 && matchClassRE.FindStringSubmatch(c.e.lines[c.lineIndex].line) != nil {
+		c.classLineIndices = append(c.classLineIndices, c.lineIndex)
+	}
+
+	// c.e.lines[c.lineIndex].classLevelText = strings.TrimSpace(c.e.lines[c.lineIndex].classLevelText)
+	c.e.lines[c.lineIndex].classLevelText = strings.TrimLeftFunc(c.e.lines[c.lineIndex].classLevelText, func(r rune) bool {
+		if !unicode.IsSpace(r) {
+			return false
+		}
+		c.e.lines[c.lineIndex].classLevelTextOffsets = c.e.lines[c.lineIndex].classLevelTextOffsets[1:]
+		return true
+	})
+
+	c.e.lines[c.lineIndex].classLevelText = strings.TrimRightFunc(c.e.lines[c.lineIndex].classLevelText, func(r rune) bool {
+		if !unicode.IsSpace(r) {
+			return false
+		}
+		c.e.lines[c.lineIndex].classLevelTextOffsets = c.e.lines[c.lineIndex].classLevelTextOffsets[:len(c.e.lines[c.lineIndex].classLevelTextOffsets)-1]
+		return true
+	})
+
+	if len(c.e.lines[c.lineIndex].classLevelText) != len(c.e.lines[c.lineIndex].classLevelTextOffsets) {
+		return fmt.Errorf("programming error: line #%v: classLevelText=%v != classLevelTextOffsets=%v", c.lineIndex+1, len(c.e.lines[c.lineIndex].classLevelText), len(c.e.lines[c.lineIndex].classLevelTextOffsets))
+	}
+
 	c.lineIndex++
 	if c.lineIndex >= len(c.e.lines) {
-		return fmt.Errorf("advanceToNextLine went past EOF: lineIndex=%v, len(lines)=%v, cursor=%v", c.lineIndex, len(c.e.lines), c)
+		return io.EOF
+	}
+
+	if c.atTopOfBraceLevel(0) && matchClassRE.FindStringSubmatch(c.e.lines[c.lineIndex].line) != nil {
+		c.classLineIndices = append(c.classLineIndices, c.lineIndex)
 	}
 
 	c.absOffset = c.e.lines[c.lineIndex].startOffset + c.e.lines[c.lineIndex].strippedOffset
 	c.relStrippedOffset = 0
+
+	if c.e.lines[c.lineIndex].stripped != "" && c.e.fullBuf[c.absOffset] != c.e.lines[c.lineIndex].stripped[0] {
+		return fmt.Errorf("programming error: fullBuf[%v]=%c, want %c", c.absOffset, c.e.fullBuf[c.absOffset], c.e.lines[c.lineIndex].stripped[0])
+	}
 
 	c.reader = strings.NewReader(c.e.lines[c.lineIndex].stripped)
 	if c.inMultiLineComment > 0 {

@@ -19,21 +19,29 @@ package dart
 import (
 	"fmt"
 	"log"
+	"runtime/debug"
 	"strings"
 )
 
 // Editor represents a text editor that understands Dart syntax.
 type Editor struct {
-	fullBuf string
-	lines   []*Line
+	fullBuf   string
+	lines     []*Line
+	eofOffset int
+
+	matchingPairs MatchingPairsMap
+	// classLineIndices contains line indices where a class or abstract class starts.
+	classLineIndices []int
 
 	Verbose bool
 }
 
 // NewEditor returns a new Editor.
-func NewEditor(buf string) *Editor {
+func NewEditor(buf string, verbose bool) (*Editor, error) {
 	e := &Editor{
-		fullBuf: buf,
+		fullBuf:       buf,
+		matchingPairs: MatchingPairsMap{},
+		Verbose:       verbose,
 	}
 
 	e.fullBuf = buf
@@ -42,60 +50,98 @@ func NewEditor(buf string) *Editor {
 	for i, line := range lines {
 		e.lines = append(e.lines, NewLine(line, lineStartOffset, i))
 		lineStartOffset += len(line) + 1
-		// Change a blank line following a comment to a SingleLineComment in
-		// order to keep it with the following entity.
-		numLines := len(e.lines)
-		if numLines > 1 && e.lines[numLines-1].entityType == BlankLine && isComment(e.lines[numLines-2]) {
-			e.lines[numLines-1].entityType = SingleLineComment
-		}
-	}
-
-	return e
-}
-
-// findMatchingBracket finds the matching closing "}" (for "{") or ")" (for "(")
-// given the offset of the opening rune.
-func (e *Editor) findMatchingBracket(openOffset int) (int, error) {
-	open := e.fullBuf[openOffset : openOffset+1]
-	if open != "{" && open != "(" {
-		return 0, fmt.Errorf("findMatchingBracket(%v) called on non-bracket %q. Please file a bug report on the GitHub issue tracker", openOffset, open)
-	}
-	searchFor := "}"
-	if open == "(" {
-		searchFor = ")"
-	}
-
-	absOffset := openOffset + 1
-	lineIndex, relStrippedOffset := e.findLineIndexAtOffset(absOffset)
-	if lineIndex >= len(e.lines) {
-		return 0, fmt.Errorf("findLineIndexAtOffset(%v) returned lineIndex(=%v) past last line %v", absOffset, lineIndex, len(e.lines))
-	}
-
-	e.logf("lineIndex=%v, relStrippedOffset=%v, stripped=%q(%v), line=%q(%v)", lineIndex, relStrippedOffset, e.lines[lineIndex].stripped, len(e.lines[lineIndex].stripped), e.lines[lineIndex].line, len(e.lines[lineIndex].line))
-
-	reader := strings.NewReader("")
-	if relStrippedOffset < 0 {
-		return 0, fmt.Errorf("findLineIndexAtOffset(%v) returned bad relStrippedOffset(=%v) for stripped line %q(%v)", absOffset, relStrippedOffset, e.lines[lineIndex].stripped, len(e.lines[lineIndex].stripped))
-	}
-	if relStrippedOffset < len(e.lines[lineIndex].stripped) {
-		reader = strings.NewReader(e.lines[lineIndex].stripped[relStrippedOffset:])
+		// // Change a blank line following a comment to a SingleLineComment in
+		// // order to keep it with the following entity.
+		// numLines := len(e.lines)
+		// if numLines > 1 && e.lines[numLines-1].entityType == BlankLine && isComment(e.lines[numLines-2]) {
+		// 	e.lines[numLines-1].entityType = SingleLineComment
+		// }
 	}
 
 	cursor := &Cursor{
-		e:         e,
-		absOffset: absOffset,
-		lineIndex: lineIndex,
-
-		relStrippedOffset: relStrippedOffset,
-
-		reader: reader,
+		e:      e,
+		reader: strings.NewReader(e.lines[0].stripped),
 	}
-	if _, err := cursor.advanceUntil(searchFor); err != nil {
-		return 0, fmt.Errorf("advanceUntil(%q): %v", searchFor, err)
+	if err := cursor.parse(e.matchingPairs); err != nil {
+		return nil, fmt.Errorf("parse: %v", err)
 	}
 
-	return cursor.absOffset - 1 - len(cursor.runeBuf), nil
+	e.eofOffset = cursor.absOffset
+	e.classLineIndices = cursor.classLineIndices
+
+	return e, nil
 }
+
+// findStartOfClass returns the absolute offset of the next top-level '{' or ';'
+// starting at offset startOffset.
+//
+// Note that this class definition is valid: "class D = Object with Function;"
+func (e *Editor) findStartOfClass(startOffset int) int {
+	for startOffset < e.eofOffset {
+		if e.fullBuf[startOffset] == '{' || e.fullBuf[startOffset] == ';' {
+			return startOffset
+		}
+		if pair, ok := e.matchingPairs[startOffset]; ok {
+			startOffset = pair.closeAbsOffset + 1
+			continue
+		}
+		startOffset++
+	}
+
+	// offset := strings.Index(e.fullBuf[startOffset:], "{")
+	// if semiOffset := strings.Index(e.fullBuf[startOffset:], ";"); offset < 0 || (semiOffset >= 0 && semiOffset < offset) {
+	// 	offset = semiOffset // this is valid:
+	// }
+	// return startOffset + offset
+
+	debug.PrintStack()
+	log.Fatalf("programming error: findStartOfClass(%v) should not reach here", startOffset)
+	return 0
+}
+
+// // findMatchingBracket finds the matching closing "}" (for "{") or ")" (for "(")
+// // given the offset of the opening rune.
+// func (e *Editor) findMatchingBracket(openOffset int) (int, error) {
+// 	open := e.fullBuf[openOffset : openOffset+1]
+// 	if open != "{" && open != "(" {
+// 		return 0, fmt.Errorf("findMatchingBracket(%v) called on non-bracket %q. Please file a bug report on the GitHub issue tracker", openOffset, open)
+// 	}
+// 	searchFor := "}"
+// 	if open == "(" {
+// 		searchFor = ")"
+// 	}
+
+// 	absOffset := openOffset + 1
+// 	lineIndex, relStrippedOffset := e.findLineIndexAtOffset(absOffset)
+// 	if lineIndex >= len(e.lines) {
+// 		return 0, fmt.Errorf("findLineIndexAtOffset(%v) returned lineIndex(=%v) past last line %v", absOffset, lineIndex, len(e.lines))
+// 	}
+
+// 	e.logf("lineIndex=%v, relStrippedOffset=%v, stripped=%q(%v), line=%q(%v)", lineIndex, relStrippedOffset, e.lines[lineIndex].stripped, len(e.lines[lineIndex].stripped), e.lines[lineIndex].line, len(e.lines[lineIndex].line))
+
+// 	reader := strings.NewReader("")
+// 	if relStrippedOffset < 0 {
+// 		return 0, fmt.Errorf("findLineIndexAtOffset(%v) returned bad relStrippedOffset(=%v) for stripped line %q(%v)", absOffset, relStrippedOffset, e.lines[lineIndex].stripped, len(e.lines[lineIndex].stripped))
+// 	}
+// 	if relStrippedOffset < len(e.lines[lineIndex].stripped) {
+// 		reader = strings.NewReader(e.lines[lineIndex].stripped[relStrippedOffset:])
+// 	}
+
+// 	cursor := &Cursor{
+// 		e:         e,
+// 		absOffset: absOffset,
+// 		lineIndex: lineIndex,
+
+// 		relStrippedOffset: relStrippedOffset,
+
+// 		reader: reader,
+// 	}
+// 	if _, err := cursor.advanceUntil(searchFor); err != nil {
+// 		return 0, fmt.Errorf("advanceUntil(%q): %v", searchFor, err)
+// 	}
+
+// 	return cursor.absOffset - 1 - len(cursor.runeBuf), nil
+// }
 
 // findLineIndexAtOffset finds the line index and relative offset for the
 // absolute offset within the text buffer. Note that the returned

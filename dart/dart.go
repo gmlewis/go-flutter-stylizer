@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -29,6 +30,7 @@ import (
 
 // Options represents the configuration options for the Dart processor.
 type Options struct {
+	Debug   bool
 	Diff    bool
 	List    bool
 	Quiet   bool
@@ -80,18 +82,22 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 		buf = string(b)
 	}
 
-	e := NewEditor(buf)
+	e, err := NewEditor(buf, c.opts.Verbose)
+	if err != nil {
+		return false, fmt.Errorf("NewEditor: %v", err)
+	}
+
 	e.Verbose = c.opts.Verbose
 	classes, err := c.GetClasses(e, c.opts.GroupAndSortGetterMethods)
 	if err != nil {
 		return false, err
 	}
-	if !c.opts.Quiet && len(classes) > 0 {
+	if !c.opts.Quiet && c.opts.Verbose && len(classes) > 0 {
 		log.Printf("Found %v classes in file %v", len(classes), filename)
 	}
 
 	edits := c.generateEdits(classes)
-	if !c.opts.Quiet {
+	if !c.opts.Quiet && c.opts.Verbose {
 		log.Printf("%v classes need rewriting.", len(edits))
 	}
 
@@ -110,11 +116,13 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 	switch {
 	case c.opts.Diff:
 		if len(edits) > 0 {
+			fromFile := filepath.Join("original", filename)
+			toFile := filepath.Join("stylized", filename)
 			diff := difflib.UnifiedDiff{
 				A:        difflib.SplitLines(buf),
 				B:        difflib.SplitLines(newBuf),
-				FromFile: "Original",
-				ToFile:   "Stylized",
+				FromFile: fromFile,
+				ToFile:   toFile,
 				Context:  3,
 				Eol:      "\n",
 			}
@@ -122,7 +130,7 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 			if err != nil {
 				return true, err
 			}
-			fmt.Printf("%v\n", strings.Replace(result, "\t", " ", -1))
+			fmt.Printf("\ndiff %v %v\n%v\n", fromFile, toFile, strings.Replace(result, "\t", " ", -1))
 		}
 	case c.opts.Write:
 		if len(edits) > 0 {
@@ -171,17 +179,9 @@ var (
 	matchClassRE = regexp.MustCompile(`^(?:abstract\s+)?class\s+(\S+).*$`)
 )
 
-func findOpenCurlyOffset(buf string, startOffset int) int {
-	offset := strings.Index(buf[startOffset:], "{")
-	if semiOffset := strings.Index(buf[startOffset:], ";"); offset < 0 || (semiOffset >= 0 && semiOffset < offset) {
-		offset = semiOffset // this is valid: class D = Object with Function;
-	}
-	return startOffset + offset
-}
-
-// logf logs the line if verbose is true.
+// logf logs the line if debug is true.
 func (c *Client) logf(fmtStr string, args ...interface{}) {
-	if c.opts.Verbose {
+	if c.opts.Debug {
 		log.Printf(fmtStr, args...)
 	}
 }
