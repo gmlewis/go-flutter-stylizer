@@ -10,9 +10,3 @@ Please make sure you have a backup (preferably in git) of your code before runni
 
 - Initial release. This version was successfully run on the Flutter code base
   and should be ready for use.
-
-## [v0.0.20-broken] - 2021-04-22
-
-- This was a port of the VSCode `flutter-stylizer` extension that
-  I wrote in TypeScript. It turns out that the port had a lot of
-  problems. Please disregard and don't use.

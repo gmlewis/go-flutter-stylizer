@@ -220,7 +220,8 @@ Even better, please submit a PR with your new "before"/"after" example coded-up
 as a unit test along with the code to fix the problem, and I'll try to
 incorporate the fix into the repo.
 
-***Please remember to state which version of the program you are using and include your configuration settings!***
+***Please remember to state which version of the program you are using, what platform/OS,
+   and include your configuration settings!***
 
 [GitHub issue tracker]: https://github.com/gmlewis/go-flutter-stylizer/issues
 
@@ -240,12 +241,6 @@ incorporate the fix into the repo.
 
 - Initial release. This version was run on the Flutter code base and
   should be ready for use.
-
-### 0.0.20-broken
-
-- This was a port of the VSCode `flutter-stylizer` extension that
-  I wrote in TypeScript. It turns out that the port had a lot of
-  problems. Please disregard and don't use.
 
 ----------------------------------------------------------------------
 
