@@ -46,7 +46,7 @@ func TestPubspec_GetClasses(t *testing.T) {
 
 func TestPubspec_Class1(t *testing.T) {
 	source := pubspec_dart_txt
-	// wantSource := pubspec_want_txt
+	wantSource := pubspec_want_txt
 
 	opts := &Options{
 		MemberOrdering: defaultMemberOrdering,
@@ -201,6 +201,6 @@ func TestPubspec_Class1(t *testing.T) {
 		BlankLine,        // line #159:
 	}
 
-	runParsePhase(t, opts, source, want)
-	// runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, wantSource, wantSource, nil)
 }

@@ -45,11 +45,11 @@ func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType
 		t.Fatal(err)
 	}
 
-	if want := 1; len(got) != want {
-		t.Fatalf("GetClasses = %v, want %v", len(got), want)
-	}
-
 	if len(want) > 0 {
+		if want := 1; len(got) != want {
+			t.Fatalf("GetClasses = %v, want %v", len(got), want)
+		}
+
 		if len(got[0].lines) != len(want) {
 			t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
 		}

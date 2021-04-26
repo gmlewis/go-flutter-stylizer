@@ -12,68 +12,6 @@ part 'pubspec.g.dart';
 
 @JsonSerializable()
 class Pubspec {
-  // TODO: executables
-
-  final String name;
-
-  @JsonKey(fromJson: _versionFromString)
-  final Version version;
-
-  final String description;
-
-  /// This should be a URL pointing to the website for the package.
-  final String homepage;
-
-  /// Specifies where to publish this package.
-  ///
-  /// Accepted values: `null`, `'none'` or an `http` or `https` URL.
-  ///
-  /// [More information](https://dart.dev/tools/pub/pubspec#publish_to).
-  final String publishTo;
-
-  /// Optional field to specify the source code repository of the package.
-  /// Useful when a package has both a home page and a repository.
-  final Uri repository;
-
-  /// Optional field to a web page where developers can report new issues or
-  /// view existing ones.
-  final Uri issueTracker;
-
-  /// If there is exactly 1 value in [authors], returns it.
-  ///
-  /// If there are 0 or more than 1, returns `null`.
-  @Deprecated(
-      'Here for completeness, but not recommended. Use `authors` instead.')
-  String get author {
-    if (authors.length == 1) {
-      return authors.single;
-    }
-    return null;
-  }
-
-  final List<String> authors;
-  final String documentation;
-
-  @JsonKey(fromJson: _environmentMap)
-  final Map<String, VersionConstraint> environment;
-
-  @JsonKey(fromJson: parseDeps, nullable: false)
-  final Map<String, Dependency> dependencies;
-
-  @JsonKey(fromJson: parseDeps, nullable: false)
-  final Map<String, Dependency> devDependencies;
-
-  @JsonKey(fromJson: parseDeps, nullable: false)
-  final Map<String, Dependency> dependencyOverrides;
-
-  /// Optional configuration specific to [Flutter](https://flutter.io/)
-  /// packages.
-  ///
-  /// May include
-  /// [assets](https://flutter.io/docs/development/ui/assets-and-images)
-  /// and other settings.
-  final Map<String, dynamic> flutter;
-
   /// If [author] and [authors] are both provided, their values are combined
   /// with duplicates eliminated.
   Pubspec(
@@ -144,6 +82,66 @@ class Pubspec {
     return checkedYamlDecode(
         yaml, (map) => Pubspec.fromJson(map, lenient: lenient),
         sourceUrl: sourceUrl);
+  }
+
+  final List<String> authors;
+  @JsonKey(fromJson: parseDeps, nullable: false)
+  final Map<String, Dependency> dependencies;
+
+  @JsonKey(fromJson: parseDeps, nullable: false)
+  final Map<String, Dependency> dependencyOverrides;
+
+  final String description;
+  @JsonKey(fromJson: parseDeps, nullable: false)
+  final Map<String, Dependency> devDependencies;
+
+  final String documentation;
+  @JsonKey(fromJson: _environmentMap)
+  final Map<String, VersionConstraint> environment;
+
+  /// Optional configuration specific to [Flutter](https://flutter.io/)
+  /// packages.
+  ///
+  /// May include
+  /// [assets](https://flutter.io/docs/development/ui/assets-and-images)
+  /// and other settings.
+  final Map<String, dynamic> flutter;
+
+  /// This should be a URL pointing to the website for the package.
+  final String homepage;
+
+  /// Optional field to a web page where developers can report new issues or
+  /// view existing ones.
+  final Uri issueTracker;
+
+  // TODO: executables
+
+  final String name;
+
+  /// Specifies where to publish this package.
+  ///
+  /// Accepted values: `null`, `'none'` or an `http` or `https` URL.
+  ///
+  /// [More information](https://dart.dev/tools/pub/pubspec#publish_to).
+  final String publishTo;
+
+  /// Optional field to specify the source code repository of the package.
+  /// Useful when a package has both a home page and a repository.
+  final Uri repository;
+
+  @JsonKey(fromJson: _versionFromString)
+  final Version version;
+
+  /// If there is exactly 1 value in [authors], returns it.
+  ///
+  /// If there are 0 or more than 1, returns `null`.
+  @Deprecated(
+      'Here for completeness, but not recommended. Use `authors` instead.')
+  String get author {
+    if (authors.length == 1) {
+      return authors.single;
+    }
+    return null;
   }
 
   static List<String> _normalizeAuthors(String author, List<String> authors) {
