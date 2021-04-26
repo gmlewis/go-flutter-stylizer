@@ -616,6 +616,24 @@ func TestWhiteSpaceAfterFunctionNames(t *testing.T) {
 	runParsePhase(t, nil, source, want)
 }
 
+func TestEmbeddedMultilineComments(t *testing.T) {
+	source := `class C {
+  dynamic /*member: C.x:assigned={a}*/ x = /*declared={a, b}*/ (int a, int b) {
+    a = 0;
+  };
+}`
+
+	want := []EntityType{
+		Unknown,
+		OtherMethod,
+		OtherMethod,
+		OtherMethod,
+		BlankLine,
+	}
+
+	runParsePhase(t, nil, source, want)
+}
+
 //go:embed testfiles/basic_classes_default_order.txt
 var basicClassesDefaultOrder string
 

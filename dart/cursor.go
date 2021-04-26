@@ -117,8 +117,11 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 				continue
 			}
 			c.inMultiLineComment++
-			c.e.logf("advanceUntil: marking line #%v as type MultiLineComment", c.lineIndex+1)
-			c.e.lines[c.lineIndex].entityType = MultiLineComment
+			// do NOT mark an entire line as MultiLineCommand unless there is not other top-level text on the line.
+			if strings.TrimSpace(c.e.lines[c.lineIndex].classLevelText) == "" {
+				c.e.logf("advanceUntil: marking line #%v as type MultiLineComment", c.lineIndex+1)
+				c.e.lines[c.lineIndex].entityType = MultiLineComment
+			}
 			c.e.logf("inMultiLineComment=%v: cursor=%v", c.inMultiLineComment, c)
 			matchingPairStack = c.NewMatchingPair(nf, matchingPairs, matchingPairStack)
 		case "*/":
@@ -128,8 +131,11 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			if c.inMultiLineComment == 0 {
 				return fmt.Errorf("ERROR: Found */ before /*: cursor=%v", c)
 			}
-			c.e.logf("advanceUntil: marking line %v as type MultiLineComment", c.lineIndex+1)
-			c.e.lines[c.lineIndex].entityType = MultiLineComment
+			// do NOT mark an entire line as MultiLineCommand unless there is not other top-level text on the line.
+			if strings.TrimSpace(c.e.lines[c.lineIndex].classLevelText) == "" {
+				c.e.logf("advanceUntil: marking line %v as type MultiLineComment", c.lineIndex+1)
+				c.e.lines[c.lineIndex].entityType = MultiLineComment
+			}
 			c.inMultiLineComment--
 			c.e.logf("inMultiLineComment=%v: cursor=%v", c.inMultiLineComment, c)
 			matchingPairStack = c.CloseMatchingPair(nf, matchingPairStack)
