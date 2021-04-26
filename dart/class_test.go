@@ -153,6 +153,33 @@ class ScannerErrorCode extends ErrorCode {
 	runParsePhase(t, nil, source, want)
 }
 
+func TestOverrideMethod(t *testing.T) {
+	const source = `// test.dart
+class C {
+  /// If this expression is both in a getter and setter context, the
+  /// [AuxiliaryElements] will be set to hold onto the static element from the
+  /// getter context.
+  @Deprecated('Use CompoundAssignmentExpression.readElement and/or '
+      'CompoundAssignmentExpression.writeElement')
+  @override
+  AuxiliaryElements auxiliaryElements;
+}`
+
+	want := []EntityType{
+		Unknown,          // line #2: {
+		OverrideVariable, // line #3:   /// If this expression is both in a getter and setter context, the
+		OverrideVariable, // line #4:   /// [AuxiliaryElements] will be set to hold onto the static element from the
+		OverrideVariable, // line #5:   /// getter context.
+		OverrideVariable, // line #6:   @Deprecated('Use CompoundAssignmentExpression.readElement and/or '
+		OverrideVariable, // line #7:       'CompoundAssignmentExpression.writeElement')
+		OverrideVariable, // line #8:   @override
+		OverrideVariable, // line #9:   AuxiliaryElements auxiliaryElements;
+		BlankLine,        // line #10:
+	}
+
+	runParsePhase(t, nil, source, want)
+}
+
 func TestNamedConstructor(t *testing.T) {
 	const source = `// test.dart
 class C {

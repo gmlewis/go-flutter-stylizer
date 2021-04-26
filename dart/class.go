@@ -256,13 +256,22 @@ func (c *Class) identifyDeprecatedAsComments() error {
 			continue
 		}
 
-		lower := strings.ToLower(line.classLevelText)
+		lower := strings.TrimSpace(strings.ToLower(line.classLevelText))
 		if !strings.HasPrefix(lower, depStr[0:len(depStr)-1]) {
 			continue
 		}
 
-		c.e.logf("identifyDeprecatedAsComments: marking @deprecated line %v as type SingleLineComment", i+1)
-		c.lines[i].entityType = SingleLineComment
+		_, lineIndex, _, err := c.findNext(i, ")")
+		if err != nil {
+			return fmt.Errorf("unable to find end of @deprecated from line #%v", c.lines[0].originalIndex+i+1)
+		}
+
+		for i <= lineIndex {
+			c.e.logf("identifyDeprecatedAsComments: marking @deprecated line %v as type SingleLineComment", i+1)
+			c.lines[i].entityType = SingleLineComment
+			i++
+		}
+		i--
 	}
 
 	return nil
@@ -488,7 +497,7 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 			v := strings.TrimSpace(features[:i])
 			nameOffset := strings.LastIndex(v, " ")
 			if nameOffset >= 0 {
-				return v[nameOffset:]
+				return v[nameOffset+1:]
 			}
 			return v
 		}
@@ -526,10 +535,10 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 			entity.name = f(len(features) - 1)
 		} else {
 			// Does not have a body - if it has no fat arrow, it is a variable.
-			if !strings.HasSuffix(features, "=>") {
+			if strings.HasSuffix(features, "=>") {
 				entity.name = f(len(features) - 2)
-				entity.entityType = OverrideVariable
 			} else {
+				entity.entityType = OverrideVariable
 				entity.name = f(len(features) - 1)
 			}
 
@@ -747,7 +756,7 @@ func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
 	// 	}
 	// }
 	default:
-		return fmt.Errorf("repairIncorrectlyLabeledLine: line #%v, unhandled case %v. Please report on GitHub Issue Tracker with example test case.", lineNum+1, incorrectLabel)
+		return fmt.Errorf("repairIncorrectlyLabeledLine: class %q, class line #%v, file line #%v, unhandled case %v. Please report on GitHub Issue Tracker with example test case.", c.className, lineNum+1, c.lines[0].originalIndex+lineNum+1, incorrectLabel)
 	}
 
 	// return nil
