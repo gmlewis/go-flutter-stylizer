@@ -562,6 +562,7 @@ func TestMultipleDecorators(t *testing.T) {
 	source := `class MultipleDecorators {
   @override
   @failingTest
+	@deprecated
   test_initializer_literal_map_untyped_empty() async {
     fail('times out.');
   }
@@ -576,6 +577,7 @@ func TestMultipleDecorators(t *testing.T) {
 
 	want := []EntityType{
 		Unknown,
+		OverrideMethod,
 		OverrideMethod,
 		OverrideMethod,
 		OverrideMethod,

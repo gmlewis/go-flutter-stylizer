@@ -261,9 +261,14 @@ func (c *Class) identifyDeprecatedAsComments() error {
 			continue
 		}
 
-		_, lineIndex, _, err := c.findNext(i, ")")
-		if err != nil {
-			return fmt.Errorf("unable to find end of @deprecated from line #%v", c.lines[0].originalIndex+i+1)
+		lineIndex := i
+
+		if strings.HasPrefix(lower, depStr) { // includes deprecation message after '('
+			var err error
+			_, lineIndex, _, err = c.findNext(i, ")")
+			if err != nil {
+				return fmt.Errorf("unable to find end of @deprecated from line #%v", c.lines[0].originalIndex+i+1)
+			}
 		}
 
 		for i <= lineIndex {
