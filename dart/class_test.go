@@ -39,7 +39,6 @@ func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType
 		t.Fatalf("NewEditor: %v", err)
 	}
 
-	// e.Verbose = true
 	c := &Client{opts: testOpts}
 	got, err := c.GetClasses(e, testOpts.GroupAndSortGetterMethods)
 	if err != nil {

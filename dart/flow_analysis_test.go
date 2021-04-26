@@ -37,6 +37,6 @@ func TestFlowAnalysis_GetClasses(t *testing.T) {
 	}
 
 	if got, want := len(classes), 22; got != want {
-		t.Errorf("got %v classes", len(classes))
+		t.Errorf("got %v classes, want %v", len(classes), want)
 	}
 }

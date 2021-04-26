@@ -40,7 +40,7 @@ func TestStrongMode_GetClasses(t *testing.T) {
 	}
 
 	if got, want := len(classes), 3; got != want {
-		t.Errorf("got %v classes", len(classes))
+		t.Errorf("got %v classes, want %v", len(classes), want)
 	}
 }
 
