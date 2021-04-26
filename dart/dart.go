@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -114,11 +115,13 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 	switch {
 	case c.opts.Diff:
 		if len(edits) > 0 {
+			fromFile := filepath.Join("original", filename)
+			toFile := filepath.Join("stylized", filename)
 			diff := difflib.UnifiedDiff{
 				A:        difflib.SplitLines(buf),
 				B:        difflib.SplitLines(newBuf),
-				FromFile: "Original",
-				ToFile:   "Stylized",
+				FromFile: fromFile,
+				ToFile:   toFile,
 				Context:  3,
 				Eol:      "\n",
 			}
@@ -126,7 +129,7 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 			if err != nil {
 				return true, err
 			}
-			fmt.Printf("%v\n", strings.Replace(result, "\t", " ", -1))
+			fmt.Printf("\ndiff %v %v\n%v\n", fromFile, toFile, strings.Replace(result, "\t", " ", -1))
 		}
 	case c.opts.Write:
 		if len(edits) > 0 {
