@@ -450,20 +450,13 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 			v := strings.TrimSpace(features[:i])
 			nameOffset := strings.LastIndex(v, " ")
 			if nameOffset >= 0 {
-				return features[nameOffset:]
+				return v[nameOffset:]
 			}
-			return features
-		}
-
-		var name string
-		// Search for beginning of method name.
-		if strings.HasSuffix(features, "=>") {
-			name = f(len(features) - 2)
-		} else {
-			name = f(len(features) - 1)
+			return v
 		}
 
 		if strings.HasSuffix(features, "(") {
+			name := f(len(features))
 			entityType := OverrideMethod
 			if name == "build(" {
 				entityType = BuildMethod
@@ -483,7 +476,6 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 		}
 
 		entity := &Entity{
-			name:       name,
 			entityType: OverrideMethod,
 		}
 
@@ -493,7 +485,9 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 				return fmt.Errorf("programming error: expected '{' at offset %v but got %c", lastCharAbsOffset, c.e.fullBuf[lastCharAbsOffset])
 			}
 
-			c.e.logf("identifyOverrideMethodsAndVars: calling markBody(line #%v, name=OverrideMethod, %v), line=%q", i+1, name, c.lines[i].line)
+			entity.name = f(len(features) - 1)
+
+			c.e.logf("identifyOverrideMethodsAndVars: calling markBody(line #%v, name=OverrideMethod, %v), line=%q", i+1, entity.name, c.lines[i].line)
 			entity, err = c.markBody(entity, i, OverrideMethod, lineIndex, lastCharAbsOffset)
 			if err != nil {
 				return err
@@ -501,7 +495,10 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 		} else {
 			// Does not have a body - if it has no fat arrow, it is a variable.
 			if !strings.HasSuffix(features, "=>") {
+				entity.name = f(len(features) - 2)
 				entity.entityType = OverrideVariable
+			} else {
+				entity.name = f(len(features) - 1)
 			}
 
 			if !strings.HasSuffix(features, ";") {
