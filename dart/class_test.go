@@ -366,7 +366,7 @@ func TestGetOnSeparateLine(t *testing.T) {
 		BlankLine,               // line #15:
 	}
 
-	runFullStylizer(t, &Options{Verbose: true}, source, wantSource, want)
+	runFullStylizer(t, nil, source, wantSource, want)
 	// Run again to make sure no extra blank lines are added.
 	runFullStylizer(t, nil, wantSource, wantSource, nil)
 }

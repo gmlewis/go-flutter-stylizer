@@ -2609,12 +2609,1364 @@ func TestStrongMode_Class2(t *testing.T) {
 	}
 
 	want := []EntityType{
-		Unknown,         // line #2: {
-		MainConstructor, // line #3:   ConstructorInitializerStrongMode(StrongMode parent, ConstructorElement element)
-		MainConstructor, // line #4:       : super(parent) {
-		MainConstructor, // line #5:     element.parameters.forEach(_addGetter);
-		MainConstructor, // line #6:   }
-		BlankLine,       // line #7:
+		Unknown,          // line #2: {
+		OtherMethod,      // line #3:   void expectStaticInvokeType(String search, String expected) {
+		OtherMethod,      // line #4:     var invocation = findNode.simple(search).parent as MethodInvocation;
+		OtherMethod,      // line #5:     assertInvokeType(invocation, expected);
+		OtherMethod,      // line #6:   }
+		BlankLine,        // line #7:
+		OtherMethod,      // line #8:   test_dynamicObjectGetter_hashCode() async {
+		OtherMethod,      // line #9:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #10: main() {
+		OtherMethod,      // line #11:   dynamic a = null;
+		OtherMethod,      // line #12:   var foo = a.hashCode;
+		OtherMethod,      // line #13: }
+		OtherMethod,      // line #14: ''', [
+		OtherMethod,      // line #15:       error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 3),
+		OtherMethod,      // line #16:     ]);
+		OtherMethod,      // line #17:     expectInitializerType('foo', 'int');
+		OtherMethod,      // line #18:   }
+		BlankLine,        // line #19:
+		OtherMethod,      // line #20:   test_futureOr_promotion1() async {
+		OtherMethod,      // line #21:     // Test that promotion from FutureOr<T> to T works for concrete types
+		OtherMethod,      // line #22:     String code = r'''
+		OtherMethod,      // line #23:     import "dart:async";
+		OtherMethod,      // line #24:     dynamic test(FutureOr<int> x) => (x is int) && (x.abs() == 0);
+		OtherMethod,      // line #25:    ''';
+		OtherMethod,      // line #26:     await assertNoErrorsInCode(code);
+		OtherMethod,      // line #27:   }
+		BlankLine,        // line #28:
+		OtherMethod,      // line #29:   test_futureOr_promotion2() async {
+		OtherMethod,      // line #30:     // Test that promotion from FutureOr<T> to Future<T> works for concrete
+		OtherMethod,      // line #31:     // types
+		OtherMethod,      // line #32:     String code = r'''
+		OtherMethod,      // line #33:     import "dart:async";
+		OtherMethod,      // line #34:     dynamic test(FutureOr<int> x) => (x is Future<int>) &&
+		OtherMethod,      // line #35:                                      (x.then((x) => x) == null);
+		OtherMethod,      // line #36:    ''';
+		OtherMethod,      // line #37:     await assertNoErrorsInCode(code);
+		OtherMethod,      // line #38:   }
+		BlankLine,        // line #39:
+		OtherMethod,      // line #40:   test_futureOr_promotion3() async {
+		OtherMethod,      // line #41:     // Test that promotion from FutureOr<T> to T works for type
+		OtherMethod,      // line #42:     // parameters T
+		OtherMethod,      // line #43:     String code = r'''
+		OtherMethod,      // line #44:     import "dart:async";
+		OtherMethod,      // line #45:     dynamic test<T extends num>(FutureOr<T> x) => (x is T) &&
+		OtherMethod,      // line #46:                                                   (x.abs() == 0);
+		OtherMethod,      // line #47:    ''';
+		OtherMethod,      // line #48:     await assertNoErrorsInCode(code);
+		OtherMethod,      // line #49:   }
+		BlankLine,        // line #50:
+		OtherMethod,      // line #51:   test_futureOr_promotion4() async {
+		OtherMethod,      // line #52:     // Test that promotion from FutureOr<T> to Future<T> works for type
+		OtherMethod,      // line #53:     // parameters T
+		OtherMethod,      // line #54:     String code = r'''
+		OtherMethod,      // line #55:     import "dart:async";
+		OtherMethod,      // line #56:     dynamic test<T extends num>(FutureOr<T> x) => (x is Future<T>) &&
+		OtherMethod,      // line #57:                                                   (x.then((x) => x) == null);
+		OtherMethod,      // line #58:    ''';
+		OtherMethod,      // line #59:     await assertNoErrorsInCode(code);
+		OtherMethod,      // line #60:   }
+		BlankLine,        // line #61:
+		OtherMethod,      // line #62:   test_generalizedVoid_assignToVoidOk() async {
+		OtherMethod,      // line #63:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #64: void main() {
+		OtherMethod,      // line #65:   void x;
+		OtherMethod,      // line #66:   x = 42;
+		OtherMethod,      // line #67: }
+		OtherMethod,      // line #68: ''', [
+		OtherMethod,      // line #69:       error(HintCode.UNUSED_LOCAL_VARIABLE, 21, 1),
+		OtherMethod,      // line #70:     ]);
+		OtherMethod,      // line #71:   }
+		BlankLine,        // line #72:
+		OtherMethod,      // line #73:   test_genericFunction() async {
+		OtherMethod,      // line #74:     await assertNoErrorsInCode(r'T f<T>(T x) => null;');
+		OtherMethod,      // line #75:     expectFunctionType('f', 'T Function<T>(T)', typeFormals: '[T]');
+		OtherMethod,      // line #76:     SimpleIdentifier f = findNode.simple('f');
+		OtherMethod,      // line #77:     FunctionElementImpl e = f.staticElement;
+		OtherMethod,      // line #78:     FunctionType ft = e.type.instantiate([typeProvider.stringType]);
+		OtherMethod,      // line #79:     assertType(ft, 'String Function(String)');
+		OtherMethod,      // line #80:   }
+		BlankLine,        // line #81:
+		OtherMethod,      // line #82:   test_genericFunction_bounds() async {
+		OtherMethod,      // line #83:     await assertNoErrorsInCode(r'T f<T extends num>(T x) => null;');
+		OtherMethod,      // line #84:     expectFunctionType('f', 'T Function<T extends num>(T)',
+		OtherMethod,      // line #85:         typeFormals: '[T extends num]');
+		OtherMethod,      // line #86:   }
+		BlankLine,        // line #87:
+		OtherMethod,      // line #88:   test_genericFunction_parameter() async {
+		OtherMethod,      // line #89:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #90: void g(T f<T>(T x)) {}
+		OtherMethod,      // line #91: ''');
+		OtherMethod,      // line #92:     var type = expectFunctionType2('f', 'T Function<T>(T)');
+		OtherMethod,      // line #93:     FunctionType ft = type.instantiate([typeProvider.stringType]);
+		OtherMethod,      // line #94:     assertType(ft, 'String Function(String)');
+		OtherMethod,      // line #95:   }
+		BlankLine,        // line #96:
+		OtherMethod,      // line #97:   test_genericFunction_static() async {
+		OtherMethod,      // line #98:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #99: class C<E> {
+		OtherMethod,      // line #100:   static T f<T>(T x) => null;
+		OtherMethod,      // line #101: }
+		OtherMethod,      // line #102: ''');
+		OtherMethod,      // line #103:     expectFunctionType('f', 'T Function<T>(T)', typeFormals: '[T]');
+		OtherMethod,      // line #104:     SimpleIdentifier f = findNode.simple('f');
+		OtherMethod,      // line #105:     MethodElementImpl e = f.staticElement;
+		OtherMethod,      // line #106:     FunctionType ft = e.type.instantiate([typeProvider.stringType]);
+		OtherMethod,      // line #107:     assertType(ft, 'String Function(String)');
+		OtherMethod,      // line #108:   }
+		BlankLine,        // line #109:
+		OtherMethod,      // line #110:   test_genericFunction_typedef() async {
+		OtherMethod,      // line #111:     String code = r'''
+		OtherMethod,      // line #112: typedef T F<T>(T x);
+		OtherMethod,      // line #113: F f0;
+		OtherMethod,      // line #114:
+		OtherMethod,      // line #115: class C {
+		OtherMethod,      // line #116:   static F f1;
+		OtherMethod,      // line #117:   F f2;
+		OtherMethod,      // line #118:   void g(F f3) { // C
+		OtherMethod,      // line #119:     F f4;
+		OtherMethod,      // line #120:     f0(3);
+		OtherMethod,      // line #121:     f1(3);
+		OtherMethod,      // line #122:     f2(3);
+		OtherMethod,      // line #123:     f3(3);
+		OtherMethod,      // line #124:     f4(3);
+		OtherMethod,      // line #125:   }
+		OtherMethod,      // line #126: }
+		OtherMethod,      // line #127:
+		OtherMethod,      // line #128: class D<S> {
+		OtherMethod,      // line #129:   static F f1;
+		OtherMethod,      // line #130:   F f2;
+		OtherMethod,      // line #131:   void g(F f3) { // D
+		OtherMethod,      // line #132:     F f4;
+		OtherMethod,      // line #133:     f0(3);
+		OtherMethod,      // line #134:     f1(3);
+		OtherMethod,      // line #135:     f2(3);
+		OtherMethod,      // line #136:     f3(3);
+		OtherMethod,      // line #137:     f4(3);
+		OtherMethod,      // line #138:   }
+		OtherMethod,      // line #139: }
+		OtherMethod,      // line #140: ''';
+		OtherMethod,      // line #141:     await assertNoErrorsInCode(code);
+		OtherMethod,      // line #142:
+		OtherMethod,      // line #143:     checkBody(String className) {
+		OtherMethod,      // line #144:       var statements = findNode.block('{ // $className').statements;
+		OtherMethod,      // line #145:
+		OtherMethod,      // line #146:       for (int i = 1; i <= 5; i++) {
+		OtherMethod,      // line #147:         Expression exp = (statements[i] as ExpressionStatement).expression;
+		OtherMethod,      // line #148:         expect(exp.staticType, typeProvider.dynamicType);
+		OtherMethod,      // line #149:       }
+		OtherMethod,      // line #150:     }
+		OtherMethod,      // line #151:
+		OtherMethod,      // line #152:     checkBody("C");
+		OtherMethod,      // line #153:     checkBody("D");
+		OtherMethod,      // line #154:   }
+		BlankLine,        // line #155:
+		OtherMethod,      // line #156:   test_genericFunction_upwardsAndDownwards() async {
+		OtherMethod,      // line #157:     // Regression tests for https://github.com/dart-lang/sdk/issues/27586.
+		OtherMethod,      // line #158:     await assertNoErrorsInCode(r'List<num> x = [1, 2];');
+		OtherMethod,      // line #159:     expectInitializerType('x', 'List<num>');
+		OtherMethod,      // line #160:   }
+		BlankLine,        // line #161:
+		OtherMethod,      // line #162:   test_genericFunction_upwardsAndDownwards_Object() async {
+		OtherMethod,      // line #163:     // Regression tests for https://github.com/dart-lang/sdk/issues/27625.
+		OtherMethod,      // line #164:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #165: List<Object> aaa = [];
+		OtherMethod,      // line #166: List<Object> bbb = [1, 2, 3];
+		OtherMethod,      // line #167: List<Object> ccc = [null];
+		OtherMethod,      // line #168: List<Object> ddd = [1 as dynamic];
+		OtherMethod,      // line #169: List<Object> eee = [new Object()];
+		OtherMethod,      // line #170:     ''');
+		OtherMethod,      // line #171:     expectInitializerType('aaa', 'List<Object>');
+		OtherMethod,      // line #172:     expectInitializerType('bbb', 'List<Object>');
+		OtherMethod,      // line #173:     expectInitializerType('ccc', 'List<Object>');
+		OtherMethod,      // line #174:     expectInitializerType('ddd', 'List<Object>');
+		OtherMethod,      // line #175:     expectInitializerType('eee', 'List<Object>');
+		OtherMethod,      // line #176:   }
+		BlankLine,        // line #177:
+		OtherMethod,      // line #178:   test_genericMethod() async {
+		OtherMethod,      // line #179:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #180: class C<E> {
+		OtherMethod,      // line #181:   List<T> f<T>(E e) => null;
+		OtherMethod,      // line #182: }
+		OtherMethod,      // line #183: main() {
+		OtherMethod,      // line #184:   C<String> cOfString;
+		OtherMethod,      // line #185: }
+		OtherMethod,      // line #186: ''', [
+		OtherMethod,      // line #187:       error(HintCode.UNUSED_LOCAL_VARIABLE, 65, 9),
+		OtherMethod,      // line #188:     ]);
+		OtherMethod,      // line #189:     assertType(findElement.method('f').type, 'List<T> Function<T>(E)');
+		OtherMethod,      // line #190:
+		OtherMethod,      // line #191:     var cOfString = findElement.localVar('cOfString');
+		OtherMethod,      // line #192:     var ft = (cOfString.type as InterfaceType).getMethod('f').type;
+		OtherMethod,      // line #193:     assertType(ft, 'List<T> Function<T>(String)');
+		OtherMethod,      // line #194:     assertType(
+		OtherMethod,      // line #195:         ft.instantiate([typeProvider.intType]), 'List<int> Function(String)');
+		OtherMethod,      // line #196:   }
+		BlankLine,        // line #197:
+		OtherMethod,      // line #198:   test_genericMethod_explicitTypeParams() async {
+		OtherMethod,      // line #199:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #200: class C<E> {
+		OtherMethod,      // line #201:   List<T> f<T>(E e) => null;
+		OtherMethod,      // line #202: }
+		OtherMethod,      // line #203: main() {
+		OtherMethod,      // line #204:   C<String> cOfString;
+		OtherMethod,      // line #205:   var x = cOfString.f<int>('hi');
+		OtherMethod,      // line #206: }
+		OtherMethod,      // line #207: ''', [
+		OtherMethod,      // line #208:       error(HintCode.UNUSED_LOCAL_VARIABLE, 82, 1),
+		OtherMethod,      // line #209:     ]);
+		OtherMethod,      // line #210:     MethodInvocation f = findNode.simple('f<int>').parent;
+		OtherMethod,      // line #211:     FunctionType ft = f.staticInvokeType;
+		OtherMethod,      // line #212:     assertType(ft, 'List<int> Function(String)');
+		OtherMethod,      // line #213:
+		OtherMethod,      // line #214:     var x = findElement.localVar('x');
+		OtherMethod,      // line #215:     expect(x.type, typeProvider.listType2(typeProvider.intType));
+		OtherMethod,      // line #216:   }
+		BlankLine,        // line #217:
+		OtherMethod,      // line #218:   test_genericMethod_functionExpressionInvocation_explicit() async {
+		OtherMethod,      // line #219:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #220: class C<E> {
+		OtherMethod,      // line #221:   T f<T>(T e) => null;
+		OtherMethod,      // line #222:   static T g<T>(T e) => null;
+		OtherMethod,      // line #223:   static T Function<T>(T) h = null;
+		OtherMethod,      // line #224: }
+		OtherMethod,      // line #225:
+		OtherMethod,      // line #226: T topF<T>(T e) => null;
+		OtherMethod,      // line #227: var topG = topF;
+		OtherMethod,      // line #228: void test<S>(T Function<T>(T) pf) {
+		OtherMethod,      // line #229:   var c = new C<int>();
+		OtherMethod,      // line #230:   T lf<T>(T e) => null;
+		OtherMethod,      // line #231:
+		OtherMethod,      // line #232:   var lambdaCall = (<E>(E e) => e)<int>(3);
+		OtherMethod,      // line #233:   var methodCall = (c.f)<int>(3);
+		OtherMethod,      // line #234:   var staticCall = (C.g)<int>(3);
+		OtherMethod,      // line #235:   var staticFieldCall = (C.h)<int>(3);
+		OtherMethod,      // line #236:   var topFunCall = (topF)<int>(3);
+		OtherMethod,      // line #237:   var topFieldCall = (topG)<int>(3);
+		OtherMethod,      // line #238:   var localCall = (lf)<int>(3);
+		OtherMethod,      // line #239:   var paramCall = (pf)<int>(3);
+		OtherMethod,      // line #240: }
+		OtherMethod,      // line #241: ''', [
+		OtherMethod,      // line #242:       error(HintCode.UNUSED_LOCAL_VARIABLE, 237, 10),
+		OtherMethod,      // line #243:       error(HintCode.UNUSED_LOCAL_VARIABLE, 281, 10),
+		OtherMethod,      // line #244:       error(HintCode.UNUSED_LOCAL_VARIABLE, 315, 10),
+		OtherMethod,      // line #245:       error(HintCode.UNUSED_LOCAL_VARIABLE, 349, 15),
+		OtherMethod,      // line #246:       error(HintCode.UNUSED_LOCAL_VARIABLE, 388, 10),
+		OtherMethod,      // line #247:       error(HintCode.UNUSED_LOCAL_VARIABLE, 423, 12),
+		OtherMethod,      // line #248:       error(HintCode.UNUSED_LOCAL_VARIABLE, 460, 9),
+		OtherMethod,      // line #249:       error(HintCode.UNUSED_LOCAL_VARIABLE, 492, 9),
+		OtherMethod,      // line #250:     ]);
+		OtherMethod,      // line #251:     _assertLocalVarType('lambdaCall', "int");
+		OtherMethod,      // line #252:     _assertLocalVarType('methodCall', "int");
+		OtherMethod,      // line #253:     _assertLocalVarType('staticCall', "int");
+		OtherMethod,      // line #254:     _assertLocalVarType('staticFieldCall', "int");
+		OtherMethod,      // line #255:     _assertLocalVarType('topFunCall', "int");
+		OtherMethod,      // line #256:     _assertLocalVarType('topFieldCall', "int");
+		OtherMethod,      // line #257:     _assertLocalVarType('localCall', "int");
+		OtherMethod,      // line #258:     _assertLocalVarType('paramCall', "int");
+		OtherMethod,      // line #259:   }
+		BlankLine,        // line #260:
+		OtherMethod,      // line #261:   test_genericMethod_functionExpressionInvocation_functionTypedParameter_explicit() async {
+		OtherMethod,      // line #262:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #263: void test<S>(T pf<T>(T e)) {
+		OtherMethod,      // line #264:   var paramCall = (pf)<int>(3);
+		OtherMethod,      // line #265: }
+		OtherMethod,      // line #266: ''', [
+		OtherMethod,      // line #267:       error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 9),
+		OtherMethod,      // line #268:     ]);
+		OtherMethod,      // line #269:     _assertLocalVarType('paramCall', "int");
+		OtherMethod,      // line #270:   }
+		BlankLine,        // line #271:
+		OtherMethod,      // line #272:   test_genericMethod_functionExpressionInvocation_functionTypedParameter_inferred() async {
+		OtherMethod,      // line #273:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #274: void test<S>(T pf<T>(T e)) {
+		OtherMethod,      // line #275:   var paramCall = (pf)(3);
+		OtherMethod,      // line #276: }
+		OtherMethod,      // line #277: ''', [
+		OtherMethod,      // line #278:       error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 9),
+		OtherMethod,      // line #279:     ]);
+		OtherMethod,      // line #280:     _assertLocalVarType('paramCall', "int");
+		OtherMethod,      // line #281:   }
+		BlankLine,        // line #282:
+		OtherMethod,      // line #283:   test_genericMethod_functionExpressionInvocation_inferred() async {
+		OtherMethod,      // line #284:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #285: class C<E> {
+		OtherMethod,      // line #286:   T f<T>(T e) => null;
+		OtherMethod,      // line #287:   static T g<T>(T e) => null;
+		OtherMethod,      // line #288:   static T Function<T>(T) h = null;
+		OtherMethod,      // line #289: }
+		OtherMethod,      // line #290:
+		OtherMethod,      // line #291: T topF<T>(T e) => null;
+		OtherMethod,      // line #292: var topG = topF;
+		OtherMethod,      // line #293: void test<S>(T Function<T>(T) pf) {
+		OtherMethod,      // line #294:   var c = new C<int>();
+		OtherMethod,      // line #295:   T lf<T>(T e) => null;
+		OtherMethod,      // line #296:
+		OtherMethod,      // line #297:   var lambdaCall = (<E>(E e) => e)(3);
+		OtherMethod,      // line #298:   var methodCall = (c.f)(3);
+		OtherMethod,      // line #299:   var staticCall = (C.g)(3);
+		OtherMethod,      // line #300:   var staticFieldCall = (C.h)(3);
+		OtherMethod,      // line #301:   var topFunCall = (topF)(3);
+		OtherMethod,      // line #302:   var topFieldCall = (topG)(3);
+		OtherMethod,      // line #303:   var localCall = (lf)(3);
+		OtherMethod,      // line #304:   var paramCall = (pf)(3);
+		OtherMethod,      // line #305: }
+		OtherMethod,      // line #306: ''', [
+		OtherMethod,      // line #307:       error(HintCode.UNUSED_LOCAL_VARIABLE, 237, 10),
+		OtherMethod,      // line #308:       error(HintCode.UNUSED_LOCAL_VARIABLE, 276, 10),
+		OtherMethod,      // line #309:       error(HintCode.UNUSED_LOCAL_VARIABLE, 305, 10),
+		OtherMethod,      // line #310:       error(HintCode.UNUSED_LOCAL_VARIABLE, 334, 15),
+		OtherMethod,      // line #311:       error(HintCode.UNUSED_LOCAL_VARIABLE, 368, 10),
+		OtherMethod,      // line #312:       error(HintCode.UNUSED_LOCAL_VARIABLE, 398, 12),
+		OtherMethod,      // line #313:       error(HintCode.UNUSED_LOCAL_VARIABLE, 430, 9),
+		OtherMethod,      // line #314:       error(HintCode.UNUSED_LOCAL_VARIABLE, 457, 9),
+		OtherMethod,      // line #315:     ]);
+		OtherMethod,      // line #316:     _assertLocalVarType('lambdaCall', "int");
+		OtherMethod,      // line #317:     _assertLocalVarType('methodCall', "int");
+		OtherMethod,      // line #318:     _assertLocalVarType('staticCall', "int");
+		OtherMethod,      // line #319:     _assertLocalVarType('staticFieldCall', "int");
+		OtherMethod,      // line #320:     _assertLocalVarType('topFunCall', "int");
+		OtherMethod,      // line #321:     _assertLocalVarType('topFieldCall', "int");
+		OtherMethod,      // line #322:     _assertLocalVarType('localCall', "int");
+		OtherMethod,      // line #323:     _assertLocalVarType('paramCall', "int");
+		OtherMethod,      // line #324:   }
+		BlankLine,        // line #325:
+		OtherMethod,      // line #326:   test_genericMethod_functionInvocation_explicit() async {
+		OtherMethod,      // line #327:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #328: class C<E> {
+		OtherMethod,      // line #329:   T f<T>(T e) => null;
+		OtherMethod,      // line #330:   static T g<T>(T e) => null;
+		OtherMethod,      // line #331:   static T Function<T>(T) h = null;
+		OtherMethod,      // line #332: }
+		OtherMethod,      // line #333:
+		OtherMethod,      // line #334: T topF<T>(T e) => null;
+		OtherMethod,      // line #335: var topG = topF;
+		OtherMethod,      // line #336: void test<S>(T Function<T>(T) pf) {
+		OtherMethod,      // line #337:   var c = new C<int>();
+		OtherMethod,      // line #338:   T lf<T>(T e) => null;
+		OtherMethod,      // line #339:   var methodCall = c.f<int>(3);
+		OtherMethod,      // line #340:   var staticCall = C.g<int>(3);
+		OtherMethod,      // line #341:   var staticFieldCall = C.h<int>(3);
+		OtherMethod,      // line #342:   var topFunCall = topF<int>(3);
+		OtherMethod,      // line #343:   var topFieldCall = topG<int>(3);
+		OtherMethod,      // line #344:   var localCall = lf<int>(3);
+		OtherMethod,      // line #345:   var paramCall = pf<int>(3);
+		OtherMethod,      // line #346: }
+		OtherMethod,      // line #347: ''', [
+		OtherMethod,      // line #348:       error(HintCode.UNUSED_LOCAL_VARIABLE, 236, 10),
+		OtherMethod,      // line #349:       error(HintCode.UNUSED_LOCAL_VARIABLE, 268, 10),
+		OtherMethod,      // line #350:       error(HintCode.UNUSED_LOCAL_VARIABLE, 300, 15),
+		OtherMethod,      // line #351:       error(HintCode.UNUSED_LOCAL_VARIABLE, 337, 10),
+		OtherMethod,      // line #352:       error(HintCode.UNUSED_LOCAL_VARIABLE, 370, 12),
+		OtherMethod,      // line #353:       error(HintCode.UNUSED_LOCAL_VARIABLE, 405, 9),
+		OtherMethod,      // line #354:       error(HintCode.UNUSED_LOCAL_VARIABLE, 435, 9),
+		OtherMethod,      // line #355:     ]);
+		OtherMethod,      // line #356:     _assertLocalVarType('methodCall', "int");
+		OtherMethod,      // line #357:     _assertLocalVarType('staticCall', "int");
+		OtherMethod,      // line #358:     _assertLocalVarType('staticFieldCall', "int");
+		OtherMethod,      // line #359:     _assertLocalVarType('topFunCall', "int");
+		OtherMethod,      // line #360:     _assertLocalVarType('topFieldCall', "int");
+		OtherMethod,      // line #361:     _assertLocalVarType('localCall', "int");
+		OtherMethod,      // line #362:     _assertLocalVarType('paramCall', "int");
+		OtherMethod,      // line #363:   }
+		BlankLine,        // line #364:
+		OtherMethod,      // line #365:   test_genericMethod_functionInvocation_functionTypedParameter_explicit() async {
+		OtherMethod,      // line #366:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #367: void test<S>(T pf<T>(T e)) {
+		OtherMethod,      // line #368:   var paramCall = pf<int>(3);
+		OtherMethod,      // line #369: }
+		OtherMethod,      // line #370: ''', [
+		OtherMethod,      // line #371:       error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 9),
+		OtherMethod,      // line #372:     ]);
+		OtherMethod,      // line #373:     _assertLocalVarType('paramCall', "int");
+		OtherMethod,      // line #374:   }
+		BlankLine,        // line #375:
+		OtherMethod,      // line #376:   test_genericMethod_functionInvocation_functionTypedParameter_inferred() async {
+		OtherMethod,      // line #377:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #378: void test<S>(T pf<T>(T e)) {
+		OtherMethod,      // line #379:   var paramCall = pf(3);
+		OtherMethod,      // line #380: }
+		OtherMethod,      // line #381: ''', [
+		OtherMethod,      // line #382:       error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 9),
+		OtherMethod,      // line #383:     ]);
+		OtherMethod,      // line #384:     _assertLocalVarType('paramCall', "int");
+		OtherMethod,      // line #385:   }
+		BlankLine,        // line #386:
+		OtherMethod,      // line #387:   test_genericMethod_functionInvocation_inferred() async {
+		OtherMethod,      // line #388:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #389: class C<E> {
+		OtherMethod,      // line #390:   T f<T>(T e) => null;
+		OtherMethod,      // line #391:   static T g<T>(T e) => null;
+		OtherMethod,      // line #392:   static T Function<T>(T) h = null;
+		OtherMethod,      // line #393: }
+		OtherMethod,      // line #394:
+		OtherMethod,      // line #395: T topF<T>(T e) => null;
+		OtherMethod,      // line #396: var topG = topF;
+		OtherMethod,      // line #397: void test<S>(T Function<T>(T) pf) {
+		OtherMethod,      // line #398:   var c = new C<int>();
+		OtherMethod,      // line #399:   T lf<T>(T e) => null;
+		OtherMethod,      // line #400:   var methodCall = c.f(3);
+		OtherMethod,      // line #401:   var staticCall = C.g(3);
+		OtherMethod,      // line #402:   var staticFieldCall = C.h(3);
+		OtherMethod,      // line #403:   var topFunCall = topF(3);
+		OtherMethod,      // line #404:   var topFieldCall = topG(3);
+		OtherMethod,      // line #405:   var localCall = lf(3);
+		OtherMethod,      // line #406:   var paramCall = pf(3);
+		OtherMethod,      // line #407: }
+		OtherMethod,      // line #408: ''', [
+		OtherMethod,      // line #409:       error(HintCode.UNUSED_LOCAL_VARIABLE, 236, 10),
+		OtherMethod,      // line #410:       error(HintCode.UNUSED_LOCAL_VARIABLE, 263, 10),
+		OtherMethod,      // line #411:       error(HintCode.UNUSED_LOCAL_VARIABLE, 290, 15),
+		OtherMethod,      // line #412:       error(HintCode.UNUSED_LOCAL_VARIABLE, 322, 10),
+		OtherMethod,      // line #413:       error(HintCode.UNUSED_LOCAL_VARIABLE, 350, 12),
+		OtherMethod,      // line #414:       error(HintCode.UNUSED_LOCAL_VARIABLE, 380, 9),
+		OtherMethod,      // line #415:       error(HintCode.UNUSED_LOCAL_VARIABLE, 405, 9),
+		OtherMethod,      // line #416:     ]);
+		OtherMethod,      // line #417:     _assertLocalVarType('methodCall', "int");
+		OtherMethod,      // line #418:     _assertLocalVarType('staticCall', "int");
+		OtherMethod,      // line #419:     _assertLocalVarType('staticFieldCall', "int");
+		OtherMethod,      // line #420:     _assertLocalVarType('topFunCall', "int");
+		OtherMethod,      // line #421:     _assertLocalVarType('topFieldCall', "int");
+		OtherMethod,      // line #422:     _assertLocalVarType('localCall', "int");
+		OtherMethod,      // line #423:     _assertLocalVarType('paramCall', "int");
+		OtherMethod,      // line #424:   }
+		BlankLine,        // line #425:
+		OtherMethod,      // line #426:   test_genericMethod_functionTypedParameter() async {
+		OtherMethod,      // line #427:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #428: class C<E> {
+		OtherMethod,      // line #429:   List<T> f<T>(T f(E e)) => null;
+		OtherMethod,      // line #430: }
+		OtherMethod,      // line #431: main() {
+		OtherMethod,      // line #432:   C<String> cOfString;
+		OtherMethod,      // line #433: }
+		OtherMethod,      // line #434: ''', [
+		OtherMethod,      // line #435:       error(HintCode.UNUSED_LOCAL_VARIABLE, 70, 9),
+		OtherMethod,      // line #436:     ]);
+		OtherMethod,      // line #437:     assertType(
+		OtherMethod,      // line #438:         findElement.method('f').type, 'List<T> Function<T>(T Function(E))');
+		OtherMethod,      // line #439:
+		OtherMethod,      // line #440:     var cOfString = findElement.localVar('cOfString');
+		OtherMethod,      // line #441:     var ft = (cOfString.type as InterfaceType).getMethod('f').type;
+		OtherMethod,      // line #442:     assertType(ft, 'List<T> Function<T>(T Function(String))');
+		OtherMethod,      // line #443:     assertType(ft.instantiate([typeProvider.intType]),
+		OtherMethod,      // line #444:         'List<int> Function(int Function(String))');
+		OtherMethod,      // line #445:   }
+		BlankLine,        // line #446:
+		OtherMethod,      // line #447:   test_genericMethod_functionTypedParameter_tearoff() async {
+		OtherMethod,      // line #448:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #449: void test<S>(T pf<T>(T e)) {
+		OtherMethod,      // line #450:   var paramTearOff = pf;
+		OtherMethod,      // line #451: }
+		OtherMethod,      // line #452: ''', [
+		OtherMethod,      // line #453:       error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 12),
+		OtherMethod,      // line #454:     ]);
+		OtherMethod,      // line #455:     _assertLocalVarType('paramTearOff', "T Function<T>(T)");
+		OtherMethod,      // line #456:   }
+		BlankLine,        // line #457:
+		OtherMethod,      // line #458:   test_genericMethod_implicitDynamic() async {
+		OtherMethod,      // line #459:     // Regression test for:
+		OtherMethod,      // line #460:     // https://github.com/dart-lang/sdk/issues/25100#issuecomment-162047588
+		OtherMethod,      // line #461:     // These should not cause any hints or warnings.
+		OtherMethod,      // line #462:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #463: class List<E> {
+		OtherMethod,      // line #464:   T map<T>(T f(E e)) => null;
+		OtherMethod,      // line #465: }
+		OtherMethod,      // line #466: void foo() {
+		OtherMethod,      // line #467:   List list = null;
+		OtherMethod,      // line #468:   list.map((e) => e);
+		OtherMethod,      // line #469:   list.map((e) => 3);
+		OtherMethod,      // line #470: }''');
+		OtherMethod,      // line #471:     expectIdentifierType(
+		OtherMethod,      // line #472:         'map((e) => e);', 'T Function<T>(T Function(dynamic))');
+		OtherMethod,      // line #473:     expectIdentifierType(
+		OtherMethod,      // line #474:         'map((e) => 3);', 'T Function<T>(T Function(dynamic))');
+		OtherMethod,      // line #475:
+		OtherMethod,      // line #476:     MethodInvocation m1 = findNode.methodInvocation('map((e) => e);');
+		OtherMethod,      // line #477:     assertInvokeType(m1, 'dynamic Function(dynamic Function(dynamic))');
+		OtherMethod,      // line #478:     MethodInvocation m2 = findNode.methodInvocation('map((e) => 3);');
+		OtherMethod,      // line #479:     assertInvokeType(m2, 'int Function(int Function(dynamic))');
+		OtherMethod,      // line #480:   }
+		BlankLine,        // line #481:
+		OtherMethod,      // line #482:   test_genericMethod_max_doubleDouble() async {
+		OtherMethod,      // line #483:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #484: import 'dart:math';
+		OtherMethod,      // line #485: main() {
+		OtherMethod,      // line #486:   var foo = max(1.0, 2.0);
+		OtherMethod,      // line #487: }
+		OtherMethod,      // line #488: ''', [
+		OtherMethod,      // line #489:       error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 3),
+		OtherMethod,      // line #490:     ]);
+		OtherMethod,      // line #491:     expectInitializerType('foo', 'double');
+		OtherMethod,      // line #492:   }
+		BlankLine,        // line #493:
+		OtherMethod,      // line #494:   test_genericMethod_max_doubleDouble_prefixed() async {
+		OtherMethod,      // line #495:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #496: import 'dart:math' as math;
+		OtherMethod,      // line #497: main() {
+		OtherMethod,      // line #498:   var foo = math.max(1.0, 2.0);
+		OtherMethod,      // line #499: }
+		OtherMethod,      // line #500: ''', [
+		OtherMethod,      // line #501:       error(HintCode.UNUSED_LOCAL_VARIABLE, 43, 3),
+		OtherMethod,      // line #502:     ]);
+		OtherMethod,      // line #503:     expectInitializerType('foo', 'double');
+		OtherMethod,      // line #504:   }
+		BlankLine,        // line #505:
+		OtherMethod,      // line #506:   test_genericMethod_max_doubleInt() async {
+		OtherMethod,      // line #507:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #508: import 'dart:math';
+		OtherMethod,      // line #509: main() {
+		OtherMethod,      // line #510:   var foo = max(1.0, 2);
+		OtherMethod,      // line #511: }
+		OtherMethod,      // line #512: ''', [
+		OtherMethod,      // line #513:       error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 3),
+		OtherMethod,      // line #514:     ]);
+		OtherMethod,      // line #515:     expectInitializerType('foo', 'num');
+		OtherMethod,      // line #516:   }
+		BlankLine,        // line #517:
+		OtherMethod,      // line #518:   test_genericMethod_max_intDouble() async {
+		OtherMethod,      // line #519:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #520: import 'dart:math';
+		OtherMethod,      // line #521: main() {
+		OtherMethod,      // line #522:   var foo = max(1, 2.0);
+		OtherMethod,      // line #523: }
+		OtherMethod,      // line #524: ''', [
+		OtherMethod,      // line #525:       error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 3),
+		OtherMethod,      // line #526:     ]);
+		OtherMethod,      // line #527:     expectInitializerType('foo', 'num');
+		OtherMethod,      // line #528:   }
+		BlankLine,        // line #529:
+		OtherMethod,      // line #530:   test_genericMethod_max_intInt() async {
+		OtherMethod,      // line #531:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #532: import 'dart:math';
+		OtherMethod,      // line #533: main() {
+		OtherMethod,      // line #534:   var foo = max(1, 2);
+		OtherMethod,      // line #535: }
+		OtherMethod,      // line #536: ''', [
+		OtherMethod,      // line #537:       error(HintCode.UNUSED_LOCAL_VARIABLE, 35, 3),
+		OtherMethod,      // line #538:     ]);
+		OtherMethod,      // line #539:     expectInitializerType('foo', 'int');
+		OtherMethod,      // line #540:   }
+		BlankLine,        // line #541:
+		OtherMethod,      // line #542:   test_genericMethod_nestedBound() async {
+		OtherMethod,      // line #543:     // Just validate that there is no warning on the call to `.abs()`.
+		OtherMethod,      // line #544:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #545: class Foo<T extends num> {
+		OtherMethod,      // line #546:   void method<U extends T>(U u) {
+		OtherMethod,      // line #547:     u.abs();
+		OtherMethod,      // line #548:   }
+		OtherMethod,      // line #549: }
+		OtherMethod,      // line #550: ''');
+		OtherMethod,      // line #551:   }
+		BlankLine,        // line #552:
+		OtherMethod,      // line #553:   test_genericMethod_nestedCapture() async {
+		OtherMethod,      // line #554:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #555: class C<T> {
+		OtherMethod,      // line #556:   T f<S>(S x) {
+		OtherMethod,      // line #557:     new C<S>().f<int>(3);
+		OtherMethod,      // line #558:     new C<S>().f; // tear-off
+		OtherMethod,      // line #559:     return null;
+		OtherMethod,      // line #560:   }
+		OtherMethod,      // line #561: }
+		OtherMethod,      // line #562: ''');
+		OtherMethod,      // line #563:     MethodInvocation f = findNode.methodInvocation('f<int>(3);');
+		OtherMethod,      // line #564:     assertInvokeType(f, 'S Function(int)');
+		OtherMethod,      // line #565:
+		OtherMethod,      // line #566:     expectIdentifierType('f;', 'S Function<S₀>(S₀)');
+		OtherMethod,      // line #567:   }
+		BlankLine,        // line #568:
+		InstanceVariable, // line #569:   @FailingTest(issue: 'https://github.com/dart-lang/sdk/issues/30236')
+		InstanceVariable, // line #570:   test_genericMethod_nestedCaptureBounds() async {
+		InstanceVariable, // line #571:     await assertNoErrorsInCode(r'''
+		InstanceVariable, // line #572: class C<T> {
+		InstanceVariable, // line #573:   T f<S extends T>(S x) {
+		InstanceVariable, // line #574:     new C<S>().f<int>(3);
+		InstanceVariable, // line #575:     new C<S>().f; // tear-off
+		InstanceVariable, // line #576:     return null;
+		InstanceVariable, // line #577:   }
+		InstanceVariable, // line #578: }
+		InstanceVariable, // line #579: ''');
+		InstanceVariable, // line #580:     MethodInvocation f = findNode.methodInvocation('f<int>(3);');
+		InstanceVariable, // line #581:     assertInvokeType(f, 'S Function(int)');
+		InstanceVariable, // line #582:     FunctionType ft = f.staticInvokeType;
+		InstanceVariable, // line #583:     expect('${ft.typeArguments}', '[S, int]');
+		InstanceVariable, // line #584:
+		InstanceVariable, // line #585:     expectIdentifierType('f;', 'S Function<S₀ extends S>(S₀)');
+		InstanceVariable, // line #586:   }
+		BlankLine,        // line #587:
+		OtherMethod,      // line #588:   test_genericMethod_nestedFunctions() async {
+		OtherMethod,      // line #589:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #590: S f<S>(S x) {
+		OtherMethod,      // line #591:   g<S>(S x) => f;
+		OtherMethod,      // line #592:   return null;
+		OtherMethod,      // line #593: }
+		OtherMethod,      // line #594: ''', [
+		OtherMethod,      // line #595:       error(HintCode.UNUSED_ELEMENT, 16, 1),
+		OtherMethod,      // line #596:     ]);
+		OtherMethod,      // line #597:     assertType(findElement.topFunction('f').type, 'S Function<S>(S)');
+		OtherMethod,      // line #598:     assertType(findElement.localFunction('g').type,
+		OtherMethod,      // line #599:         'S Function<S>(S) Function<S₀>(S₀)');
+		OtherMethod,      // line #600:   }
+		BlankLine,        // line #601:
+		OtherMethod,      // line #602:   test_genericMethod_override() async {
+		OtherMethod,      // line #603:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #604: class C {
+		OtherMethod,      // line #605:   T f<T>(T x) => null;
+		OtherMethod,      // line #606: }
+		OtherMethod,      // line #607: class D extends C {
+		OtherMethod,      // line #608:   T f<T>(T x) => null; // from D
+		OtherMethod,      // line #609: }
+		OtherMethod,      // line #610: ''');
+		OtherMethod,      // line #611:     expectFunctionType('f<T>(T x) => null; // from D', 'T Function<T>(T)',
+		OtherMethod,      // line #612:         typeFormals: '[T]');
+		OtherMethod,      // line #613:     SimpleIdentifier f = findNode.simple('f<T>(T x) => null; // from D');
+		OtherMethod,      // line #614:     MethodElementImpl e = f.staticElement;
+		OtherMethod,      // line #615:     FunctionType ft = e.type.instantiate([typeProvider.stringType]);
+		OtherMethod,      // line #616:     assertType(ft, 'String Function(String)');
+		OtherMethod,      // line #617:   }
+		BlankLine,        // line #618:
+		OtherMethod,      // line #619:   test_genericMethod_override_bounds() async {
+		OtherMethod,      // line #620:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #621: class A {}
+		OtherMethod,      // line #622: class B {
+		OtherMethod,      // line #623:   T f<T extends A>(T x) => null;
+		OtherMethod,      // line #624: }
+		OtherMethod,      // line #625: // override with the same bound is OK
+		OtherMethod,      // line #626: class C extends B {
+		OtherMethod,      // line #627:   T f<T extends A>(T x) => null;
+		OtherMethod,      // line #628: }
+		OtherMethod,      // line #629: // override with new name and the same bound is OK
+		OtherMethod,      // line #630: class D extends B {
+		OtherMethod,      // line #631:   Q f<Q extends A>(Q x) => null;
+		OtherMethod,      // line #632: }
+		OtherMethod,      // line #633: ''');
+		OtherMethod,      // line #634:   }
+		BlankLine,        // line #635:
+		OtherMethod,      // line #636:   test_genericMethod_override_covariant_field() async {
+		OtherMethod,      // line #637:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #638: abstract class A {
+		OtherMethod,      // line #639:   num get x;
+		OtherMethod,      // line #640:   set x(covariant num _);
+		OtherMethod,      // line #641: }
+		OtherMethod,      // line #642:
+		OtherMethod,      // line #643: class B extends A {
+		OtherMethod,      // line #644:   int x;
+		OtherMethod,      // line #645: }
+		OtherMethod,      // line #646: ''');
+		OtherMethod,      // line #647:   }
+		BlankLine,        // line #648:
+		OtherMethod,      // line #649:   test_genericMethod_override_differentContextsSameBounds() async {
+		OtherMethod,      // line #650:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #651:         class GenericMethodBounds<T> {
+		OtherMethod,      // line #652:   Type get t => T;
+		OtherMethod,      // line #653:   GenericMethodBounds<E> foo<E extends T>() => new GenericMethodBounds<E>();
+		OtherMethod,      // line #654:   GenericMethodBounds<E> bar<E extends void Function(T)>() =>
+		OtherMethod,      // line #655:       new GenericMethodBounds<E>();
+		OtherMethod,      // line #656: }
+		OtherMethod,      // line #657:
+		OtherMethod,      // line #658: class GenericMethodBoundsDerived extends GenericMethodBounds<num> {
+		OtherMethod,      // line #659:   GenericMethodBounds<E> foo<E extends num>() => new GenericMethodBounds<E>();
+		OtherMethod,      // line #660:   GenericMethodBounds<E> bar<E extends void Function(num)>() =>
+		OtherMethod,      // line #661:       new GenericMethodBounds<E>();
+		OtherMethod,      // line #662: }
+		OtherMethod,      // line #663: ''');
+		OtherMethod,      // line #664:   }
+		BlankLine,        // line #665:
+		OtherMethod,      // line #666:   test_genericMethod_override_invalidContravariantTypeParamBounds() async {
+		OtherMethod,      // line #667:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #668: class A {}
+		OtherMethod,      // line #669: class B extends A {}
+		OtherMethod,      // line #670: class C {
+		OtherMethod,      // line #671:   T f<T extends A>(T x) => null;
+		OtherMethod,      // line #672: }
+		OtherMethod,      // line #673: class D extends C {
+		OtherMethod,      // line #674:   T f<T extends B>(T x) => null;
+		OtherMethod,      // line #675: }''', [
+		OtherMethod,      // line #676:       error(CompileTimeErrorCode.INVALID_OVERRIDE, 101, 1),
+		OtherMethod,      // line #677:     ]);
+		OtherMethod,      // line #678:   }
+		BlankLine,        // line #679:
+		OtherMethod,      // line #680:   test_genericMethod_override_invalidCovariantTypeParamBounds() async {
+		OtherMethod,      // line #681:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #682: class A {}
+		OtherMethod,      // line #683: class B extends A {}
+		OtherMethod,      // line #684: class C {
+		OtherMethod,      // line #685:   T f<T extends B>(T x) => null;
+		OtherMethod,      // line #686: }
+		OtherMethod,      // line #687: class D extends C {
+		OtherMethod,      // line #688:   T f<T extends A>(T x) => null;
+		OtherMethod,      // line #689: }''', [
+		OtherMethod,      // line #690:       error(CompileTimeErrorCode.INVALID_OVERRIDE, 101, 1),
+		OtherMethod,      // line #691:     ]);
+		OtherMethod,      // line #692:   }
+		BlankLine,        // line #693:
+		OtherMethod,      // line #694:   test_genericMethod_override_invalidReturnType() async {
+		OtherMethod,      // line #695:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #696: class C {
+		OtherMethod,      // line #697:   Iterable<T> f<T>(T x) => null;
+		OtherMethod,      // line #698: }
+		OtherMethod,      // line #699: class D extends C {
+		OtherMethod,      // line #700:   String f<S>(S x) => null;
+		OtherMethod,      // line #701: }''', [
+		OtherMethod,      // line #702:       error(CompileTimeErrorCode.INVALID_OVERRIDE, 74, 1),
+		OtherMethod,      // line #703:     ]);
+		OtherMethod,      // line #704:   }
+		BlankLine,        // line #705:
+		OtherMethod,      // line #706:   test_genericMethod_override_invalidTypeParamCount() async {
+		OtherMethod,      // line #707:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #708: class C {
+		OtherMethod,      // line #709:   T f<T>(T x) => null;
+		OtherMethod,      // line #710: }
+		OtherMethod,      // line #711: class D extends C {
+		OtherMethod,      // line #712:   S f<T, S>(T x) => null;
+		OtherMethod,      // line #713: }''', [
+		OtherMethod,      // line #714:       error(CompileTimeErrorCode.INVALID_OVERRIDE, 59, 1),
+		OtherMethod,      // line #715:     ]);
+		OtherMethod,      // line #716:   }
+		BlankLine,        // line #717:
+		OtherMethod,      // line #718:   test_genericMethod_propagatedType_promotion() async {
+		OtherMethod,      // line #719:     // Regression test for:
+		OtherMethod,      // line #720:     // https://github.com/dart-lang/sdk/issues/25340
+		OtherMethod,      // line #721:
+		OtherMethod,      // line #722:     // Note, after https://github.com/dart-lang/sdk/issues/25486 the original
+		OtherMethod,      // line #723:     // example won't work, as we now compute a static type and therefore discard
+		OtherMethod,      // line #724:     // the propagated type. So a new test was created that doesn't run under
+		OtherMethod,      // line #725:     // strong mode.
+		OtherMethod,      // line #726:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #727: abstract class Iter {
+		OtherMethod,      // line #728:   List<S> map<S>(S f(x));
+		OtherMethod,      // line #729: }
+		OtherMethod,      // line #730: class C {}
+		OtherMethod,      // line #731: C toSpan(dynamic element) {
+		OtherMethod,      // line #732:   if (element is Iter) {
+		OtherMethod,      // line #733:     var y = element.map(toSpan);
+		OtherMethod,      // line #734:   }
+		OtherMethod,      // line #735:   return null;
+		OtherMethod,      // line #736: }
+		OtherMethod,      // line #737: ''', [
+		OtherMethod,      // line #738:       error(HintCode.UNUSED_LOCAL_VARIABLE, 122, 1),
+		OtherMethod,      // line #739:     ]);
+		OtherMethod,      // line #740:     _assertLocalVarType('y', 'List<C>');
+		OtherMethod,      // line #741:   }
+		BlankLine,        // line #742:
+		OtherMethod,      // line #743:   test_genericMethod_tearoff() async {
+		OtherMethod,      // line #744:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #745: class C<E> {
+		OtherMethod,      // line #746:   T f<T>(E e) => null;
+		OtherMethod,      // line #747:   static T g<T>(T e) => null;
+		OtherMethod,      // line #748:   static T Function<T>(T) h = null;
+		OtherMethod,      // line #749: }
+		OtherMethod,      // line #750:
+		OtherMethod,      // line #751: T topF<T>(T e) => null;
+		OtherMethod,      // line #752: var topG = topF;
+		OtherMethod,      // line #753: void test<S>(T Function<T>(T) pf) {
+		OtherMethod,      // line #754:   var c = new C<int>();
+		OtherMethod,      // line #755:   T lf<T>(T e) => null;
+		OtherMethod,      // line #756:   var methodTearOff = c.f;
+		OtherMethod,      // line #757:   var staticTearOff = C.g;
+		OtherMethod,      // line #758:   var staticFieldTearOff = C.h;
+		OtherMethod,      // line #759:   var topFunTearOff = topF;
+		OtherMethod,      // line #760:   var topFieldTearOff = topG;
+		OtherMethod,      // line #761:   var localTearOff = lf;
+		OtherMethod,      // line #762:   var paramTearOff = pf;
+		OtherMethod,      // line #763: }
+		OtherMethod,      // line #764: ''', [
+		OtherMethod,      // line #765:       error(HintCode.UNUSED_LOCAL_VARIABLE, 236, 13),
+		OtherMethod,      // line #766:       error(HintCode.UNUSED_LOCAL_VARIABLE, 263, 13),
+		OtherMethod,      // line #767:       error(HintCode.UNUSED_LOCAL_VARIABLE, 290, 18),
+		OtherMethod,      // line #768:       error(HintCode.UNUSED_LOCAL_VARIABLE, 322, 13),
+		OtherMethod,      // line #769:       error(HintCode.UNUSED_LOCAL_VARIABLE, 350, 15),
+		OtherMethod,      // line #770:       error(HintCode.UNUSED_LOCAL_VARIABLE, 380, 12),
+		OtherMethod,      // line #771:       error(HintCode.UNUSED_LOCAL_VARIABLE, 405, 12),
+		OtherMethod,      // line #772:     ]);
+		OtherMethod,      // line #773:     _assertLocalVarType('methodTearOff', "T Function<T>(int)");
+		OtherMethod,      // line #774:     _assertLocalVarType('staticTearOff', "T Function<T>(T)");
+		OtherMethod,      // line #775:     _assertLocalVarType('staticFieldTearOff', "T Function<T>(T)");
+		OtherMethod,      // line #776:     _assertLocalVarType('topFunTearOff', "T Function<T>(T)");
+		OtherMethod,      // line #777:     _assertLocalVarType('topFieldTearOff', "T Function<T>(T)");
+		OtherMethod,      // line #778:     _assertLocalVarType('localTearOff', "T Function<T>(T)");
+		OtherMethod,      // line #779:     _assertLocalVarType('paramTearOff', "T Function<T>(T)");
+		OtherMethod,      // line #780:   }
+		BlankLine,        // line #781:
+		OtherMethod,      // line #782:   @failingTest
+		OtherMethod,      // line #783:   test_genericMethod_tearoff_instantiated() async {
+		OtherMethod,      // line #784:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #785: class C<E> {
+		OtherMethod,      // line #786:   T f<T>(E e) => null;
+		OtherMethod,      // line #787:   static T g<T>(T e) => null;
+		OtherMethod,      // line #788:   static T Function<T>(T) h = null;
+		OtherMethod,      // line #789: }
+		OtherMethod,      // line #790:
+		OtherMethod,      // line #791: T topF<T>(T e) => null;
+		OtherMethod,      // line #792: var topG = topF;
+		OtherMethod,      // line #793: void test<S>(T pf<T>(T e)) {
+		OtherMethod,      // line #794:   var c = new C<int>();
+		OtherMethod,      // line #795:   T lf<T>(T e) => null;
+		OtherMethod,      // line #796:   var methodTearOffInst = c.f<int>;
+		OtherMethod,      // line #797:   var staticTearOffInst = C.g<int>;
+		OtherMethod,      // line #798:   var staticFieldTearOffInst = C.h<int>;
+		OtherMethod,      // line #799:   var topFunTearOffInst = topF<int>;
+		OtherMethod,      // line #800:   var topFieldTearOffInst = topG<int>;
+		OtherMethod,      // line #801:   var localTearOffInst = lf<int>;
+		OtherMethod,      // line #802:   var paramTearOffInst = pf<int>;
+		OtherMethod,      // line #803: }
+		OtherMethod,      // line #804: ''');
+		OtherMethod,      // line #805:     expectIdentifierType('methodTearOffInst', "int Function(int)");
+		OtherMethod,      // line #806:     expectIdentifierType('staticTearOffInst', "int Function(int)");
+		OtherMethod,      // line #807:     expectIdentifierType('staticFieldTearOffInst', "int Function(int)");
+		OtherMethod,      // line #808:     expectIdentifierType('topFunTearOffInst', "int Function(int)");
+		OtherMethod,      // line #809:     expectIdentifierType('topFieldTearOffInst', "int Function(int)");
+		OtherMethod,      // line #810:     expectIdentifierType('localTearOffInst', "int Function(int)");
+		OtherMethod,      // line #811:     expectIdentifierType('paramTearOffInst', "int Function(int)");
+		OtherMethod,      // line #812:   }
+		BlankLine,        // line #813:
+		OtherMethod,      // line #814:   test_genericMethod_then() async {
+		OtherMethod,      // line #815:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #816: String toString(int x) => x.toString();
+		OtherMethod,      // line #817: main() {
+		OtherMethod,      // line #818:   Future<int> bar = null;
+		OtherMethod,      // line #819:   var foo = bar.then(toString);
+		OtherMethod,      // line #820: }
+		OtherMethod,      // line #821: ''', [
+		OtherMethod,      // line #822:       error(HintCode.UNUSED_LOCAL_VARIABLE, 81, 3),
+		OtherMethod,      // line #823:     ]);
+		OtherMethod,      // line #824:
+		OtherMethod,      // line #825:     expectInitializerType('foo', 'Future<String>');
+		OtherMethod,      // line #826:   }
+		BlankLine,        // line #827:
+		OtherMethod,      // line #828:   test_genericMethod_then_prefixed() async {
+		OtherMethod,      // line #829:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #830: import 'dart:async' as async;
+		OtherMethod,      // line #831: String toString(int x) => x.toString();
+		OtherMethod,      // line #832: main() {
+		OtherMethod,      // line #833:   async.Future<int> bar = null;
+		OtherMethod,      // line #834:   var foo = bar.then(toString);
+		OtherMethod,      // line #835: }
+		OtherMethod,      // line #836: ''', [
+		OtherMethod,      // line #837:       error(HintCode.UNUSED_LOCAL_VARIABLE, 117, 3),
+		OtherMethod,      // line #838:     ]);
+		OtherMethod,      // line #839:     expectInitializerType('foo', 'Future<String>');
+		OtherMethod,      // line #840:   }
+		BlankLine,        // line #841:
+		OtherMethod,      // line #842:   test_genericMethod_then_propagatedType() async {
+		OtherMethod,      // line #843:     // Regression test for https://github.com/dart-lang/sdk/issues/25482.
+		OtherMethod,      // line #844:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #845: void main() {
+		OtherMethod,      // line #846:   Future<String> p;
+		OtherMethod,      // line #847:   var foo = p.then((r) => new Future<String>.value(3));
+		OtherMethod,      // line #848: }
+		OtherMethod,      // line #849: ''', [
+		OtherMethod,      // line #850:       error(HintCode.UNUSED_LOCAL_VARIABLE, 40, 3),
+		OtherMethod,      // line #851:       error(CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE, 85, 1),
+		OtherMethod,      // line #852:     ]);
+		OtherMethod,      // line #853:     // Note: this correctly reports the error
+		OtherMethod,      // line #854:     // CompileTimeErrorCode.ARGUMENT_TYPE_NOT_ASSIGNABLE when run with the driver;
+		OtherMethod,      // line #855:     // when run without the driver, it reports no errors.  So we don't bother
+		OtherMethod,      // line #856:     // checking whether the correct errors were reported.
+		OtherMethod,      // line #857:     expectInitializerType('foo', 'Future<String>');
+		OtherMethod,      // line #858:   }
+		BlankLine,        // line #859:
+		OtherMethod,      // line #860:   test_genericMethod_toplevel_field_staticTearoff() async {
+		OtherMethod,      // line #861:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #862: class C<E> {
+		OtherMethod,      // line #863:   static T g<T>(T e) => null;
+		OtherMethod,      // line #864:   static T Function<T>(T) h = null;
+		OtherMethod,      // line #865: }
+		OtherMethod,      // line #866:
+		OtherMethod,      // line #867: void test() {
+		OtherMethod,      // line #868:   var fieldRead = C.h;
+		OtherMethod,      // line #869: }
+		OtherMethod,      // line #870: ''', [
+		OtherMethod,      // line #871:       error(HintCode.UNUSED_LOCAL_VARIABLE, 102, 9),
+		OtherMethod,      // line #872:     ]);
+		OtherMethod,      // line #873:     _assertLocalVarType('fieldRead', "T Function<T>(T)");
+		OtherMethod,      // line #874:   }
+		BlankLine,        // line #875:
+		OtherMethod,      // line #876:   test_implicitBounds() async {
+		OtherMethod,      // line #877:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #878: class A<T> {}
+		OtherMethod,      // line #879:
+		OtherMethod,      // line #880: class B<T extends num> {}
+		OtherMethod,      // line #881:
+		OtherMethod,      // line #882: class C<S extends int, T extends B<S>, U extends A> {}
+		OtherMethod,      // line #883:
+		OtherMethod,      // line #884: void test() {
+		OtherMethod,      // line #885:   A ai;
+		OtherMethod,      // line #886:   B bi;
+		OtherMethod,      // line #887:   C ci;
+		OtherMethod,      // line #888:   var aa = new A();
+		OtherMethod,      // line #889:   var bb = new B();
+		OtherMethod,      // line #890:   var cc = new C();
+		OtherMethod,      // line #891: }
+		OtherMethod,      // line #892: ''', [
+		OtherMethod,      // line #893:       error(HintCode.UNUSED_LOCAL_VARIABLE, 116, 2),
+		OtherMethod,      // line #894:       error(HintCode.UNUSED_LOCAL_VARIABLE, 124, 2),
+		OtherMethod,      // line #895:       error(HintCode.UNUSED_LOCAL_VARIABLE, 132, 2),
+		OtherMethod,      // line #896:       error(HintCode.UNUSED_LOCAL_VARIABLE, 142, 2),
+		OtherMethod,      // line #897:       error(HintCode.UNUSED_LOCAL_VARIABLE, 162, 2),
+		OtherMethod,      // line #898:       error(HintCode.UNUSED_LOCAL_VARIABLE, 182, 2),
+		OtherMethod,      // line #899:     ]);
+		OtherMethod,      // line #900:     _assertLocalVarType('ai', "A<dynamic>");
+		OtherMethod,      // line #901:     _assertLocalVarType('bi', "B<num>");
+		OtherMethod,      // line #902:     _assertLocalVarType('ci', "C<int, B<int>, A<dynamic>>");
+		OtherMethod,      // line #903:     _assertLocalVarType('aa', "A<dynamic>");
+		OtherMethod,      // line #904:     _assertLocalVarType('bb', "B<num>");
+		OtherMethod,      // line #905:     _assertLocalVarType('cc', "C<int, B<int>, A<dynamic>>");
+		OtherMethod,      // line #906:   }
+		BlankLine,        // line #907:
+		OtherMethod,      // line #908:   test_instantiateToBounds_class_error_extension_malbounded() async {
+		OtherMethod,      // line #909:     // Test that superclasses are strictly checked for malbounded default
+		OtherMethod,      // line #910:     // types
+		OtherMethod,      // line #911:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #912: class C<T0 extends List<T1>, T1 extends List<T0>> {}
+		OtherMethod,      // line #913: class D extends C {}
+		OtherMethod,      // line #914: ''', [
+		OtherMethod,      // line #915:       error(CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS, 69, 1),
+		OtherMethod,      // line #916:     ]);
+		OtherMethod,      // line #917:   }
+		BlankLine,        // line #918:
+		OtherMethod,      // line #919:   test_instantiateToBounds_class_error_instantiation_malbounded() async {
+		OtherMethod,      // line #920:     // Test that instance creations are strictly checked for malbounded default
+		OtherMethod,      // line #921:     // types
+		OtherMethod,      // line #922:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #923: class C<T0 extends List<T1>, T1 extends List<T0>> {}
+		OtherMethod,      // line #924: void test() {
+		OtherMethod,      // line #925:   var c = new C();
+		OtherMethod,      // line #926: }
+		OtherMethod,      // line #927: ''', [
+		OtherMethod,      // line #928:       error(HintCode.UNUSED_LOCAL_VARIABLE, 73, 1),
+		OtherMethod,      // line #929:       error(CompileTimeErrorCode.TYPE_ARGUMENT_NOT_MATCHING_BOUNDS, 81, 1),
+		OtherMethod,      // line #930:       error(CompileTimeErrorCode.COULD_NOT_INFER, 81, 1),
+		OtherMethod,      // line #931:     ]);
+		OtherMethod,      // line #932:     _assertLocalVarType('c', 'C<List<dynamic>, List<List<dynamic>>>');
+		OtherMethod,      // line #933:   }
+		BlankLine,        // line #934:
+		OtherMethod,      // line #935:   test_instantiateToBounds_class_error_recursion() async {
+		OtherMethod,      // line #936:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #937: class C<T0 extends List<T1>, T1 extends List<T0>> {}
+		OtherMethod,      // line #938: C c;
+		OtherMethod,      // line #939: ''');
+		OtherMethod,      // line #940:     _assertTopVarType('c', 'C<List<dynamic>, List<dynamic>>');
+		OtherMethod,      // line #941:   }
+		BlankLine,        // line #942:
+		OtherMethod,      // line #943:   test_instantiateToBounds_class_error_recursion_self() async {
+		OtherMethod,      // line #944:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #945: class C<T extends C<T>> {}
+		OtherMethod,      // line #946: C c;
+		OtherMethod,      // line #947: ''');
+		OtherMethod,      // line #948:     _assertTopVarType('c', 'C<C<dynamic>>');
+		OtherMethod,      // line #949:   }
+		BlankLine,        // line #950:
+		OtherMethod,      // line #951:   test_instantiateToBounds_class_error_recursion_self2() async {
+		OtherMethod,      // line #952:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #953: class A<E> {}
+		OtherMethod,      // line #954: class C<T extends A<T>> {}
+		OtherMethod,      // line #955: C c;
+		OtherMethod,      // line #956: ''');
+		OtherMethod,      // line #957:     _assertTopVarType('c', 'C<A<dynamic>>');
+		OtherMethod,      // line #958:   }
+		BlankLine,        // line #959:
+		OtherMethod,      // line #960:   test_instantiateToBounds_class_error_typedef() async {
+		OtherMethod,      // line #961:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #962: typedef T F<T>(T x);
+		OtherMethod,      // line #963: class C<T extends F<T>> {}
+		OtherMethod,      // line #964: C c;
+		OtherMethod,      // line #965: ''');
+		OtherMethod,      // line #966:     _assertTopVarType('c', 'C<dynamic Function(dynamic)>');
+		OtherMethod,      // line #967:   }
+		BlankLine,        // line #968:
+		OtherMethod,      // line #969:   test_instantiateToBounds_class_ok_implicitDynamic_multi() async {
+		OtherMethod,      // line #970:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #971: class C<T0 extends Map<T1, T2>, T1 extends List, T2 extends int> {}
+		OtherMethod,      // line #972: C c;
+		OtherMethod,      // line #973: ''');
+		OtherMethod,      // line #974:     _assertTopVarType('c', 'C<Map<List<dynamic>, int>, List<dynamic>, int>');
+		OtherMethod,      // line #975:   }
+		BlankLine,        // line #976:
+		OtherMethod,      // line #977:   test_instantiateToBounds_class_ok_referenceOther_after() async {
+		OtherMethod,      // line #978:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #979: class C<T0 extends T1, T1 extends int> {}
+		OtherMethod,      // line #980: C c;
+		OtherMethod,      // line #981: ''');
+		OtherMethod,      // line #982:     _assertTopVarType('c', 'C<int, int>');
+		OtherMethod,      // line #983:   }
+		BlankLine,        // line #984:
+		OtherMethod,      // line #985:   test_instantiateToBounds_class_ok_referenceOther_after2() async {
+		OtherMethod,      // line #986:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #987: class C<T0 extends Map<T1, T1>, T1 extends int> {}
+		OtherMethod,      // line #988: C c;
+		OtherMethod,      // line #989: ''');
+		OtherMethod,      // line #990:     _assertTopVarType('c', 'C<Map<int, int>, int>');
+		OtherMethod,      // line #991:   }
+		BlankLine,        // line #992:
+		OtherMethod,      // line #993:   test_instantiateToBounds_class_ok_referenceOther_before() async {
+		OtherMethod,      // line #994:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #995: class C<T0 extends int, T1 extends T0> {}
+		OtherMethod,      // line #996: C c;
+		OtherMethod,      // line #997: ''');
+		OtherMethod,      // line #998:     _assertTopVarType('c', 'C<int, int>');
+		OtherMethod,      // line #999:   }
+		BlankLine,        // line #1000:
+		OtherMethod,      // line #1001:   test_instantiateToBounds_class_ok_referenceOther_multi() async {
+		OtherMethod,      // line #1002:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #1003: class C<T0 extends Map<T1, T2>, T1 extends List<T2>, T2 extends int> {}
+		OtherMethod,      // line #1004: C c;
+		OtherMethod,      // line #1005: ''');
+		OtherMethod,      // line #1006:     _assertTopVarType('c', 'C<Map<List<int>, int>, List<int>, int>');
+		OtherMethod,      // line #1007:   }
+		BlankLine,        // line #1008:
+		OtherMethod,      // line #1009:   test_instantiateToBounds_class_ok_simpleBounds() async {
+		OtherMethod,      // line #1010:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #1011: class A<T> {}
+		OtherMethod,      // line #1012: class B<T extends num> {}
+		OtherMethod,      // line #1013: class C<T extends List<int>> {}
+		OtherMethod,      // line #1014: class D<T extends A> {}
+		OtherMethod,      // line #1015: void main() {
+		OtherMethod,      // line #1016:   A a;
+		OtherMethod,      // line #1017:   B b;
+		OtherMethod,      // line #1018:   C c;
+		OtherMethod,      // line #1019:   D d;
+		OtherMethod,      // line #1020: }
+		OtherMethod,      // line #1021: ''', [
+		OtherMethod,      // line #1022:       error(HintCode.UNUSED_LOCAL_VARIABLE, 114, 1),
+		OtherMethod,      // line #1023:       error(HintCode.UNUSED_LOCAL_VARIABLE, 121, 1),
+		OtherMethod,      // line #1024:       error(HintCode.UNUSED_LOCAL_VARIABLE, 128, 1),
+		OtherMethod,      // line #1025:       error(HintCode.UNUSED_LOCAL_VARIABLE, 135, 1),
+		OtherMethod,      // line #1026:     ]);
+		OtherMethod,      // line #1027:     _assertLocalVarType('a', 'A<dynamic>');
+		OtherMethod,      // line #1028:     _assertLocalVarType('b', 'B<num>');
+		OtherMethod,      // line #1029:     _assertLocalVarType('c', 'C<List<int>>');
+		OtherMethod,      // line #1030:     _assertLocalVarType('d', 'D<A<dynamic>>');
+		OtherMethod,      // line #1031:   }
+		BlankLine,        // line #1032:
+		OtherMethod,      // line #1033:   test_instantiateToBounds_generic_function_error_malbounded() async {
+		OtherMethod,      // line #1034:     // Test that generic methods are strictly checked for malbounded default
+		OtherMethod,      // line #1035:     // types
+		OtherMethod,      // line #1036:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #1037: T0 f<T0 extends List<T1>, T1 extends List<T0>>() {}
+		OtherMethod,      // line #1038: void g() {
+		OtherMethod,      // line #1039:   var c = f();
+		OtherMethod,      // line #1040:   return;
+		OtherMethod,      // line #1041: }
+		OtherMethod,      // line #1042: ''', [
+		OtherMethod,      // line #1043:       error(HintCode.MISSING_RETURN, 3, 1),
+		OtherMethod,      // line #1044:       error(HintCode.UNUSED_LOCAL_VARIABLE, 69, 1),
+		OtherMethod,      // line #1045:       error(CompileTimeErrorCode.COULD_NOT_INFER, 73, 1),
+		OtherMethod,      // line #1046:     ]);
+		OtherMethod,      // line #1047:     _assertLocalVarType('c', 'List<dynamic>');
+		OtherMethod,      // line #1048:   }
+		BlankLine,        // line #1049:
+		OtherMethod,      // line #1050:   test_instantiateToBounds_method_ok_referenceOther_before() async {
+		OtherMethod,      // line #1051:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #1052: class C<T> {
+		OtherMethod,      // line #1053:   void m<S0 extends T, S1 extends List<S0>>(S0 p0, S1 p1) {}
+		OtherMethod,      // line #1054:
+		OtherMethod,      // line #1055:   void main() {
+		OtherMethod,      // line #1056:     m(null, null);
+		OtherMethod,      // line #1057:   }
+		OtherMethod,      // line #1058: }
+		OtherMethod,      // line #1059: ''');
+		OtherMethod,      // line #1060:
+		OtherMethod,      // line #1061:     expectStaticInvokeType('m(null', 'void Function(Null, Null)');
+		OtherMethod,      // line #1062:   }
+		BlankLine,        // line #1063:
+		OtherMethod,      // line #1064:   test_instantiateToBounds_method_ok_referenceOther_before2() async {
+		OtherMethod,      // line #1065:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #1066: class C<T> {
+		OtherMethod,      // line #1067:   Map<S0, S1> m<S0 extends T, S1 extends List<S0>>() => null;
+		OtherMethod,      // line #1068:
+		OtherMethod,      // line #1069:   void main() {
+		OtherMethod,      // line #1070:     m();
+		OtherMethod,      // line #1071:   }
+		OtherMethod,      // line #1072: }
+		OtherMethod,      // line #1073: ''');
+		OtherMethod,      // line #1074:
+		OtherMethod,      // line #1075:     expectStaticInvokeType('m();', 'Map<T, List<T>> Function()');
+		OtherMethod,      // line #1076:   }
+		BlankLine,        // line #1077:
+		OtherMethod,      // line #1078:   test_instantiateToBounds_method_ok_simpleBounds() async {
+		OtherMethod,      // line #1079:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #1080: class C<T> {
+		OtherMethod,      // line #1081:   void m<S extends T>(S p0) {}
+		OtherMethod,      // line #1082:
+		OtherMethod,      // line #1083:   void main() {
+		OtherMethod,      // line #1084:     m(null);
+		OtherMethod,      // line #1085:   }
+		OtherMethod,      // line #1086: }
+		OtherMethod,      // line #1087: ''');
+		OtherMethod,      // line #1088:
+		OtherMethod,      // line #1089:     expectStaticInvokeType('m(null)', 'void Function(Null)');
+		OtherMethod,      // line #1090:   }
+		BlankLine,        // line #1091:
+		OtherMethod,      // line #1092:   test_instantiateToBounds_method_ok_simpleBounds2() async {
+		OtherMethod,      // line #1093:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #1094: class C<T> {
+		OtherMethod,      // line #1095:   S m<S extends T>() => null;
+		OtherMethod,      // line #1096:
+		OtherMethod,      // line #1097:   void main() {
+		OtherMethod,      // line #1098:     m();
+		OtherMethod,      // line #1099:   }
+		OtherMethod,      // line #1100: }
+		OtherMethod,      // line #1101: ''');
+		OtherMethod,      // line #1102:
+		OtherMethod,      // line #1103:     expectStaticInvokeType('m();', 'T Function()');
+		OtherMethod,      // line #1104:   }
+		BlankLine,        // line #1105:
+		OtherMethod,      // line #1106:   test_issue32396() async {
+		OtherMethod,      // line #1107:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #1108: class C<E> {
+		OtherMethod,      // line #1109:   static T g<T>(T e) => null;
+		OtherMethod,      // line #1110:   static final h = g;
+		OtherMethod,      // line #1111: }
+		OtherMethod,      // line #1112: ''');
+		OtherMethod,      // line #1113:   }
+		BlankLine,        // line #1114:
+		OtherMethod,      // line #1115:   test_objectMethodOnFunctions_Anonymous() async {
+		OtherMethod,      // line #1116:     await _objectMethodOnFunctions_helper2(r'''
+		OtherMethod,      // line #1117: void main() {
+		OtherMethod,      // line #1118:   var f = (x) => 3;
+		OtherMethod,      // line #1119:   // No errors, correct type
+		OtherMethod,      // line #1120:   var t0 = f.toString();
+		OtherMethod,      // line #1121:   var t1 = f.toString;
+		OtherMethod,      // line #1122:   var t2 = f.hashCode;
+		OtherMethod,      // line #1123:
+		OtherMethod,      // line #1124:   // Expressions, no errors, correct type
+		OtherMethod,      // line #1125:   var t3 = (f).toString();
+		OtherMethod,      // line #1126:   var t4 = (f).toString;
+		OtherMethod,      // line #1127:   var t5 = (f).hashCode;
+		OtherMethod,      // line #1128:
+		OtherMethod,      // line #1129:   // Cascades, no errors
+		OtherMethod,      // line #1130:   f..toString();
+		OtherMethod,      // line #1131:   f..toString;
+		OtherMethod,      // line #1132:   f..hashCode;
+		OtherMethod,      // line #1133:
+		OtherMethod,      // line #1134:   // Expression cascades, no errors
+		OtherMethod,      // line #1135:   (f)..toString();
+		OtherMethod,      // line #1136:   (f)..toString;
+		OtherMethod,      // line #1137:   (f)..hashCode;
+		OtherMethod,      // line #1138: }
+		OtherMethod,      // line #1139: ''', [
+		OtherMethod,      // line #1140:       error(HintCode.UNUSED_LOCAL_VARIABLE, 69, 2),
+		OtherMethod,      // line #1141:       error(HintCode.UNUSED_LOCAL_VARIABLE, 94, 2),
+		OtherMethod,      // line #1142:       error(HintCode.UNUSED_LOCAL_VARIABLE, 117, 2),
+		OtherMethod,      // line #1143:       error(HintCode.UNUSED_LOCAL_VARIABLE, 183, 2),
+		OtherMethod,      // line #1144:       error(HintCode.UNUSED_LOCAL_VARIABLE, 210, 2),
+		OtherMethod,      // line #1145:       error(HintCode.UNUSED_LOCAL_VARIABLE, 235, 2),
+		OtherMethod,      // line #1146:     ]);
+		OtherMethod,      // line #1147:   }
+		BlankLine,        // line #1148:
+		OtherMethod,      // line #1149:   test_objectMethodOnFunctions_Function() async {
+		OtherMethod,      // line #1150:     await _objectMethodOnFunctions_helper2(r'''
+		OtherMethod,      // line #1151: void main() {
+		OtherMethod,      // line #1152:   Function f;
+		OtherMethod,      // line #1153:   // No errors, correct type
+		OtherMethod,      // line #1154:   var t0 = f.toString();
+		OtherMethod,      // line #1155:   var t1 = f.toString;
+		OtherMethod,      // line #1156:   var t2 = f.hashCode;
+		OtherMethod,      // line #1157:
+		OtherMethod,      // line #1158:   // Expressions, no errors, correct type
+		OtherMethod,      // line #1159:   var t3 = (f).toString();
+		OtherMethod,      // line #1160:   var t4 = (f).toString;
+		OtherMethod,      // line #1161:   var t5 = (f).hashCode;
+		OtherMethod,      // line #1162:
+		OtherMethod,      // line #1163:   // Cascades, no errors
+		OtherMethod,      // line #1164:   f..toString();
+		OtherMethod,      // line #1165:   f..toString;
+		OtherMethod,      // line #1166:   f..hashCode;
+		OtherMethod,      // line #1167:
+		OtherMethod,      // line #1168:   // Expression cascades, no errors
+		OtherMethod,      // line #1169:   (f)..toString();
+		OtherMethod,      // line #1170:   (f)..toString;
+		OtherMethod,      // line #1171:   (f)..hashCode;
+		OtherMethod,      // line #1172: }
+		OtherMethod,      // line #1173: ''', [
+		OtherMethod,      // line #1174:       error(HintCode.UNUSED_LOCAL_VARIABLE, 63, 2),
+		OtherMethod,      // line #1175:       error(HintCode.UNUSED_LOCAL_VARIABLE, 88, 2),
+		OtherMethod,      // line #1176:       error(HintCode.UNUSED_LOCAL_VARIABLE, 111, 2),
+		OtherMethod,      // line #1177:       error(HintCode.UNUSED_LOCAL_VARIABLE, 177, 2),
+		OtherMethod,      // line #1178:       error(HintCode.UNUSED_LOCAL_VARIABLE, 204, 2),
+		OtherMethod,      // line #1179:       error(HintCode.UNUSED_LOCAL_VARIABLE, 229, 2),
+		OtherMethod,      // line #1180:     ]);
+		OtherMethod,      // line #1181:   }
+		BlankLine,        // line #1182:
+		OtherMethod,      // line #1183:   test_objectMethodOnFunctions_Static() async {
+		OtherMethod,      // line #1184:     await _objectMethodOnFunctions_helper2(r'''
+		OtherMethod,      // line #1185: int f(int x) => null;
+		OtherMethod,      // line #1186: void main() {
+		OtherMethod,      // line #1187:   // No errors, correct type
+		OtherMethod,      // line #1188:   var t0 = f.toString();
+		OtherMethod,      // line #1189:   var t1 = f.toString;
+		OtherMethod,      // line #1190:   var t2 = f.hashCode;
+		OtherMethod,      // line #1191:
+		OtherMethod,      // line #1192:   // Expressions, no errors, correct type
+		OtherMethod,      // line #1193:   var t3 = (f).toString();
+		OtherMethod,      // line #1194:   var t4 = (f).toString;
+		OtherMethod,      // line #1195:   var t5 = (f).hashCode;
+		OtherMethod,      // line #1196:
+		OtherMethod,      // line #1197:   // Cascades, no errors
+		OtherMethod,      // line #1198:   f..toString();
+		OtherMethod,      // line #1199:   f..toString;
+		OtherMethod,      // line #1200:   f..hashCode;
+		OtherMethod,      // line #1201:
+		OtherMethod,      // line #1202:   // Expression cascades, no errors
+		OtherMethod,      // line #1203:   (f)..toString();
+		OtherMethod,      // line #1204:   (f)..toString;
+		OtherMethod,      // line #1205:   (f)..hashCode;
+		OtherMethod,      // line #1206: }
+		OtherMethod,      // line #1207: ''', [
+		OtherMethod,      // line #1208:       error(HintCode.UNUSED_LOCAL_VARIABLE, 71, 2),
+		OtherMethod,      // line #1209:       error(HintCode.UNUSED_LOCAL_VARIABLE, 96, 2),
+		OtherMethod,      // line #1210:       error(HintCode.UNUSED_LOCAL_VARIABLE, 119, 2),
+		OtherMethod,      // line #1211:       error(HintCode.UNUSED_LOCAL_VARIABLE, 185, 2),
+		OtherMethod,      // line #1212:       error(HintCode.UNUSED_LOCAL_VARIABLE, 212, 2),
+		OtherMethod,      // line #1213:       error(HintCode.UNUSED_LOCAL_VARIABLE, 237, 2),
+		OtherMethod,      // line #1214:     ]);
+		OtherMethod,      // line #1215:   }
+		BlankLine,        // line #1216:
+		OtherMethod,      // line #1217:   test_objectMethodOnFunctions_Typedef() async {
+		OtherMethod,      // line #1218:     await _objectMethodOnFunctions_helper2(r'''
+		OtherMethod,      // line #1219: typedef bool Predicate<T>(T object);
+		OtherMethod,      // line #1220:
+		OtherMethod,      // line #1221: void main() {
+		OtherMethod,      // line #1222:   Predicate<int> f;
+		OtherMethod,      // line #1223:   // No errors, correct type
+		OtherMethod,      // line #1224:   var t0 = f.toString();
+		OtherMethod,      // line #1225:   var t1 = f.toString;
+		OtherMethod,      // line #1226:   var t2 = f.hashCode;
+		OtherMethod,      // line #1227:
+		OtherMethod,      // line #1228:   // Expressions, no errors, correct type
+		OtherMethod,      // line #1229:   var t3 = (f).toString();
+		OtherMethod,      // line #1230:   var t4 = (f).toString;
+		OtherMethod,      // line #1231:   var t5 = (f).hashCode;
+		OtherMethod,      // line #1232:
+		OtherMethod,      // line #1233:   // Cascades, no errors
+		OtherMethod,      // line #1234:   f..toString();
+		OtherMethod,      // line #1235:   f..toString;
+		OtherMethod,      // line #1236:   f..hashCode;
+		OtherMethod,      // line #1237:
+		OtherMethod,      // line #1238:   // Expression cascades, no errors
+		OtherMethod,      // line #1239:   (f)..toString();
+		OtherMethod,      // line #1240:   (f)..toString;
+		OtherMethod,      // line #1241:   (f)..hashCode;
+		OtherMethod,      // line #1242: }
+		OtherMethod,      // line #1243: ''', [
+		OtherMethod,      // line #1244:       error(HintCode.UNUSED_LOCAL_VARIABLE, 107, 2),
+		OtherMethod,      // line #1245:       error(HintCode.UNUSED_LOCAL_VARIABLE, 132, 2),
+		OtherMethod,      // line #1246:       error(HintCode.UNUSED_LOCAL_VARIABLE, 155, 2),
+		OtherMethod,      // line #1247:       error(HintCode.UNUSED_LOCAL_VARIABLE, 221, 2),
+		OtherMethod,      // line #1248:       error(HintCode.UNUSED_LOCAL_VARIABLE, 248, 2),
+		OtherMethod,      // line #1249:       error(HintCode.UNUSED_LOCAL_VARIABLE, 273, 2),
+		OtherMethod,      // line #1250:     ]);
+		OtherMethod,      // line #1251:   }
+		BlankLine,        // line #1252:
+		OtherMethod,      // line #1253:   test_returnOfInvalidType_object_void() async {
+		OtherMethod,      // line #1254:     await assertErrorsInCode(
+		OtherMethod,      // line #1255:         "Object f() { void voidFn() => null; return voidFn(); }", [
+		OtherMethod,      // line #1256:       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 43, 8),
+		OtherMethod,      // line #1257:     ]);
+		OtherMethod,      // line #1258:   }
+		BlankLine,        // line #1259:
+		OtherMethod,      // line #1260:   test_setterWithDynamicTypeIsError() async {
+		OtherMethod,      // line #1261:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #1262: class A {
+		OtherMethod,      // line #1263:   dynamic set f(String s) => null;
+		OtherMethod,      // line #1264: }
+		OtherMethod,      // line #1265: dynamic set g(int x) => null;
+		OtherMethod,      // line #1266: ''', [
+		OtherMethod,      // line #1267:       error(CompileTimeErrorCode.NON_VOID_RETURN_FOR_SETTER, 12, 7),
+		OtherMethod,      // line #1268:       error(CompileTimeErrorCode.NON_VOID_RETURN_FOR_SETTER, 47, 7),
+		OtherMethod,      // line #1269:     ]);
+		OtherMethod,      // line #1270:   }
+		BlankLine,        // line #1271:
+		OtherMethod,      // line #1272:   test_setterWithExplicitVoidType_returningVoid() async {
+		OtherMethod,      // line #1273:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #1274: void returnsVoid() {}
+		OtherMethod,      // line #1275: class A {
+		OtherMethod,      // line #1276:   void set f(String s) => returnsVoid();
+		OtherMethod,      // line #1277: }
+		OtherMethod,      // line #1278: void set g(int x) => returnsVoid();
+		OtherMethod,      // line #1279: ''');
+		OtherMethod,      // line #1280:   }
+		BlankLine,        // line #1281:
+		OtherMethod,      // line #1282:   test_setterWithNoVoidType() async {
+		OtherMethod,      // line #1283:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #1284: class A {
+		OtherMethod,      // line #1285:   set f(String s) {
+		OtherMethod,      // line #1286:     return '42';
+		OtherMethod,      // line #1287:   }
+		OtherMethod,      // line #1288: }
+		OtherMethod,      // line #1289: set g(int x) => 42;
+		OtherMethod,      // line #1290: ''', [
+		OtherMethod,      // line #1291:       error(CompileTimeErrorCode.RETURN_OF_INVALID_TYPE_FROM_FUNCTION, 41, 4),
+		OtherMethod,      // line #1292:     ]);
+		OtherMethod,      // line #1293:   }
+		BlankLine,        // line #1294:
+		OtherMethod,      // line #1295:   test_setterWithNoVoidType_returningVoid() async {
+		OtherMethod,      // line #1296:     await assertNoErrorsInCode(r'''
+		OtherMethod,      // line #1297: void returnsVoid() {}
+		OtherMethod,      // line #1298: class A {
+		OtherMethod,      // line #1299:   set f(String s) => returnsVoid();
+		OtherMethod,      // line #1300: }
+		OtherMethod,      // line #1301: set g(int x) => returnsVoid();
+		OtherMethod,      // line #1302: ''');
+		OtherMethod,      // line #1303:   }
+		BlankLine,        // line #1304:
+		OtherMethod,      // line #1305:   test_setterWithOtherTypeIsError() async {
+		OtherMethod,      // line #1306:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #1307: class A {
+		OtherMethod,      // line #1308:   String set f(String s) => null;
+		OtherMethod,      // line #1309: }
+		OtherMethod,      // line #1310: Object set g(x) => null;
+		OtherMethod,      // line #1311: ''', [
+		OtherMethod,      // line #1312:       error(CompileTimeErrorCode.NON_VOID_RETURN_FOR_SETTER, 12, 6),
+		OtherMethod,      // line #1313:       error(CompileTimeErrorCode.NON_VOID_RETURN_FOR_SETTER, 46, 6),
+		OtherMethod,      // line #1314:     ]);
+		OtherMethod,      // line #1315:   }
+		BlankLine,        // line #1316:
+		OtherMethod,      // line #1317:   test_ternaryOperator_null_left() async {
+		OtherMethod,      // line #1318:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #1319: main() {
+		OtherMethod,      // line #1320:   var foo = (true) ? null : 3;
+		OtherMethod,      // line #1321: }
+		OtherMethod,      // line #1322: ''', [
+		OtherMethod,      // line #1323:       error(HintCode.UNUSED_LOCAL_VARIABLE, 15, 3),
+		OtherMethod,      // line #1324:     ]);
+		OtherMethod,      // line #1325:     expectInitializerType('foo', 'int');
+		OtherMethod,      // line #1326:   }
+		BlankLine,        // line #1327:
+		OtherMethod,      // line #1328:   test_ternaryOperator_null_right() async {
+		OtherMethod,      // line #1329:     await assertErrorsInCode(r'''
+		OtherMethod,      // line #1330: main() {
+		OtherMethod,      // line #1331:   var foo = (true) ? 3 : null;
+		OtherMethod,      // line #1332: }
+		OtherMethod,      // line #1333: ''', [
+		OtherMethod,      // line #1334:       error(HintCode.UNUSED_LOCAL_VARIABLE, 15, 3),
+		OtherMethod,      // line #1335:     ]);
+		OtherMethod,      // line #1336:     expectInitializerType('foo', 'int');
+		OtherMethod,      // line #1337:   }
+		BlankLine,        // line #1338:
+		OtherMethod,      // line #1339:   void _assertLocalVarType(String name, String expectedType) {
+		OtherMethod,      // line #1340:     var element = findElement.localVar(name);
+		OtherMethod,      // line #1341:     assertType(element.type, expectedType);
+		OtherMethod,      // line #1342:   }
+		BlankLine,        // line #1343:
+		OtherMethod,      // line #1344:   void _assertTopVarType(String name, String expectedType) {
+		OtherMethod,      // line #1345:     var element = findElement.topVar(name);
+		OtherMethod,      // line #1346:     assertType(element.type, expectedType);
+		OtherMethod,      // line #1347:   }
+		BlankLine,        // line #1348:
+		OtherMethod,      // line #1349:   Future<void> _objectMethodOnFunctions_helper2(
+		OtherMethod,      // line #1350:       String code, List<ExpectedError> expectedErrors) async {
+		OtherMethod,      // line #1351:     await assertErrorsInCode(code, expectedErrors);
+		OtherMethod,      // line #1352:     _assertLocalVarType('t0', "String");
+		OtherMethod,      // line #1353:     _assertLocalVarType('t1', "String Function()");
+		OtherMethod,      // line #1354:     _assertLocalVarType('t2', "int");
+		OtherMethod,      // line #1355:     _assertLocalVarType('t3', "String");
+		OtherMethod,      // line #1356:     _assertLocalVarType('t4', "String Function()");
+		OtherMethod,      // line #1357:     _assertLocalVarType('t5', "int");
+		OtherMethod,      // line #1358:   }
+		BlankLine,        // line #1359:
 	}
 
 	runParsePhase(t, opts, source, want)
@@ -2637,54 +3989,266 @@ func TestStrongMode_Class3(t *testing.T) {
 	}
 
 	want := []EntityType{
-		Unknown,                 // line #2: {
-		PrivateInstanceVariable, // line #3:   final StrongMode _parent;
-		PrivateInstanceVariable, // line #4:   final Map<String, Element> _getters = {};
-		PrivateInstanceVariable, // line #5:   final Map<String, Element> _setters = {};
-		BlankLine,               // line #6:
-		MainConstructor,         // line #7:   EnclosedStrongMode(StrongMode parent) : _parent = parent;
-		BlankLine,               // line #8:
-		OtherMethod,             // line #9:   StrongMode get parent => _parent;
-		BlankLine,               // line #10:
-		OverrideMethod,          // line #11:   @Deprecated('Use lookup2() that is closer to the language specification')
-		OverrideMethod,          // line #12:   @override
-		OverrideMethod,          // line #13:   Element lookup({@required String id, @required bool setter}) {
-		OverrideMethod,          // line #14:     var result = lookup2(id);
-		OverrideMethod,          // line #15:     return setter ? result.setter : result.getter;
-		OverrideMethod,          // line #16:   }
-		BlankLine,               // line #17:
-		OverrideMethod,          // line #18:   @override
-		OverrideMethod,          // line #19:   StrongModeLookupResult lookup2(String id) {
-		OverrideMethod,          // line #20:     var getter = _getters[id];
-		OverrideMethod,          // line #21:     var setter = _setters[id];
-		OverrideMethod,          // line #22:     if (getter != null || setter != null) {
-		OverrideMethod,          // line #23:       return StrongModeLookupResult(getter, setter);
-		OverrideMethod,          // line #24:     }
-		OverrideMethod,          // line #25:
-		OverrideMethod,          // line #26:     return _parent.lookup2(id);
-		OverrideMethod,          // line #27:   }
-		BlankLine,               // line #28:
-		OtherMethod,             // line #29:   void _addGetter(Element element) {
-		OtherMethod,             // line #30:     _addTo(_getters, element);
-		OtherMethod,             // line #31:   }
-		BlankLine,               // line #32:
-		OtherMethod,             // line #33:   void _addPropertyAccessor(PropertyAccessorElement element) {
-		OtherMethod,             // line #34:     if (element.isGetter) {
-		OtherMethod,             // line #35:       _addGetter(element);
-		OtherMethod,             // line #36:     } else {
-		OtherMethod,             // line #37:       _addSetter(element);
-		OtherMethod,             // line #38:     }
-		OtherMethod,             // line #39:   }
-		BlankLine,               // line #40:
-		OtherMethod,             // line #41:   void _addSetter(Element element) {
-		OtherMethod,             // line #42:     _addTo(_setters, element);
-		OtherMethod,             // line #43:   }
-		BlankLine,               // line #44:
-		OtherMethod,             // line #45:   void _addTo(Map<String, Element> map, Element element) {
-		OtherMethod,             // line #46:     var id = element.displayName;
-		OtherMethod,             // line #47:     map[id] ??= element;
-		OtherMethod,             // line #48:   }
-		BlankLine,               // line #49:
+		Unknown,     // line #2: {
+		OtherMethod, // line #3:   test_foreachInference_dynamic_disabled() async {
+		OtherMethod, // line #4:     await resolveTestCode(r'''
+		OtherMethod, // line #5: main() {
+		OtherMethod, // line #6:   var list = <int>[];
+		OtherMethod, // line #7:   for (dynamic v in list) {
+		OtherMethod, // line #8:     v; // marker
+		OtherMethod, // line #9:   }
+		OtherMethod, // line #10: }''');
+		OtherMethod, // line #11:     assertTypeDynamic(findElement.localVar('v').type);
+		OtherMethod, // line #12:     assertTypeDynamic(findNode.simple('v; // marker'));
+		OtherMethod, // line #13:   }
+		BlankLine,   // line #14:
+		OtherMethod, // line #15:   test_foreachInference_reusedVar_disabled() async {
+		OtherMethod, // line #16:     await resolveTestCode(r'''
+		OtherMethod, // line #17: main() {
+		OtherMethod, // line #18:   var list = <int>[];
+		OtherMethod, // line #19:   var v;
+		OtherMethod, // line #20:   for (v in list) {
+		OtherMethod, // line #21:     v; // marker
+		OtherMethod, // line #22:   }
+		OtherMethod, // line #23: }''');
+		OtherMethod, // line #24:     assertTypeDynamic(findNode.simple('v in'));
+		OtherMethod, // line #25:     assertTypeDynamic(findNode.simple('v; // marker'));
+		OtherMethod, // line #26:   }
+		BlankLine,   // line #27:
+		OtherMethod, // line #28:   test_foreachInference_var() async {
+		OtherMethod, // line #29:     await resolveTestCode(r'''
+		OtherMethod, // line #30: main() {
+		OtherMethod, // line #31:   var list = <int>[];
+		OtherMethod, // line #32:   for (var v in list) {
+		OtherMethod, // line #33:     v; // marker
+		OtherMethod, // line #34:   }
+		OtherMethod, // line #35: }''');
+		OtherMethod, // line #36:     assertType(findElement.localVar('v').type, 'int');
+		OtherMethod, // line #37:     assertType(findNode.simple('v; // marker'), 'int');
+		OtherMethod, // line #38:   }
+		BlankLine,   // line #39:
+		OtherMethod, // line #40:   test_foreachInference_var_iterable() async {
+		OtherMethod, // line #41:     await resolveTestCode(r'''
+		OtherMethod, // line #42: main() {
+		OtherMethod, // line #43:   Iterable<int> list = <int>[];
+		OtherMethod, // line #44:   for (var v in list) {
+		OtherMethod, // line #45:     v; // marker
+		OtherMethod, // line #46:   }
+		OtherMethod, // line #47: }''');
+		OtherMethod, // line #48:     assertType(findElement.localVar('v').type, 'int');
+		OtherMethod, // line #49:     assertType(findNode.simple('v; // marker'), 'int');
+		OtherMethod, // line #50:   }
+		BlankLine,   // line #51:
+		OtherMethod, // line #52:   test_foreachInference_var_stream() async {
+		OtherMethod, // line #53:     await resolveTestCode(r'''
+		OtherMethod, // line #54: main() async {
+		OtherMethod, // line #55:   Stream<int> stream = null;
+		OtherMethod, // line #56:   await for (var v in stream) {
+		OtherMethod, // line #57:     v; // marker
+		OtherMethod, // line #58:   }
+		OtherMethod, // line #59: }''');
+		OtherMethod, // line #60:     assertType(findElement.localVar('v').type, 'int');
+		OtherMethod, // line #61:     assertType(findNode.simple('v; // marker'), 'int');
+		OtherMethod, // line #62:   }
+		BlankLine,   // line #63:
+		OtherMethod, // line #64:   test_inconsistentMethodInheritance_inferFunctionTypeFromTypedef() async {
+		OtherMethod, // line #65:     await assertNoErrorsInCode(r'''
+		OtherMethod, // line #66: typedef bool F<E>(E argument);
+		OtherMethod, // line #67:
+		OtherMethod, // line #68: abstract class Base {
+		OtherMethod, // line #69:   f<E extends int>(F<int> x);
+		OtherMethod, // line #70: }
+		OtherMethod, // line #71:
+		OtherMethod, // line #72: abstract class BaseCopy extends Base {
+		OtherMethod, // line #73: }
+		OtherMethod, // line #74:
+		OtherMethod, // line #75: abstract class Override implements Base, BaseCopy {
+		OtherMethod, // line #76:   f<E extends int>(x) => null;
+		OtherMethod, // line #77: }
+		OtherMethod, // line #78:
+		OtherMethod, // line #79: class C extends Override implements Base {}
+		OtherMethod, // line #80: ''');
+		OtherMethod, // line #81:   }
+		BlankLine,   // line #82:
+		OtherMethod, // line #83:   test_localVariableInference_bottom_disabled() async {
+		OtherMethod, // line #84:     await resolveTestCode(r'''
+		OtherMethod, // line #85: main() {
+		OtherMethod, // line #86:   var v = null;
+		OtherMethod, // line #87:   v; // marker
+		OtherMethod, // line #88: }''');
+		OtherMethod, // line #89:     assertTypeDynamic(findElement.localVar('v').type);
+		OtherMethod, // line #90:     assertTypeDynamic(findNode.simple('v; // marker'));
+		OtherMethod, // line #91:   }
+		BlankLine,   // line #92:
+		OtherMethod, // line #93:   test_localVariableInference_constant() async {
+		OtherMethod, // line #94:     await resolveTestCode(r'''
+		OtherMethod, // line #95: main() {
+		OtherMethod, // line #96:   var v = 3;
+		OtherMethod, // line #97:   v; // marker
+		OtherMethod, // line #98: }''');
+		OtherMethod, // line #99:     assertType(findElement.localVar('v').type, 'int');
+		OtherMethod, // line #100:     assertType(findNode.simple('v; // marker'), 'int');
+		OtherMethod, // line #101:   }
+		BlankLine,   // line #102:
+		OtherMethod, // line #103:   test_localVariableInference_declaredType_disabled() async {
+		OtherMethod, // line #104:     await resolveTestCode(r'''
+		OtherMethod, // line #105: main() {
+		OtherMethod, // line #106:   dynamic v = 3;
+		OtherMethod, // line #107:   v; // marker
+		OtherMethod, // line #108: }''');
+		OtherMethod, // line #109:     assertTypeDynamic(findElement.localVar('v').type);
+		OtherMethod, // line #110:     assertTypeDynamic(findNode.simple('v; // marker'));
+		OtherMethod, // line #111:   }
+		BlankLine,   // line #112:
+		OtherMethod, // line #113:   test_localVariableInference_noInitializer_disabled() async {
+		OtherMethod, // line #114:     await resolveTestCode(r'''
+		OtherMethod, // line #115: main() {
+		OtherMethod, // line #116:   var v;
+		OtherMethod, // line #117:   v = 3;
+		OtherMethod, // line #118:   v; // marker
+		OtherMethod, // line #119: }''');
+		OtherMethod, // line #120:     if (hasAssignmentLeftResolution) {
+		OtherMethod, // line #121:       assertTypeDynamic(findNode.simple('v ='));
+		OtherMethod, // line #122:     } else {
+		OtherMethod, // line #123:       assertTypeNull(findNode.simple('v ='));
+		OtherMethod, // line #124:     }
+		OtherMethod, // line #125:     assertTypeDynamic(findNode.simple('v; // marker'));
+		OtherMethod, // line #126:   }
+		BlankLine,   // line #127:
+		OtherMethod, // line #128:   test_localVariableInference_transitive_field_inferred_lexical() async {
+		OtherMethod, // line #129:     await resolveTestCode(r'''
+		OtherMethod, // line #130: class A {
+		OtherMethod, // line #131:   final x = 3;
+		OtherMethod, // line #132:   f() {
+		OtherMethod, // line #133:     var v = x;
+		OtherMethod, // line #134:     return v; // marker
+		OtherMethod, // line #135:   }
+		OtherMethod, // line #136: }
+		OtherMethod, // line #137: main() {
+		OtherMethod, // line #138: }
+		OtherMethod, // line #139: ''');
+		OtherMethod, // line #140:     assertType(findElement.localVar('v').type, 'int');
+		OtherMethod, // line #141:     assertType(findNode.simple('v; // marker'), 'int');
+		OtherMethod, // line #142:   }
+		BlankLine,   // line #143:
+		OtherMethod, // line #144:   test_localVariableInference_transitive_field_inferred_reversed() async {
+		OtherMethod, // line #145:     await resolveTestCode(r'''
+		OtherMethod, // line #146: class A {
+		OtherMethod, // line #147:   f() {
+		OtherMethod, // line #148:     var v = x;
+		OtherMethod, // line #149:     return v; // marker
+		OtherMethod, // line #150:   }
+		OtherMethod, // line #151:   final x = 3;
+		OtherMethod, // line #152: }
+		OtherMethod, // line #153: main() {
+		OtherMethod, // line #154: }
+		OtherMethod, // line #155: ''');
+		OtherMethod, // line #156:     assertType(findElement.localVar('v').type, 'int');
+		OtherMethod, // line #157:     assertType(findNode.simple('v; // marker'), 'int');
+		OtherMethod, // line #158:   }
+		BlankLine,   // line #159:
+		OtherMethod, // line #160:   test_localVariableInference_transitive_field_lexical() async {
+		OtherMethod, // line #161:     await resolveTestCode(r'''
+		OtherMethod, // line #162: class A {
+		OtherMethod, // line #163:   int x = 3;
+		OtherMethod, // line #164:   f() {
+		OtherMethod, // line #165:     var v = x;
+		OtherMethod, // line #166:     return v; // marker
+		OtherMethod, // line #167:   }
+		OtherMethod, // line #168: }
+		OtherMethod, // line #169: main() {
+		OtherMethod, // line #170: }
+		OtherMethod, // line #171: ''');
+		OtherMethod, // line #172:     assertType(findElement.localVar('v').type, 'int');
+		OtherMethod, // line #173:     assertType(findNode.simple('v; // marker'), 'int');
+		OtherMethod, // line #174:   }
+		BlankLine,   // line #175:
+		OtherMethod, // line #176:   test_localVariableInference_transitive_field_reversed() async {
+		OtherMethod, // line #177:     await resolveTestCode(r'''
+		OtherMethod, // line #178: class A {
+		OtherMethod, // line #179:   f() {
+		OtherMethod, // line #180:     var v = x;
+		OtherMethod, // line #181:     return v; // marker
+		OtherMethod, // line #182:   }
+		OtherMethod, // line #183:   int x = 3;
+		OtherMethod, // line #184: }
+		OtherMethod, // line #185: main() {
+		OtherMethod, // line #186: }
+		OtherMethod, // line #187: ''');
+		OtherMethod, // line #188:     assertType(findElement.localVar('v').type, 'int');
+		OtherMethod, // line #189:     assertType(findNode.simple('v; // marker'), 'int');
+		OtherMethod, // line #190:   }
+		BlankLine,   // line #191:
+		OtherMethod, // line #192:   test_localVariableInference_transitive_list_local() async {
+		OtherMethod, // line #193:     await resolveTestCode(r'''
+		OtherMethod, // line #194: main() {
+		OtherMethod, // line #195:   var x = <int>[3];
+		OtherMethod, // line #196:   var v = x[0];
+		OtherMethod, // line #197:   v; // marker
+		OtherMethod, // line #198: }''');
+		OtherMethod, // line #199:     assertType(findElement.localVar('v').type, 'int');
+		OtherMethod, // line #200:     assertType(findNode.simple('v; // marker'), 'int');
+		OtherMethod, // line #201:   }
+		BlankLine,   // line #202:
+		OtherMethod, // line #203:   test_localVariableInference_transitive_local() async {
+		OtherMethod, // line #204:     await resolveTestCode(r'''
+		OtherMethod, // line #205: main() {
+		OtherMethod, // line #206:   var x = 3;
+		OtherMethod, // line #207:   var v = x;
+		OtherMethod, // line #208:   v; // marker
+		OtherMethod, // line #209: }''');
+		OtherMethod, // line #210:     assertType(findElement.localVar('v').type, 'int');
+		OtherMethod, // line #211:     assertType(findNode.simple('v; // marker'), 'int');
+		OtherMethod, // line #212:   }
+		BlankLine,   // line #213:
+		OtherMethod, // line #214:   test_localVariableInference_transitive_topLevel_inferred_lexical() async {
+		OtherMethod, // line #215:     await resolveTestCode(r'''
+		OtherMethod, // line #216: final x = 3;
+		OtherMethod, // line #217: main() {
+		OtherMethod, // line #218:   var v = x;
+		OtherMethod, // line #219:   v; // marker
+		OtherMethod, // line #220: }
+		OtherMethod, // line #221: ''');
+		OtherMethod, // line #222:     assertType(findElement.localVar('v').type, 'int');
+		OtherMethod, // line #223:     assertType(findNode.simple('v; // marker'), 'int');
+		OtherMethod, // line #224:   }
+		BlankLine,   // line #225:
+		OtherMethod, // line #226:   test_localVariableInference_transitive_toplevel_inferred_reversed() async {
+		OtherMethod, // line #227:     await resolveTestCode(r'''
+		OtherMethod, // line #228: main() {
+		OtherMethod, // line #229:   var v = x;
+		OtherMethod, // line #230:   v; // marker
+		OtherMethod, // line #231: }
+		OtherMethod, // line #232: final x = 3;
+		OtherMethod, // line #233: ''');
+		OtherMethod, // line #234:     assertType(findElement.localVar('v').type, 'int');
+		OtherMethod, // line #235:     assertType(findNode.simple('v; // marker'), 'int');
+		OtherMethod, // line #236:   }
+		BlankLine,   // line #237:
+		OtherMethod, // line #238:   test_localVariableInference_transitive_topLevel_lexical() async {
+		OtherMethod, // line #239:     await resolveTestCode(r'''
+		OtherMethod, // line #240: int x = 3;
+		OtherMethod, // line #241: main() {
+		OtherMethod, // line #242:   var v = x;
+		OtherMethod, // line #243:   v; // marker
+		OtherMethod, // line #244: }
+		OtherMethod, // line #245: ''');
+		OtherMethod, // line #246:     assertType(findElement.localVar('v').type, 'int');
+		OtherMethod, // line #247:     assertType(findNode.simple('v; // marker'), 'int');
+		OtherMethod, // line #248:   }
+		BlankLine,   // line #249:
+		OtherMethod, // line #250:   test_localVariableInference_transitive_topLevel_reversed() async {
+		OtherMethod, // line #251:     await resolveTestCode(r'''
+		OtherMethod, // line #252: main() {
+		OtherMethod, // line #253:   var v = x;
+		OtherMethod, // line #254:   v; // marker
+		OtherMethod, // line #255: }
+		OtherMethod, // line #256: int x = 3;
+		OtherMethod, // line #257: ''');
+		OtherMethod, // line #258:     assertType(findElement.localVar('v').type, 'int');
+		OtherMethod, // line #259:     assertType(findNode.simple('v; // marker'), 'int');
+		OtherMethod, // line #260:   }
+		BlankLine,   // line #261:
 	}
 
 	runParsePhase(t, opts, source, want)
