@@ -558,7 +558,7 @@ func TestMarkMethodOffsetAlignment(t *testing.T) {
 	runParsePhase(t, nil, source, want)
 }
 
-func TestWhiteSpaceAfterFunctionNames(t *testing.T) {
+func TestMultipleDecorators(t *testing.T) {
 	source := `class MultipleDecorators {
   @override
   @failingTest
@@ -600,14 +600,16 @@ func TestWhiteSpaceAfterFunctionNames(t *testing.T) {
 	runParsePhase(t, nil, source, want)
 }
 
-func TestMultipleDecorators(t *testing.T) {
+func TestWhiteSpaceAfterFunctionNames(t *testing.T) {
 	source := `class C {
   @override Widget build ( BuildContext context ) { }
+	myFunc                 () => null;
 }`
 
 	want := []EntityType{
 		Unknown,
 		BuildMethod,
+		OtherMethod,
 		BlankLine,
 	}
 

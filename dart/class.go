@@ -482,7 +482,7 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 			continue
 		}
 
-		lineNum := i + 1
+		lineNum := i
 
 		features, lineIndex, lastCharAbsOffset, err := c.findNext(lineNum, "=>", "=", "{", ";", "(")
 		if err != nil {
@@ -508,18 +508,18 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 		}
 
 		if strings.HasSuffix(features, "(") {
-			name := f(len(features))
+			name := f(len(features) - 1)
 			entityType := OverrideMethod
-			if name == "build(" {
+			if name == "build" {
 				entityType = BuildMethod
 			}
 
 			c.e.logf("identifyOverrideMethodsAndVars: calling markMethod(line #%v, name=%q, %v), line=%q", i+1, name, entityType, c.lines[i].line)
-			entity, err := c.markMethod(lineNum, name, entityType, lastCharAbsOffset)
+			entity, err := c.markMethod(lineNum, name+"(", entityType, lastCharAbsOffset)
 			if err != nil {
 				return err
 			}
-			if name == "build(" {
+			if name == "build" {
 				c.buildMethod = entity
 			} else {
 				c.overrideMethods = append(c.overrideMethods, entity)
