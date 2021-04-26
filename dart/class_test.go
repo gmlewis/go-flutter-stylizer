@@ -574,6 +574,12 @@ func TestMultipleDecorators(t *testing.T) {
   test_initializer_literal_map_untyped_empty() async {
     fail('times out.');
   }
+
+  @ThisDecorator('is'
+    'completely'
+    'made'
+    'up')
+  final String do_not_use;
 }`
 
 	want := []EntityType{
@@ -593,6 +599,12 @@ func TestMultipleDecorators(t *testing.T) {
 		OverrideMethod,
 		OverrideMethod,
 		OverrideMethod,
+		BlankLine,
+		InstanceVariable,
+		InstanceVariable,
+		InstanceVariable,
+		InstanceVariable,
+		InstanceVariable,
 		BlankLine,
 	}
 
