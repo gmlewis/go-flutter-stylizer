@@ -463,7 +463,7 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 			}
 
 			c.e.logf("identifyOverrideMethodsAndVars: calling markMethod(line #%v, name=%q, %v), line=%q", i+1, name, entityType, c.lines[i].line)
-			entity, err := c.markMethod(i, name, entityType, lastCharAbsOffset)
+			entity, err := c.markMethod(lineNum, name, entityType, lastCharAbsOffset)
 			if err != nil {
 				return err
 			}
@@ -486,12 +486,6 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 			}
 
 			entity.name = f(len(features) - 1)
-
-			c.e.logf("identifyOverrideMethodsAndVars: calling markBody(line #%v, name=OverrideMethod, %v), line=%q", i+1, entity.name, c.lines[i].line)
-			entity, err = c.markBody(entity, i, OverrideMethod, lineIndex, lastCharAbsOffset)
-			if err != nil {
-				return err
-			}
 		} else {
 			// Does not have a body - if it has no fat arrow, it is a variable.
 			if !strings.HasSuffix(features, "=>") {
@@ -507,22 +501,11 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 					return fmt.Errorf("expected trailing ';' for @override operator method on line #%v: %v", lineNum+1, err)
 				}
 			}
-
-			entity, err = c.markBody(entity, i, entity.entityType, lineIndex, lastCharAbsOffset)
-			if err != nil {
-				return err
-			}
 		}
 
-		// Preserve the comment lines leading up to the method.
-		for lineNum--; lineNum > 0; lineNum-- {
-			if isComment(c.lines[lineNum]) || strings.HasPrefix(c.lines[lineNum].stripped, "@") {
-				c.e.logf("identifyOverrideMethodsAndVars: marking comment line %v as type %v", lineNum+1, entity.entityType)
-				c.lines[lineNum].entityType = entity.entityType
-				entity.lines = append([]*Line{c.lines[lineNum]}, entity.lines...)
-				continue
-			}
-			break
+		entity, err = c.markBody(entity, lineNum, entity.entityType, lineIndex, lastCharAbsOffset)
+		if err != nil {
+			return err
 		}
 
 		if entity.entityType == OverrideVariable {
@@ -777,17 +760,23 @@ func (c *Class) markMethod(classLineNum int, methodName string, entityType Entit
 	if !ok {
 		return nil, fmt.Errorf("programming error: expected '()' pair at absOpenParenOffset=%v, line=%#v", absOpenParenOffset, c.lines[classLineNum])
 	}
+	classCloseLineIndex := c.classCloseLineIndex(pair)
 
-	features, classLineIndex, lastCharAbsOffset, err := c.findNext(pair.closeLineIndex-c.lines[0].originalIndex, "=>", "{", ";")
+	features, classLineIndex, lastCharAbsOffset, err := c.findNext(classCloseLineIndex, "=>", "{", ";")
 	if err != nil {
-		return nil, fmt.Errorf("expected method body starting at classLineIndex=%v: %v", pair.closeLineIndex-c.lines[0].originalIndex, err)
+		return nil, fmt.Errorf("expected method body starting at classCloseLineIndex=%v: %v", classCloseLineIndex, err)
 	}
 
 	if strings.HasSuffix(features, "=>") {
-		features, classLineIndex, lastCharAbsOffset, err = c.findNext(pair.closeLineIndex-c.lines[0].originalIndex, "{", ";")
+		features, classLineIndex, lastCharAbsOffset, err = c.findNext(classCloseLineIndex, "{", ";")
 	}
 
 	return c.markBody(entity, classLineNum, entityType, classLineIndex, lastCharAbsOffset)
+}
+
+func (c *Class) classCloseLineIndex(pair *MatchingPair) int {
+	// return pair.closeLineIndex - pair.openLineIndex + c.lines[0].originalIndex
+	return pair.closeLineIndex - c.lines[0].originalIndex
 }
 
 // markBody marks an entire body with the same entityType.
@@ -800,7 +789,7 @@ func (c *Class) markBody(entity *Entity, classLineNum int, entityType EntityType
 		if !ok {
 			return nil, fmt.Errorf("expected matching '}' pair at lastCharAbsOffset=%v", lastCharAbsOffset)
 		}
-		classLineIndex = pair.closeLineIndex - c.lines[0].originalIndex
+		classLineIndex = c.classCloseLineIndex(pair)
 	}
 
 	for i := classLineNum; i <= classLineIndex; i++ {
