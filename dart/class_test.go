@@ -558,7 +558,7 @@ func TestMarkMethodOffsetAlignment(t *testing.T) {
 	runParsePhase(t, nil, source, want)
 }
 
-func TestMultipleDecorators(t *testing.T) {
+func TestWhiteSpaceAfterFunctionNames(t *testing.T) {
 	source := `class MultipleDecorators {
   @override
   @failingTest
@@ -566,6 +566,8 @@ func TestMultipleDecorators(t *testing.T) {
   test_initializer_literal_map_untyped_empty() async {
     fail('times out.');
   }
+
+	@override _TransformationsDemoState createState() => _TransformationsDemoState();
 
 	@Deprecated('do not use this')
   @failingTest
@@ -585,11 +587,27 @@ func TestMultipleDecorators(t *testing.T) {
 		OverrideMethod,
 		BlankLine,
 		OverrideMethod,
+		BlankLine,
 		OverrideMethod,
 		OverrideMethod,
 		OverrideMethod,
 		OverrideMethod,
 		OverrideMethod,
+		OverrideMethod,
+		BlankLine,
+	}
+
+	runParsePhase(t, nil, source, want)
+}
+
+func TestMultipleDecorators(t *testing.T) {
+	source := `class C {
+  @override Widget build ( BuildContext context ) { }
+}`
+
+	want := []EntityType{
+		Unknown,
+		BuildMethod,
 		BlankLine,
 	}
 
