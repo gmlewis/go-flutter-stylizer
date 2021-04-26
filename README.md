@@ -8,7 +8,7 @@ https://github.com/gmlewis/flutter-stylizer) but is
 written in Go instead of TypeScript.
 
 This makes it particularly well-suited to be used in GitHub Actions,
-Bitbucket pipelines, etc., to maintain Flutter code repositories.
+Bitbucket, or other CI/CD pipelines, to maintain Flutter code repositories.
 
 ## Status
 
@@ -26,7 +26,7 @@ not yet ready to try out.
     * `PATH=${PATH}:${HOME}/go/bin`
   * Create a directory for the Go executables: `mkdir -p ${GOPATH}/bin`
 
-* Install `flutter-stylizer`:
+* To install `flutter-stylizer`, run from a bash-like shell or terminal:
 
 ```
 $ go get -u github.com/gmlewis/go-flutter-stylizer/cmd/flutter-stylizer

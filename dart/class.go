@@ -276,31 +276,62 @@ func (c *Class) identifyMainConstructor() error {
 			continue
 		}
 
-		offset := strings.Index(line.classLevelText, className)
-		if offset >= 0 {
-			if offset > 0 {
-				char := line.classLevelText[offset-1 : offset]
-				if char != " " && char != "\t" {
-					continue
-				}
-			}
-			if line.entityType > MainConstructor {
-				if err := c.repairIncorrectlyLabeledLine(i); err != nil {
-					return err
-				}
-			}
-			c.e.logf("identifyMainConstructor: marking line %v as type MainConstructor", i+1)
-			line.entityType = MainConstructor
+		features, lineIndex, lastCharAbsOffset, err := c.findNext(i, "=", "{", ";", "(")
+		if err != nil {
+			// An error here is OK... it just means we reached EOF.
+			return nil
+		}
 
-			absOpenParenOffset := line.classLevelTextOffsets[offset+len(className)-1]
-			c.e.logf("identifyMainConstructor: calling markMethod(line #%v, className=%q, MainConstructor)", i+1, className)
-			var err error
-			c.theConstructor, err = c.markMethod(i, className, MainConstructor, absOpenParenOffset)
-			if err != nil {
+		advanceToNextLineIndex := func() {
+			for i+1 < len(c.lines) && i+1 <= lineIndex {
+				i++
+			}
+		}
+
+		if !strings.HasSuffix(features, "(") {
+			if strings.HasSuffix(features, "=") || strings.HasSuffix(features, "{") {
+				features, lineIndex, lastCharAbsOffset, err = c.findNext(i, "}", ";")
+				if err != nil {
+					// An error here is OK... it just means we reached EOF.
+					return nil
+				}
+			}
+			advanceToNextLineIndex()
+			continue
+		}
+
+		if c.e.fullBuf[lastCharAbsOffset] != '(' {
+			return fmt.Errorf("programming error: expected fullBuf[%v]='(' but got '%c'", lastCharAbsOffset, c.e.fullBuf[lastCharAbsOffset])
+		}
+
+		classNameIndex := strings.Index(features, className)
+		if classNameIndex < 0 {
+			advanceToNextLineIndex()
+			continue
+		}
+
+		if classNameIndex > 0 {
+			char := features[classNameIndex-1 : classNameIndex]
+			if char != " " && char != "\t" {
+				advanceToNextLineIndex()
+				continue
+			}
+		}
+
+		if line.entityType > MainConstructor {
+			if err := c.repairIncorrectlyLabeledLine(i); err != nil {
 				return err
 			}
-			break
 		}
+		c.e.logf("identifyMainConstructor: marking line %v as type MainConstructor", i+1)
+		line.entityType = MainConstructor
+
+		c.e.logf("identifyMainConstructor: calling markMethod(line #%v, className=%q, MainConstructor)", i+1, className)
+		c.theConstructor, err = c.markMethod(i, className, MainConstructor, lastCharAbsOffset)
+		if err != nil {
+			return err
+		}
+		break
 	}
 
 	return nil

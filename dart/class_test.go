@@ -114,6 +114,45 @@ class myClass extends Widget {
 	runParsePhase(t, nil, source, want)
 }
 
+func TestMainHandler_NoFalsePositives(t *testing.T) {
+	const source = `// test.dart
+class ScannerErrorCode extends ErrorCode {
+  /**
+   * Parameters:
+   * 0: the token that was expected but not found
+   */
+  static const ScannerErrorCode EXPECTED_TOKEN =
+      const ScannerErrorCode('EXPECTED_TOKEN', "Expected to find '{0}'.");
+
+  /**
+   * Parameters:
+   * 0: the illegal character
+   */
+  static const ScannerErrorCode ILLEGAL_CHARACTER =
+      const ScannerErrorCode('ILLEGAL_CHARACTER', "Illegal character '{0}'.");
+}`
+
+	want := []EntityType{
+		Unknown,        // line #2: {
+		StaticVariable, // line #3:   /**
+		StaticVariable, // line #4:    * Parameters:
+		StaticVariable, // line #5:    * 0: the token that was expected but not found
+		StaticVariable, // line #6:    */
+		StaticVariable, // line #7:   static const ScannerErrorCode EXPECTED_TOKEN =
+		StaticVariable, // line #8:       const ScannerErrorCode('EXPECTED_TOKEN', "Expected to find '{0}'.");
+		BlankLine,      // line #9:
+		StaticVariable, // line #10:   /**
+		StaticVariable, // line #11:    * Parameters:
+		StaticVariable, // line #12:    * 0: the illegal character
+		StaticVariable, // line #13:    */
+		StaticVariable, // line #14:   static const ScannerErrorCode ILLEGAL_CHARACTER =
+		StaticVariable, // line #15:       const ScannerErrorCode('ILLEGAL_CHARACTER', "Illegal character '{0}'.");
+		BlankLine,      // line #16:
+	}
+
+	runParsePhase(t, nil, source, want)
+}
+
 func TestNamedConstructorsAreKeptIntact(t *testing.T) {
 	const source = `class AnimationController extends Animation<double>
 with AnimationEagerListenerMixin, AnimationLocalListenersMixin, AnimationLocalStatusListenersMixin {
