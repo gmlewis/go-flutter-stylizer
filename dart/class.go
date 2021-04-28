@@ -138,62 +138,6 @@ func (c *Client) GetClasses(editor *Editor, groupAndSortGetterMethods bool) ([]*
 		classes = append(classes, dartClass)
 	}
 
-	// for _, line := range editor.lines {
-	// 	if (strings.HasPrefix(line.line, "void main(") || strings.HasPrefix(line.line, "main(")) && strings.HasSuffix(line.line, ") {") {
-	// 		// Find the end of main, marking sections as comments or strings to avoid them below.
-	// 		openCurlyOffset := findOpenCurlyOffset(editor.fullBuf, line.startOffset)
-	// 		editor.findMatchingBracket(openCurlyOffset)
-	// 		continue
-	// 	}
-
-	// 	mm := matchClassRE.FindStringSubmatch(line.line)
-	// 	if len(mm) != 2 {
-	// 		continue
-	// 	}
-
-	// 	className := mm[1]
-	// 	classOffset := line.startOffset
-	// 	openCurlyOffset := findOpenCurlyOffset(editor.fullBuf, classOffset)
-
-	// 	if editor.fullBuf[openCurlyOffset] == ';' {
-	// 		continue
-	// 	}
-
-	// 	if openCurlyOffset <= classOffset {
-	// 		return nil, fmt.Errorf(`expected "{" after "class" at offset %v`, classOffset)
-	// 	}
-
-	// 	if line.entityType != Unknown || line.isCommentOrString {
-	// 		editor.logf("\n\nSkipping new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v due to entityType/comment/string", className, classOffset, openCurlyOffset, line)
-	// 		continue
-	// 	}
-
-	// 	// This is a hack, but helps with files like `localizations_utils.dart` in
-	// 	// the Flutter distribution.
-	// 	if strings.ContainsAny(line.stripped, "$'") {
-	// 		editor.logf("\n\nSkipping new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v due to appearance of $ or '", className, classOffset, openCurlyOffset, line)
-	// 		continue
-	// 	}
-
-	// 	editor.logf("\n\nFound new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v", className, classOffset, openCurlyOffset, line)
-	// 	closeCurlyOffset, err := editor.findMatchingBracket(openCurlyOffset)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	if closeCurlyOffset <= openCurlyOffset {
-	// 		return nil, fmt.Errorf(`expected "}" after "{" at offset %v`, openCurlyOffset)
-	// 	}
-	// 	editor.logf("\n\nFound end of class %q at closeCurlyOffset=%v", className, closeCurlyOffset)
-
-	// 	dartClass := NewClass(editor, className, openCurlyOffset, closeCurlyOffset, groupAndSortGetterMethods)
-	// 	if err := dartClass.FindFeatures(); err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	classes = append(classes, dartClass)
-	// }
-
 	return classes, nil
 }
 
@@ -262,7 +206,6 @@ func (c *Class) FindFeatures() error {
 // of the last character returned.
 //
 // If no search terms can be found, the error io.EOF is returned.
-
 func (c *Class) findNext(lineNum int, searchFor ...string) (features string, classLineNum int, absOffsetIndex int, err error) {
 	classLineNum = lineNum
 
@@ -721,69 +664,9 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
 	incorrectLabel := c.lines[lineNum].entityType
 	switch incorrectLabel {
-	// case MainConstructor:
-	// 	el := c.theConstructor
-	// 	for j := 0; j < len(el.lines); j++ {
-	// 		line := el.lines[j]
-	// 		if line != c.lines[lineNum] {
-	// 			continue
-	// 		}
-	// 		c.theConstructor.lines = append(c.theConstructor.lines[:j], c.theConstructor.lines[j+1:]...)
-	// 		if len(c.theConstructor.lines) == 0 {
-	// 			c.theConstructor = nil
-	// 		}
-	// 		return nil
-	// 	}
-	// case NamedConstructor:
-	// 	for i := 0; i < len(c.namedConstructors); i++ {
-	// 		el := c.namedConstructors[i]
-	// 		for j := 0; j < len(el.lines); j++ {
-	// 			line := el.lines[j]
-	// 			if line != c.lines[lineNum] {
-	// 				continue
-	// 			}
-	// 			c.namedConstructors[i].lines = append(c.namedConstructors[i].lines[:j], c.namedConstructors[i].lines[j+1:]...)
-	// 			if len(c.namedConstructors[i].lines) == 0 {
-	// 				c.namedConstructors = append(c.namedConstructors[:i], c.namedConstructors[i+1:]...)
-	// 			}
-	// 			return nil
-	// 		}
-	// 	}
-	// case OverrideMethod:
-	// 	for i := 0; i < len(c.overrideMethods); i++ {
-	// 		el := c.overrideMethods[i]
-	// 		for j := 0; j < len(el.lines); j++ {
-	// 			line := el.lines[j]
-	// 			if line != c.lines[lineNum] {
-	// 				continue
-	// 			}
-	// 			c.overrideMethods[i].lines = append(c.overrideMethods[i].lines[:j], c.overrideMethods[i].lines[j+1:]...)
-	// 			if len(c.overrideMethods[i].lines) == 0 {
-	// 				c.overrideMethods = append(c.overrideMethods[:i], c.overrideMethods[i+1:]...)
-	// 			}
-	// 			return nil
-	// 		}
-	// 	}
-	// case OverrideVariable:
-	// for i := 0; i < len(c.overrideVariables); i++ {
-	// 	el := c.overrideVariables[i]
-	// 	for j := 0; j < len(el.lines); j++ {
-	// 		line := el.lines[j]
-	// 		if line != c.lines[lineNum] {
-	// 			continue
-	// 		}
-	// 		c.overrideVariables[i].lines = append(c.overrideVariables[i].lines[:j], c.overrideVariables[i].lines[j+1:]...)
-	// 		if len(c.overrideVariables[i].lines) == 0 {
-	// 			c.overrideVariables = append(c.overrideVariables[:i], c.overrideVariables[i+1:]...)
-	// 		}
-	// 		return nil
-	// 	}
-	// }
 	default:
 		return fmt.Errorf("repairIncorrectlyLabeledLine: class %q, class line #%v, file line #%v, unhandled case %v. Please report on GitHub Issue Tracker with example test case.", c.className, lineNum+1, c.lines[0].originalIndex+lineNum+1, incorrectLabel)
 	}
-
-	// return nil
 }
 
 func (c *Class) findSequence(lineNum int) (string, int, string, error) {
@@ -862,7 +745,6 @@ func (c *Class) markMethod(classLineNum int, methodName string, entityType Entit
 }
 
 func (c *Class) classCloseLineIndex(pair *MatchingPair) int {
-	// return pair.closeLineIndex - pair.openLineIndex + c.lines[0].originalIndex
 	return pair.closeLineIndex - c.lines[0].originalIndex
 }
 
