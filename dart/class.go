@@ -704,6 +704,9 @@ func (c *Class) markMethod(classLineNum int, methodName string, entityType Entit
 
 	if strings.HasSuffix(features, "=>") {
 		features, classLineIndex, lastCharAbsOffset, err = c.findNext(classCloseLineIndex, "{", ";")
+		if err != nil {
+			return nil, fmt.Errorf("expected fat arrow method body starting at classCloseLineIndex=%v: %v", classCloseLineIndex, err)
+		}
 	}
 
 	return c.markBody(entity, classLineNum, entityType, classLineIndex, lastCharAbsOffset)
