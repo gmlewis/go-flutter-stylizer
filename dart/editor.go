@@ -72,6 +72,43 @@ func NewEditor(buf string, verbose bool) (*Editor, error) {
 	return e, nil
 }
 
+func (e *Editor) GetClasses(groupAndSortGetterMethods bool) ([]*Class, error) {
+	var classes []*Class
+
+	for _, lineIndex := range e.classLineIndices {
+		line := e.lines[lineIndex]
+		mm := matchClassRE.FindStringSubmatch(line.line)
+		if len(mm) != 2 {
+			return nil, fmt.Errorf("programming error: expected class on line #%v, got %q", lineIndex+1, line.line)
+		}
+
+		className := mm[1]
+		classOffset := line.startOffset
+		openCurlyOffset := e.findStartOfClass(classOffset)
+		if e.fullBuf[openCurlyOffset] == ';' { // this is valid and can be ignored: class D = Object with Function;
+			continue
+		}
+
+		e.logf("\n\nFound new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v", className, classOffset, openCurlyOffset, line)
+		pair, ok := e.matchingPairs[openCurlyOffset]
+		if !ok {
+			return nil, fmt.Errorf("programming error: no matching pair found at openCurlyOffset %v", openCurlyOffset)
+		}
+
+		closeCurlyOffset := pair.closeAbsOffset
+		e.logf("\n\nFound end of class %q at closeCurlyOffset=%v", className, closeCurlyOffset)
+
+		dartClass := NewClass(e, className, openCurlyOffset, closeCurlyOffset, groupAndSortGetterMethods)
+		if err := dartClass.FindFeatures(); err != nil {
+			return nil, err
+		}
+
+		classes = append(classes, dartClass)
+	}
+
+	return classes, nil
+}
+
 // findStartOfClass returns the absolute offset of the next top-level '{' or ';'
 // starting at offset startOffset.
 //

@@ -33,8 +33,7 @@ func TestStrongMode_GetClasses(t *testing.T) {
 		t.Fatalf("NewEditor: %v", err)
 	}
 
-	c := &Client{}
-	classes, err := c.GetClasses(e, false)
+	classes, err := e.GetClasses(false)
 	if err != nil {
 		t.Fatalf("GetClasses: %v", err)
 	}

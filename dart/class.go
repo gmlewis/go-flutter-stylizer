@@ -106,43 +106,6 @@ func NewClass(editor *Editor, className string,
 	}
 }
 
-func (c *Client) GetClasses(editor *Editor, groupAndSortGetterMethods bool) ([]*Class, error) {
-	var classes []*Class
-
-	for _, lineIndex := range editor.classLineIndices {
-		line := editor.lines[lineIndex]
-		mm := matchClassRE.FindStringSubmatch(line.line)
-		if len(mm) != 2 {
-			return nil, fmt.Errorf("programming error: expected class on line #%v, got %q", lineIndex+1, line.line)
-		}
-
-		className := mm[1]
-		classOffset := line.startOffset
-		openCurlyOffset := editor.findStartOfClass(classOffset)
-		if editor.fullBuf[openCurlyOffset] == ';' { // this is valid and can be ignored: class D = Object with Function;
-			continue
-		}
-
-		editor.logf("\n\nFound new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v", className, classOffset, openCurlyOffset, line)
-		pair, ok := editor.matchingPairs[openCurlyOffset]
-		if !ok {
-			return nil, fmt.Errorf("programming error: no matching pair found at openCurlyOffset %v", openCurlyOffset)
-		}
-
-		closeCurlyOffset := pair.closeAbsOffset
-		editor.logf("\n\nFound end of class %q at closeCurlyOffset=%v", className, closeCurlyOffset)
-
-		dartClass := NewClass(editor, className, openCurlyOffset, closeCurlyOffset, groupAndSortGetterMethods)
-		if err := dartClass.FindFeatures(); err != nil {
-			return nil, err
-		}
-
-		classes = append(classes, dartClass)
-	}
-
-	return classes, nil
-}
-
 func (c *Class) FindFeatures() error {
 	for i, line := range c.lines {
 		// Change a blank line following a full-line comment to a SingleLineComment in

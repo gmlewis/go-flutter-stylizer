@@ -88,7 +88,7 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 	}
 
 	e.Verbose = c.opts.Verbose
-	classes, err := c.GetClasses(e, c.opts.GroupAndSortGetterMethods)
+	classes, err := e.GetClasses(c.opts.GroupAndSortGetterMethods)
 	if err != nil {
 		return false, err
 	}

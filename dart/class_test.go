@@ -40,7 +40,7 @@ func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType
 	}
 
 	c := &Client{opts: testOpts}
-	got, err := c.GetClasses(e, testOpts.GroupAndSortGetterMethods)
+	got, err := e.GetClasses(testOpts.GroupAndSortGetterMethods)
 	if err != nil {
 		t.Fatal(err)
 	}
