@@ -84,12 +84,14 @@ func NewClass(editor *Editor, className string,
 	// Replace last line for truncated classBody:
 	ll := classLines[len(classLines)-1]
 	classLines[len(classLines)-1] = &Line{
-		line:           p[len(p)-1],
-		stripped:       strings.TrimSpace(p[len(p)-1]),
-		strippedOffset: ll.strippedOffset,
-		startOffset:    ll.startOffset,
-		endOffset:      ll.endOffset,
-		entityType:     BlankLine,
+		line:              p[len(p)-1],
+		stripped:          strings.TrimSpace(p[len(p)-1]),
+		strippedOffset:    ll.strippedOffset,
+		startOffset:       ll.startOffset,
+		endOffset:         ll.endOffset,
+		entityType:        BlankLine,
+		originalIndex:     ll.originalIndex,
+		isCommentOrString: ll.isCommentOrString,
 	}
 
 	return &Class{
