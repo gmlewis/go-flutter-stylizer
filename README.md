@@ -12,30 +12,30 @@ Bitbucket, or other CI/CD pipelines, to maintain Flutter code repositories.
 
 ## Status
 
-This has been run on the Flutter source code base (consisting of 7772 *.dart
+This has been run on the Flutter source code base (consisting of 8003 *.dart
 files) located here (on Linux):
 https://flutter.dev/docs/get-started/install/linux
 and produces no further changes after the initial run.
 
 ```
 $ cd ~/development
-$ time tar xf ~/Downloads/flutter_linux_2.0.5-stable.tar.xz
+$ time tar xf ~/Downloads/flutter_linux_2.2.3-stable.tar.xz
 
-real	0m21.166s
-user	0m20.610s
-sys	0m4.915s
+real	0m24.000s
+user	0m23.249s
+sys	0m5.379s
 
 $ time flutter-stylizer -q -w ./...
 
-real	0m11.595s
-user	0m14.547s
-sys	0m0.881s
+real	0m12.916s
+user	0m15.289s
+sys	0m1.202s
 
 $ time flutter-stylizer -q -d ./...
 
-real	0m10.531s
-user	0m13.120s
-sys	0m0.718s
+real	0m11.828s
+user	0m14.362s
+sys	0m0.745s
 ```
 
 ## Installation
