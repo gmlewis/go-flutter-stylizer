@@ -1,5 +1,7 @@
 # flutter-stylizer
 
+[![CodeQL](https://github.com/gmlewis/go-flutter-stylizer/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/gmlewis/go-flutter-stylizer/actions/workflows/codeql-analysis.yml)
+
 `flutter-stylizer` is a stand-alone statically-linked Go executable that
 organizes your Flutter classes in an opinionated and consistent manner.
 
