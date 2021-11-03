@@ -204,6 +204,20 @@ behavior of the "public-other-methods" as requested in #18:
 These features are experimental and should be used with caution.
 Please file any bugs you find on the [GitHub issue tracker].
 
+### Exclude files using file globbing
+
+To exclude files from processing, add a section with one or more
+[glob-style](https://pub.dev/packages/glob#syntax) patterns to your
+`${HOME}/.flutter-stylizer.yaml` file (or any `.yaml` file and use the
+`--config` flag to point to it), like this:
+
+```
+exclude:
+  - "**/*.g.dart"
+  - "**/*.gr.dart"
+  - "**/*.freezed.dart"
+```
+
 ## Limitations
 
 This program does not have a full-featured Dart syntax tree parser.

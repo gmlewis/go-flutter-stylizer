@@ -23,11 +23,46 @@ import (
 	"strings"
 )
 
-func findDartFiles(path string) []string {
+func findDartFiles(path string, excludeFiles []string, quiet bool) []string {
+	if !quiet && len(excludeFiles) > 0 {
+		log.Printf("excluding files: %+v", excludeFiles)
+	}
 	var result []string
 
+	excluded := func(path string) bool {
+		for _, pattern := range excludeFiles {
+			if strings.HasPrefix(pattern, "**/") {
+				base := filepath.Base(path)
+				match, err := filepath.Match(pattern[3:], base)
+				if err != nil {
+					log.Fatalf("bad glob pattern %q: %v", pattern[3:], err)
+				}
+				if match {
+					if !quiet {
+						log.Printf("Skipping file %q due to exclude pattern %q ...", path, pattern)
+					}
+					return true
+				}
+				continue
+			}
+
+			match, err := filepath.Match(pattern, path)
+			if err != nil {
+				log.Fatalf("bad glob pattern %q: %v", pattern, err)
+			}
+			if match {
+				if !quiet {
+					log.Printf("Skipping file %q due to exclude pattern %q ...", path, pattern)
+				}
+				return true
+			}
+		}
+
+		return false
+	}
+
 	f := func(path string, d fs.DirEntry, err error) error {
-		if strings.HasSuffix(path, ".dart") {
+		if strings.HasSuffix(path, ".dart") && !excluded(path) {
 			result = append(result, path)
 		}
 		return nil

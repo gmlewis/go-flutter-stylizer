@@ -102,6 +102,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	groupAndSortGetterMethods := vp.GetBool("groupAndSortGetterMethods")
 	memberOrdering := vp.GetStringSlice("memberOrdering")
 	sortOtherMethods := vp.GetBool("sortOtherMethods")
+	excludeFiles := vp.GetStringSlice("exclude")
 
 	if !quiet && (len(memberOrdering) > 0 || groupAndSortGetterMethods || sortOtherMethods) {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
@@ -129,7 +130,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	var newArgs []string
 	for i := 0; i < len(args); i++ {
 		if strings.HasSuffix(args[i], "/...") || strings.HasSuffix(args[i], `\...`) {
-			dartFiles := findDartFiles(args[i][0 : len(args[i])-4])
+			dartFiles := findDartFiles(args[i][0:len(args[i])-4], excludeFiles, quiet)
 			newArgs = append(newArgs, dartFiles...)
 			continue
 		}
