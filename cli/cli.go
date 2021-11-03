@@ -30,9 +30,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-// This version string should stay in sync with the VSCode plugin
-// to reduce confusion.
-const VERSION = "0.1.2"
+// This version string probably can not reasonably stay in sync with the VSCode plugin, unfortunately.
+const VERSION = "0.1.4"
 
 var cfgFile string
 
