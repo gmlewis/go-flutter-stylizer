@@ -16,6 +16,8 @@ limitations under the License.
 
 package dart
 
+import "strings"
+
 // Entity represents a single, independent feature of a Dart.Class.
 type Entity struct {
 	entityType EntityType
@@ -77,4 +79,8 @@ func (e EntityType) String() string {
 	case GetterMethod:
 		return "GetterMethod"
 	}
+}
+
+func (e *Entity) isPrivateMethod() bool {
+	return strings.HasPrefix(e.name, "_")
 }

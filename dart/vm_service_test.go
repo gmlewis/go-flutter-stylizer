@@ -34,7 +34,7 @@ func TestVMService_GetClasses(t *testing.T) {
 		t.Fatalf("NewEditor: %v", err)
 	}
 
-	classes, err := e.GetClasses(false)
+	classes, err := e.GetClasses(false, false)
 	if err != nil {
 		t.Fatalf("GetClasses: %v", err)
 	}

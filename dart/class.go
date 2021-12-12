@@ -32,18 +32,20 @@ type Class struct {
 	openCurlyOffset           int
 	closeCurlyOffset          int
 	groupAndSortGetterMethods bool
+	separatePrivateMethods    bool
 
-	theConstructor         *Entity
-	namedConstructors      []*Entity
-	staticVariables        []*Entity
-	instanceVariables      []*Entity
-	overrideVariables      []*Entity
-	staticPrivateVariables []*Entity
-	privateVariables       []*Entity
-	overrideMethods        []*Entity
-	otherMethods           []*Entity
-	buildMethod            *Entity
-	getterMethods          []*Entity
+	theConstructor          *Entity
+	namedConstructors       []*Entity
+	staticVariables         []*Entity
+	instanceVariables       []*Entity
+	overrideVariables       []*Entity
+	staticPrivateVariables  []*Entity
+	privateVariables        []*Entity
+	overrideMethods         []*Entity
+	otherAllOrPublicMethods []*Entity
+	otherPrivateMethods     []*Entity
+	buildMethod             *Entity
+	getterMethods           []*Entity
 }
 
 // NewClass returns a new Dart Class.
@@ -55,7 +57,7 @@ type Class struct {
 // groupAndSortGetterMethods determines how getter methods are processed.
 func NewClass(editor *Editor, className string,
 	openCurlyOffset, closeCurlyOffset int,
-	groupAndSortGetterMethods bool) *Class {
+	groupAndSortGetterMethods, separatePrivateMethods bool) *Class {
 	lessThanOffset := strings.Index(className, "<")
 	if lessThanOffset >= 0 { // Strip off <T>.
 		className = className[0:lessThanOffset]
@@ -103,6 +105,7 @@ func NewClass(editor *Editor, className string,
 		closeCurlyOffset: closeCurlyOffset,
 
 		groupAndSortGetterMethods: groupAndSortGetterMethods,
+		separatePrivateMethods:    separatePrivateMethods,
 	}
 }
 
@@ -526,7 +529,11 @@ func (c *Class) identifyOthers() error {
 
 		switch entity.entityType {
 		case OtherMethod:
-			c.otherMethods = append(c.otherMethods, entity)
+			if c.separatePrivateMethods && entity.isPrivateMethod() {
+				c.otherPrivateMethods = append(c.otherPrivateMethods, entity)
+			} else {
+				c.otherAllOrPublicMethods = append(c.otherAllOrPublicMethods, entity)
+			}
 		case GetterMethod:
 			c.getterMethods = append(c.getterMethods, entity)
 		case StaticVariable:

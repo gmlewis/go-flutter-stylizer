@@ -9,5 +9,6 @@ memberOrdering:
   private-instance-variables
   public-override-methods
   public-other-methods
+  private-other-methods
   build-method
 sortOtherMethods: false
