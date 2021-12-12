@@ -40,7 +40,7 @@ func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType
 	}
 
 	c := &Client{opts: testOpts}
-	got, err := e.GetClasses(testOpts.GroupAndSortGetterMethods)
+	got, err := e.GetClasses(testOpts.GroupAndSortGetterMethods, testOpts.SeparatePrivateMethods)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1129,7 +1129,7 @@ func TestIssue19_FactoryConstructorShouldNotBeDuplicated(t *testing.T) {
 func TestFindFeatures_linux_mac(t *testing.T) {
 	bc, bcLineOffset, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
 
-	uc := NewClass(bc, "Class1", bcOCO, bcCCO, false)
+	uc := NewClass(bc, "Class1", bcOCO, bcCCO, false, false)
 
 	want := []EntityType{
 		Unknown,                 // line #7: class Class1 {
@@ -1203,7 +1203,7 @@ func TestFindFeatures_linux_mac(t *testing.T) {
 func TestFindFeatures_windoze(t *testing.T) {
 	wz, wzLineOffset, wzOCO, wzCCO := setupEditor(t, "class Class1 {", bcWindoze)
 
-	wc := NewClass(wz, "Class1", wzOCO, wzCCO, false)
+	wc := NewClass(wz, "Class1", wzOCO, wzCCO, false, false)
 
 	want := []EntityType{
 		Unknown,                 // line #7: class Class1 {

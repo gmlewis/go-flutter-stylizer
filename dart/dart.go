@@ -39,8 +39,9 @@ type Options struct {
 
 	GroupAndSortGetterMethods bool
 
-	MemberOrdering   []string
-	SortOtherMethods bool
+	MemberOrdering         []string
+	SortOtherMethods       bool
+	SeparatePrivateMethods bool
 }
 
 // Client represents a Dart processor.
@@ -58,6 +59,7 @@ var defaultMemberOrdering = []string{
 	"private-instance-variables",
 	"public-override-methods",
 	"public-other-methods",
+	"private-other-methods", // optional!
 	"build-method",
 }
 
@@ -65,6 +67,12 @@ var defaultMemberOrdering = []string{
 func New(opts Options) *Client {
 	if !validateMemberOrdering(opts.MemberOrdering) {
 		opts.MemberOrdering = defaultMemberOrdering
+	}
+
+	for _, v := range opts.MemberOrdering {
+		if v == "private-other-methods" {
+			opts.SeparatePrivateMethods = true
+		}
 	}
 
 	return &Client{opts: opts}
@@ -88,7 +96,7 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 	}
 
 	e.Verbose = c.opts.Verbose
-	classes, err := e.GetClasses(c.opts.GroupAndSortGetterMethods)
+	classes, err := e.GetClasses(c.opts.GroupAndSortGetterMethods, c.opts.SeparatePrivateMethods)
 	if err != nil {
 		return false, err
 	}
@@ -149,8 +157,8 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 }
 
 func validateMemberOrdering(memberOrdering []string) bool {
-	if len(memberOrdering) != len(defaultMemberOrdering) {
-		log.Printf("flutterStylizer.memberOrdering must have %v values, but found %v. Ignoring and using defaults.", len(defaultMemberOrdering), len(memberOrdering))
+	if got, want := len(memberOrdering), len(defaultMemberOrdering); got < want-1 || got > want {
+		log.Printf("flutterStylizer.memberOrdering must have %v or %v values, but found %v. Ignoring and using defaults.", want-1, want, got)
 		return false
 	}
 

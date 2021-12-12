@@ -128,6 +128,13 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 		case "public-override-methods":
 			sort.SliceStable(dc.overrideMethods, sortFunc(dc.overrideMethods))
 			addEntities(dc.overrideMethods, true)
+		case "private-other-methods":
+			if c.opts.SeparatePrivateMethods {
+				if c.opts.SortOtherMethods {
+					sort.SliceStable(dc.otherPrivateMethods, sortFunc(dc.otherPrivateMethods))
+				}
+				addEntities(dc.otherPrivateMethods, true)
+			}
 		case "public-other-methods":
 			if c.opts.GroupAndSortGetterMethods {
 				sort.SliceStable(dc.getterMethods, sortFunc(dc.getterMethods))
@@ -135,9 +142,9 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 			}
 
 			if c.opts.SortOtherMethods {
-				sort.SliceStable(dc.otherMethods, sortFunc(dc.otherMethods))
+				sort.SliceStable(dc.otherAllOrPublicMethods, sortFunc(dc.otherAllOrPublicMethods))
 			}
-			addEntities(dc.otherMethods, true)
+			addEntities(dc.otherAllOrPublicMethods, true)
 
 			// Preserve random single-line and multi-line comments.
 			for i := 1; i < len(dc.lines); i++ {

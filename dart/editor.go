@@ -72,7 +72,7 @@ func NewEditor(buf string, verbose bool) (*Editor, error) {
 	return e, nil
 }
 
-func (e *Editor) GetClasses(groupAndSortGetterMethods bool) ([]*Class, error) {
+func (e *Editor) GetClasses(groupAndSortGetterMethods, separatePrivateMethods bool) ([]*Class, error) {
 	var classes []*Class
 
 	for _, lineIndex := range e.classLineIndices {
@@ -98,7 +98,7 @@ func (e *Editor) GetClasses(groupAndSortGetterMethods bool) ([]*Class, error) {
 		closeCurlyOffset := pair.closeAbsOffset
 		e.logf("\n\nFound end of class %q at closeCurlyOffset=%v", className, closeCurlyOffset)
 
-		dartClass := NewClass(e, className, openCurlyOffset, closeCurlyOffset, groupAndSortGetterMethods)
+		dartClass := NewClass(e, className, openCurlyOffset, closeCurlyOffset, groupAndSortGetterMethods, separatePrivateMethods)
 		if err := dartClass.FindFeatures(); err != nil {
 			return nil, err
 		}
