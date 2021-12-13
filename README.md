@@ -204,9 +204,9 @@ behavior of the "public-other-methods" as requested in #18:
 - `sortOtherMethods` (default: `false`)
   - Whether to sort the 'public-other-methods' within their group.
 
-As of `v0.1.5`, a new `private-other-methods` field was added (See #3.)
+As of `v0.1.5`, a new `private-other-methods` field was added. (See #3.)
 If not specified, private methods will continue to be grouped within
-the `public_other_methods` section.
+the `public-other-methods` section.
 
 These features are experimental and should be used with caution.
 Please file any bugs you find on the [GitHub issue tracker].
