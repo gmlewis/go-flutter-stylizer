@@ -260,6 +260,10 @@ incorporate the fix into the repo.
 
 ## Release Notes
 
+### v0.1.6
+
+- Process all `mixin` blocks in addition to all `class` blocks.
+
 ### v0.1.5
 
 - `private-other-methods` can be added to the member ordering.
