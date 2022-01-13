@@ -642,32 +642,41 @@ func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
 }
 
 func (c *Class) findSequence(lineNum int) (string, int, string, error) {
-	var result string
-
 	features, lineIndex, _, err := c.findNext(lineNum, ";", "}")
 	if err != nil || features == "" {
 		return "", 0, "", fmt.Errorf(`findNext: %v`, err)
 	}
 
-	buildLeadingText := true
-	var buildStr string
-	for i, f := range features {
-		if strings.ContainsAny(string(f), "()[]{}=;") {
-			buildLeadingText = false
-			if f == '=' && i < len(features)-1 && features[i+1] == '>' {
-				result += "=>"
-				continue
-			}
-			result += string(f)
-		}
-		if buildLeadingText {
-			buildStr += string(f)
-		}
-	}
-	leadingText := strings.TrimSpace(buildStr)
+	sequence, leadingText := findSequenceAndLeadingText(features)
 	lineCount := lineIndex - lineNum + 1
 
-	return result, lineCount, leadingText, nil
+	return sequence, lineCount, leadingText, nil
+}
+
+func findSequenceAndLeadingText(features string) (sequence, leadingText string) {
+	// two special cases to ignore:
+	const sc1 = " Function()> "
+	const sc2 = " Function() "
+	modified := strings.ReplaceAll(features, sc1, strings.Repeat(" ", len(sc1)))
+	modified = strings.ReplaceAll(modified, sc2, strings.Repeat(" ", len(sc2)))
+
+	buildLeadingText := true
+	var buildStr string
+	for i, f := range modified {
+		if strings.ContainsAny(string(f), "()[]{}=;") {
+			buildLeadingText = false
+			if f == '=' && i < len(modified)-1 && modified[i+1] == '>' {
+				sequence += "=>"
+				continue
+			}
+			sequence += string(f)
+		}
+		if buildLeadingText {
+			buildStr += features[i : i+1]
+		}
+	}
+	leadingText = strings.TrimSpace(buildStr)
+	return sequence, leadingText
 }
 
 // markMethod marks an entire method with the same entityType.

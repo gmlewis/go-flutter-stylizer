@@ -260,6 +260,10 @@ incorporate the fix into the repo.
 
 ## Release Notes
 
+### v0.1.7
+
+- Fix [issue #26](https://github.com/gmlewis/flutter-stylizer/issues/26) caused by `Function()`.
+
 ### v0.1.6
 
 - Process all `mixin` blocks in addition to all `class` blocks.
