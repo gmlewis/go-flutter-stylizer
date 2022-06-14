@@ -77,7 +77,7 @@ func (e *Editor) GetClasses(groupAndSortGetterMethods, separatePrivateMethods bo
 
 	for _, lineIndex := range e.classLineIndices {
 		line := e.lines[lineIndex]
-		mm := matchClassRE.FindStringSubmatch(line.line)
+		mm := matchClassOrMixinRE.FindStringSubmatch(line.line)
 		if len(mm) != 2 {
 			return nil, fmt.Errorf("programming error: expected class on line #%v, got %q", lineIndex+1, line.line)
 		}

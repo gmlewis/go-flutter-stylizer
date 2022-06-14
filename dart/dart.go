@@ -185,7 +185,7 @@ func validateMemberOrdering(memberOrdering []string) bool {
 }
 
 var (
-	matchClassRE = regexp.MustCompile(`^(?:abstract\s+)?class\s+(\S+).*$`)
+	matchClassOrMixinRE = regexp.MustCompile(`^(?:abstract\s+)?(?:class|mixin)\s+(\S+).*$`)
 )
 
 // logf logs the line if debug is true.

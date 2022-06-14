@@ -205,9 +205,9 @@ behavior of the "public-other-methods" as requested in #18:
 - `sortOtherMethods` (default: `false`)
   - Whether to sort the 'public-other-methods' within their group.
 
-As of `v0.1.5`, a new `private-other-methods` field was added (See #3.)
+As of `v0.1.5`, a new `private-other-methods` field was added. (See #3.)
 If not specified, private methods will continue to be grouped within
-the `public_other_methods` section.
+the `public-other-methods` section.
 
 As of `v0.1.8`, a new option flag was added:
 
@@ -271,6 +271,14 @@ incorporate the fix into the repo.
 
 - Add new option [issue #31](https://github.com/gmlewis/flutter-stylizer/issues/31):
   - `groupAndSortVariableTypes` (default: `false`)
+
+### v0.1.7
+
+- Fix [issue #26](https://github.com/gmlewis/flutter-stylizer/issues/26) caused by `Function()`.
+
+### v0.1.6
+
+- Process all `mixin` blocks in addition to all `class` blocks.
 
 ### v0.1.5
 

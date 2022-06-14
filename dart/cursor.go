@@ -506,7 +506,7 @@ func (c *Cursor) atTopOfBraceLevel(braceLevel int) bool {
 //
 // It also detects the start of class lines.
 func (c *Cursor) advanceToNextLine() error {
-	if c.lineIndex == 0 && matchClassRE.FindStringSubmatch(c.e.lines[c.lineIndex].line) != nil {
+	if c.lineIndex == 0 && matchClassOrMixinRE.FindStringSubmatch(c.e.lines[c.lineIndex].line) != nil {
 		c.classLineIndices = append(c.classLineIndices, c.lineIndex)
 	}
 
@@ -536,7 +536,7 @@ func (c *Cursor) advanceToNextLine() error {
 		return io.EOF
 	}
 
-	if c.atTopOfBraceLevel(0) && matchClassRE.FindStringSubmatch(c.e.lines[c.lineIndex].line) != nil {
+	if c.atTopOfBraceLevel(0) && matchClassOrMixinRE.FindStringSubmatch(c.e.lines[c.lineIndex].line) != nil {
 		c.classLineIndices = append(c.classLineIndices, c.lineIndex)
 	}
 
