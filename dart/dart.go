@@ -38,6 +38,7 @@ type Options struct {
 	Write   bool
 
 	GroupAndSortGetterMethods bool
+	GroupAndSortVariableTypes bool
 
 	MemberOrdering         []string
 	SortOtherMethods       bool

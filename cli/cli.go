@@ -31,7 +31,7 @@ import (
 )
 
 // This version string probably can not reasonably stay in sync with the VSCode plugin, unfortunately.
-const VERSION = "0.1.5"
+const VERSION = "0.1.7"
 
 var cfgFile string
 
@@ -99,6 +99,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 
 	vp := viper.GetViper()
 	groupAndSortGetterMethods := vp.GetBool("groupAndSortGetterMethods")
+	groupAndSortVariableTypes := vp.GetBool("groupAndSortVariableTypes")
 	memberOrdering := vp.GetStringSlice("memberOrdering")
 	sortOtherMethods := vp.GetBool("sortOtherMethods")
 	excludeFiles := vp.GetStringSlice("exclude")
@@ -116,6 +117,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		Write:   write,
 
 		GroupAndSortGetterMethods: groupAndSortGetterMethods,
+		GroupAndSortVariableTypes: groupAndSortVariableTypes,
 
 		MemberOrdering:   memberOrdering,
 		SortOtherMethods: sortOtherMethods,
