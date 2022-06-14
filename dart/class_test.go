@@ -20,6 +20,8 @@ import (
 	_ "embed"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType) (*Client, []*Class) {
@@ -29,6 +31,7 @@ func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType
 	testOpts := Options{MemberOrdering: defaultMemberOrdering}
 	if opts != nil {
 		testOpts.GroupAndSortGetterMethods = opts.GroupAndSortGetterMethods
+		testOpts.GroupAndSortVariableTypes = opts.GroupAndSortVariableTypes
 		testOpts.MemberOrdering = opts.MemberOrdering
 		testOpts.SortOtherMethods = opts.SortOtherMethods
 		verbose = opts.Verbose
@@ -78,21 +81,10 @@ func runFullStylizer(t *testing.T, opts *Options, source, wantSource string, wan
 		}
 	}
 
-	newBuf := c.rewriteClasses(source, edits)
-	gotLines := strings.Split(newBuf, "\n")
-	wantLines := strings.Split(wantSource, "\n")
-	if len(gotLines) != len(wantLines) {
-		t.Errorf("rewriteClasses = %v lines, want %v lines", len(gotLines), len(wantLines))
-		t.Errorf("rewriteClasses got:\n%v", newBuf)
-	}
-
-	for i := 0; i < len(gotLines); i++ {
-		line := strings.ReplaceAll(gotLines[i], "\r", "")
-		if i < len(wantLines) && line != wantLines[i] {
-			t.Errorf("line #%v: got:\n%v\nwant:\n%v", i+1, line, wantLines[i])
-		} else if i >= len(wantLines) {
-			t.Errorf("line #%v: got:\n%v", i+1, line)
-		}
+	newBuf := strings.ReplaceAll(c.rewriteClasses(source, edits), "\r", "")
+	if diff := cmp.Diff(wantSource, newBuf); diff != "" {
+		t.Log("got:", newBuf)
+		t.Errorf("rewriteClasses mismatch (-want +got):\n%v", diff)
 	}
 
 	return got

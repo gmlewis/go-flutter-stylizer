@@ -89,6 +89,23 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 		}
 	}
 
+	addEntitiesByVarTypes := func(entities []*Entity) {
+		var finalVars, normalVars, optionalVars []*Entity
+		for _, e := range entities {
+			stripped := e.lines[0].stripped
+			if strings.Contains(stripped, "final ") {
+				finalVars = append(finalVars, e)
+			} else if strings.Contains(stripped, "?") {
+				optionalVars = append(optionalVars, e)
+			} else {
+				normalVars = append(normalVars, e)
+			}
+		}
+		addEntities(finalVars, false)
+		addEntities(normalVars, false)
+		addEntities(optionalVars, false)
+	}
+
 	sortFunc := func(slice []*Entity) func(a, b int) bool {
 		return func(a, b int) bool { return slice[a].name < slice[b].name }
 	}
@@ -115,7 +132,11 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 			addEntities(dc.staticVariables, false)
 		case "public-instance-variables":
 			sort.SliceStable(dc.instanceVariables, sortFunc(dc.instanceVariables))
-			addEntities(dc.instanceVariables, false)
+			if c.opts.GroupAndSortVariableTypes {
+				addEntitiesByVarTypes(dc.instanceVariables)
+			} else {
+				addEntities(dc.instanceVariables, false)
+			}
 		case "public-override-variables":
 			sort.SliceStable(dc.overrideVariables, sortFunc(dc.overrideVariables))
 			addEntities(dc.overrideVariables, false)

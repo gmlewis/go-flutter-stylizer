@@ -99,6 +99,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 
 	vp := viper.GetViper()
 	groupAndSortGetterMethods := vp.GetBool("groupAndSortGetterMethods")
+	groupAndSortVariableTypes := vp.GetBool("groupAndSortVariableTypes")
 	memberOrdering := vp.GetStringSlice("memberOrdering")
 	sortOtherMethods := vp.GetBool("sortOtherMethods")
 	excludeFiles := vp.GetStringSlice("exclude")
@@ -116,6 +117,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		Write:   write,
 
 		GroupAndSortGetterMethods: groupAndSortGetterMethods,
+		GroupAndSortVariableTypes: groupAndSortVariableTypes,
 
 		MemberOrdering:   memberOrdering,
 		SortOtherMethods: sortOtherMethods,

@@ -177,6 +177,7 @@ To override the default order of the stylizer, add a section to your
 
 ```
 groupAndSortGetterMethods: false
+groupAndSortVariableTypes: false
 memberOrdering:
   public-constructor
   named-constructors
@@ -207,6 +208,12 @@ behavior of the "public-other-methods" as requested in #18:
 As of `v0.1.5`, a new `private-other-methods` field was added. (See #3.)
 If not specified, private methods will continue to be grouped within
 the `public-other-methods` section.
+
+As of `v0.1.8`, a new option flag was added:
+
+- `groupAndSortVariableTypes` (default: `false`)
+  - Whether to group public variables separately by type and sort
+    them within their groups. Types are: "final", "optional" (`?`), and "normal".
 
 These features are experimental and should be used with caution.
 Please file any bugs you find on the [GitHub issue tracker].
@@ -259,6 +266,11 @@ incorporate the fix into the repo.
   supported even though the Dart compiler can handle it.
 
 ## Release Notes
+
+### v0.1.8
+
+- Add new option [issue #31](https://github.com/gmlewis/flutter-stylizer/issues/31):
+  - `groupAndSortVariableTypes` (default: `false`)
 
 ### v0.1.7
 
