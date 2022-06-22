@@ -19,6 +19,7 @@ package dart
 import (
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 )
 
@@ -164,6 +165,11 @@ func (c *Class) FindFeatures() error {
 	return nil
 }
 
+var (
+	ternary1RE = regexp.MustCompile(`\?\s+\{`)
+	ternary2RE = regexp.MustCompile(`:\s+\{`)
+)
+
 // findNext finds the next occurrence of one of the searchFor terms
 // within the classLevelText (possibly spanning multiple lines).
 //
@@ -179,6 +185,11 @@ func (c *Class) findNext(lineNum int, searchFor ...string) (features string, cla
 
 	for ; classLineNum < len(c.lines); classLineNum++ {
 		line := c.lines[classLineNum]
+		if line.classLevelText == "" {
+			features += " "
+			continue
+		}
+
 		features += line.classLevelText
 		classLevelIndex := -1
 		var s string
@@ -191,12 +202,19 @@ func (c *Class) findNext(lineNum int, searchFor ...string) (features string, cla
 				continue
 			}
 
+			// If the matched "ending" item is a "}"
+			// and before that we found a "?" followed by a "{",
+			// then we need to keep reading and find a ":" followed by another "}".
+			if ss == "}" && ternary1RE.MatchString(features) && !ternary2RE.MatchString(features) {
+				continue
+			}
+
 			classLevelIndex = i
 			s = ss
 		}
 
 		if classLevelIndex >= 0 {
-			if i := strings.Index(features, s); i > 0 {
+			if i := strings.LastIndex(features, s); i > 0 {
 				features = features[0 : i+len(s)]
 			}
 
@@ -438,7 +456,8 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 		}
 
 		if strings.HasSuffix(features, "(") {
-			name := f(len(features) - 1)
+			// There might be multiple parens, so find the first one to get the name:
+			name := f(strings.Index(features, "("))
 			entityType := OverrideMethod
 			if name == "build" {
 				entityType = BuildMethod
@@ -577,7 +596,7 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 	}
 
 	entity.entityType = InstanceVariable
-	switch true {
+	switch {
 	case privateVar && staticKeyword:
 		entity.entityType = StaticPrivateVariable
 	case staticKeyword:
@@ -599,13 +618,13 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 		entity.entityType = OtherMethod
 
 	default:
-		if strings.Index(sequence, "=>") >= 0 {
+		if strings.Contains(sequence, "=>") {
 			entity.entityType = OtherMethod
 		}
 	}
 
 	// Force getters to be methods.
-	if strings.Index(leadingText, " get ") >= 0 {
+	if strings.Contains(leadingText, " get ") {
 		if c.groupAndSortGetterMethods {
 			entity.entityType = GetterMethod
 		} else {
@@ -637,7 +656,7 @@ func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
 	incorrectLabel := c.lines[lineNum].entityType
 	switch incorrectLabel {
 	default:
-		return fmt.Errorf("repairIncorrectlyLabeledLine: class %q, class line #%v, file line #%v, unhandled case %v. Please report on GitHub Issue Tracker with example test case.", c.className, lineNum+1, c.lines[0].originalIndex+lineNum+1, incorrectLabel)
+		return fmt.Errorf("repairIncorrectlyLabeledLine: class %q, class line #%v, file line #%v, unhandled case %v. Please report on GitHub Issue Tracker with example test case", c.className, lineNum+1, c.lines[0].originalIndex+lineNum+1, incorrectLabel)
 	}
 }
 
@@ -719,7 +738,7 @@ func (c *Class) markMethod(classLineNum int, methodName string, entityType Entit
 	}
 
 	if strings.HasSuffix(features, "=>") {
-		features, classLineIndex, lastCharAbsOffset, err = c.findNext(classCloseLineIndex, "{", ";")
+		_, classLineIndex, lastCharAbsOffset, err = c.findNext(classCloseLineIndex, "{", ";")
 		if err != nil {
 			return nil, fmt.Errorf("expected fat arrow method body starting at classCloseLineIndex=%v: %v", classCloseLineIndex, err)
 		}

@@ -68,7 +68,7 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 			lines = append(lines, line.line)
 		}
 
-		if separateEntities != false || len(entity.lines) > 1 {
+		if separateEntities || len(entity.lines) > 1 {
 			if len(lines) > 0 && lines[len(lines)-1] != "" {
 				lines = append(lines, "")
 				c.logf("reorderClass.addEntity(%v): adding blank line #%v", entity.entityType, len(lines))

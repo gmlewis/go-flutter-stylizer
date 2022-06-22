@@ -16456,6 +16456,18 @@ func TestFindSequenceAndLeadingText(t *testing.T) {
 			sequence:    "(){}",
 			leadingText: "String toString",
 		},
+		{
+			features:    `final Map<String, dynamic> _initialValues = kReleaseMode ? {} : { 'a':'b' };`,
+			sequence:    "={}{};",
+			leadingText: "final Map<String, dynamic> _initialValues",
+		},
+		{
+			features: `final Map<String, dynamic> _initialValues = kReleaseMode
+			 ? {}
+			 : { 'a':'b' };`,
+			sequence:    "={}{};",
+			leadingText: "final Map<String, dynamic> _initialValues",
+		},
 	}
 
 	for i, tt := range tests {

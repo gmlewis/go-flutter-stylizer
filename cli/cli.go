@@ -94,7 +94,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	f(write)
 
 	if flagCount > 1 {
-		return fmt.Errorf("Must supply only one of --diff (-d), --list (-l), and --write (-w).")
+		return fmt.Errorf("must supply only one of --diff (-d), --list (-l), and --write (-w)")
 	}
 
 	vp := viper.GetViper()
@@ -125,7 +125,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	c := dart.New(opts)
 
 	if len(args) == 0 {
-		return fmt.Errorf("Must supply at least one filename or './...' to process all files in directory tree.")
+		return fmt.Errorf("must supply at least one filename or './...' to process all files in directory tree")
 	}
 
 	var newArgs []string
@@ -138,7 +138,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		newArgs = append(newArgs, args[i])
 	}
 	if len(newArgs) == 0 {
-		return fmt.Errorf("No *.dart files found.")
+		return fmt.Errorf("no *.dart files found")
 	}
 
 	if !quiet {
@@ -159,7 +159,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	}
 
 	if anyDiffs && (opts.Diff || opts.List) {
-		return fmt.Errorf("Differences were found. Exit code 1.")
+		return fmt.Errorf("differences were found. Exit code 1")
 	}
 
 	if !quiet {
