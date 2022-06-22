@@ -31,7 +31,7 @@ import (
 )
 
 // This version string probably can not reasonably stay in sync with the VSCode plugin, unfortunately.
-const VERSION = "0.1.8"
+const VERSION = "0.1.11"
 
 var cfgFile string
 
