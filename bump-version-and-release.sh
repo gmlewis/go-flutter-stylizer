@@ -5,7 +5,7 @@ go test ./...
 go vet ./...
 bump_version patch cli/cli.go
 ./install.sh
-git push
+git push && git push --tags
 GOOS=linux GOARCH=amd64 go build -o ${HOME}/Downloads/flutter-stylizer-for-linux ./cmd/flutter-stylizer
 GOOS=windows GOARCH=386 go build -o ${HOME}/Downloads/flutter-stylizer-for-windows.exe ./cmd/flutter-stylizer
 GOOS=darwin GOARCH=amd64 go build -o ${HOME}/Downloads/flutter-stylizer-for-mac ./cmd/flutter-stylizer
