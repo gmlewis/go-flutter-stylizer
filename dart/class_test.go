@@ -18,6 +18,7 @@ package dart
 
 import (
 	_ "embed"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -54,7 +55,11 @@ func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType
 		}
 
 		if len(got[0].lines) != len(want) {
-			t.Errorf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
+			for i := 0; i < len(got[0].lines); i++ {
+				line := got[0].lines[i]
+				fmt.Printf("%v, // line #%v: %v\n", line.entityType, line.originalIndex+1, line.line)
+			}
+			t.Fatalf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
 		}
 
 		for i := 0; i < len(got[0].lines); i++ {
