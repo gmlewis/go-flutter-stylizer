@@ -24,8 +24,8 @@ import (
 //go:embed testfiles/strong_mode.dart.txt
 var strong_mode_dart_txt string
 
-//go:embed testfiles/strong_mode_want.txt
-var strong_mode_want_txt string
+// //go:embed testfiles/strong_mode_want.txt
+// var strong_mode_want_txt string
 
 func TestStrongMode_GetClasses(t *testing.T) {
 	e, err := NewEditor(strong_mode_dart_txt, false)

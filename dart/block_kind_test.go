@@ -18,7 +18,6 @@ package dart
 
 import (
 	_ "embed"
-	"fmt"
 	"testing"
 )
 
@@ -91,50 +90,5 @@ func TestBlockKindExample_StaysTheSame(t *testing.T) {
 
 	if len(classes) != 1 {
 		t.Fatalf("got %v classes; want 1", len(classes))
-	}
-}
-
-func compareEntities(t *testing.T, name string, got, want []*Entity) {
-	t.Helper()
-
-	if got == nil {
-		return
-	}
-
-	if len(got) != len(want) {
-		t.Errorf("entities %q: got %v, want %v", name, len(got), len(want))
-
-		for i := 0; i < len(got); i++ {
-			var e *Entity
-			if i < len(want) {
-				e = want[i]
-			}
-			compareEntity(t, fmt.Sprintf("%v[%v]", name, i+1), got[i], e)
-		}
-	}
-}
-
-func compareEntity(t *testing.T, name string, got, want *Entity) {
-	t.Helper()
-
-	if got == nil {
-		return
-	}
-
-	if want == nil {
-		want = &Entity{}
-	}
-
-	if len(got.lines) != len(want.lines) {
-		t.Errorf("entity %q: got %v lines, want %v", name, len(got.lines), len(want.lines))
-
-		for i := 0; i < len(got.lines); i++ {
-			line := got.lines[i]
-			if i < len(want.lines) && line.line != want.lines[i].line {
-				t.Errorf("entity %q: line #%v: got:\n%v\nwant:\n%v", name, i+1, line.line, want.lines[i].line)
-			} else {
-				t.Errorf("entity %q: line #%v: got:\n%v", name, i+1, line.line)
-			}
-		}
 	}
 }

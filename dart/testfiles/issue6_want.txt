@@ -1,5 +1,6 @@
 class MyClass {
   static const kReleaseMode = true;
+
   final Map<String, dynamic> _initialValues = kReleaseMode
       ? {}
       : {
