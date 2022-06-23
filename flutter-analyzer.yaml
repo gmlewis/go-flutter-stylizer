@@ -11,4 +11,5 @@ memberOrdering:
   public-other-methods
   private-other-methods
   build-method
+sortClassesWithinFile: false
 sortOtherMethods: false

@@ -150,6 +150,21 @@ func (e *Editor) findLineIndexAtOffset(absOffset int) (int, int) {
 	return len(e.lines), 0
 }
 
+// findClassAbsoluteStart finds the very first absolute offset either at the
+// beginning of the buffer or after the last blank line before a class is defined.
+func (e *Editor) findClassAbsoluteStart(dc *Class) int {
+	result := dc.openCurlyOffset
+	for ; result > 0; result-- {
+		if result > 1 && e.fullBuf[result-2:result] == "\n\n" {
+			break
+		}
+		if result > 3 && e.fullBuf[result-4:result] == "\r\n\r\n" {
+			break
+		}
+	}
+	return result
+}
+
 // logf logs the line if verbose is true.
 func (e *Editor) logf(fmtStr string, args ...interface{}) {
 	if e.Verbose {

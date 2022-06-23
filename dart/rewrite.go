@@ -24,13 +24,14 @@ import (
 
 // Edit represents an edit of an editor buffer.
 type Edit struct {
+	dc       *Class
 	startPos int
 	endPos   int
 	text     string
 }
 
 func (c *Client) generateEdits(classes []*Class) []*Edit {
-	var edits []*Edit
+	var edits, allClasses []*Edit
 
 	for i := len(classes) - 1; i >= 0; i-- {
 		dc := classes[i]
@@ -38,20 +39,55 @@ func (c *Client) generateEdits(classes []*Class) []*Edit {
 		endPos := dc.closeCurlyOffset
 
 		lines, changesMade := c.reorderClass(dc)
-		if !changesMade {
-			continue
-		}
 
 		edit := &Edit{
+			dc:       dc,
 			startPos: startPos,
 			endPos:   endPos,
 			text:     strings.Join(lines, "\n"),
 		}
 
-		edits = append(edits, edit)
+		allClasses = append(allClasses, edit)
+		if changesMade {
+			edits = append(edits, edit)
+		}
+	}
+
+	if c.opts.SortClassesWithinFile {
+		edits = c.sortClassesWithinFile(edits, allClasses)
 	}
 
 	return edits
+}
+
+func (c *Client) sortClassesWithinFile(edits, allClasses []*Edit) []*Edit {
+	gt := func(a, b int) bool { return allClasses[a].dc.className > allClasses[b].dc.className }
+	if sort.SliceIsSorted(allClasses, gt) {
+		return edits
+	}
+
+	sort.Slice(allClasses, gt)
+	rev := append([]*Edit{}, allClasses...)
+	lt := func(a, b int) bool { return rev[a].dc.className < rev[b].dc.className }
+	sort.Slice(rev, lt)
+
+	var result []*Edit
+	for i, cl := range allClasses {
+		// log.Printf("i=%v, className=%q, old: startPos=%v, endPos=%v, new: startPos=%v, endPos=%v", i, cl.dc.className, cl.startPos, cl.endPos, rev[i].startPos, rev[i].endPos)
+		csp := c.editor.findClassAbsoluteStart(cl.dc)
+		// log.Printf("i=%v, csp=%v\n%s%s", i, csp,
+		rcsp := c.editor.findClassAbsoluteStart(rev[i].dc)
+		// log.Printf("i=%v, rcsp=%v\n%s%s", i, rcsp, c.editor.fullBuf[rcsp:rev[i].startPos], rev[i].text)
+
+		result = append(result, &Edit{
+			dc:       cl.dc,
+			startPos: rcsp,
+			endPos:   rev[i].endPos,
+			text:     c.editor.fullBuf[csp:cl.startPos] + cl.text,
+		})
+	}
+
+	return result
 }
 
 func (c *Client) reorderClass(dc *Class) ([]string, bool) {

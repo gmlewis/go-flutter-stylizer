@@ -41,13 +41,15 @@ type Options struct {
 	GroupAndSortVariableTypes bool
 
 	MemberOrdering         []string
+	SortClassesWithinFile  bool
 	SortOtherMethods       bool
 	SeparatePrivateMethods bool
 }
 
 // Client represents a Dart processor.
 type Client struct {
-	opts Options
+	editor *Editor
+	opts   Options
 }
 
 var defaultMemberOrdering = []string{
@@ -65,7 +67,7 @@ var defaultMemberOrdering = []string{
 }
 
 // New returns a new Dart processor.
-func New(opts Options) *Client {
+func New(e *Editor, opts Options) *Client {
 	if !validateMemberOrdering(opts.MemberOrdering) {
 		opts.MemberOrdering = defaultMemberOrdering
 	}
@@ -76,7 +78,7 @@ func New(opts Options) *Client {
 		}
 	}
 
-	return &Client{opts: opts}
+	return &Client{editor: e, opts: opts}
 }
 
 // StylizeFile sylizes a single Dart file using the provided options.
@@ -95,6 +97,7 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("NewEditor: %v", err)
 	}
+	c.editor = e
 
 	e.Verbose = c.opts.Verbose
 	classes, err := e.GetClasses(c.opts.GroupAndSortGetterMethods, c.opts.SeparatePrivateMethods)

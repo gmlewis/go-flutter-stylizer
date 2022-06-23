@@ -6,6 +6,11 @@ this file.
 Please make sure you have a backup (preferably in git) of your code before running
 `flutter-stylizer` in case it doesn't handle your code properly.
 
+## [0.1.12]
+
+- Add new option [issue #8](https://github.com/gmlewis/go-flutter-stylizer/issues/8):
+  - `sortClassesWithinFile` (default: `false`)
+
 ## [0.1.11]
 
 - Fix [issue #6](https://github.com/gmlewis/go-flutter-stylizer/issues/6).

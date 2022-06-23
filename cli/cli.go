@@ -101,6 +101,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	groupAndSortGetterMethods := vp.GetBool("groupAndSortGetterMethods")
 	groupAndSortVariableTypes := vp.GetBool("groupAndSortVariableTypes")
 	memberOrdering := vp.GetStringSlice("memberOrdering")
+	sortClassesWithinFile := vp.GetBool("sortClassesWithinFile")
 	sortOtherMethods := vp.GetBool("sortOtherMethods")
 	excludeFiles := vp.GetStringSlice("exclude")
 
@@ -119,10 +120,11 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		GroupAndSortGetterMethods: groupAndSortGetterMethods,
 		GroupAndSortVariableTypes: groupAndSortVariableTypes,
 
-		MemberOrdering:   memberOrdering,
-		SortOtherMethods: sortOtherMethods,
+		MemberOrdering:        memberOrdering,
+		SortClassesWithinFile: sortClassesWithinFile,
+		SortOtherMethods:      sortOtherMethods,
 	}
-	c := dart.New(opts)
+	c := dart.New(nil, opts) // Editor is filled in by StylizeFile below.
 
 	if len(args) == 0 {
 		return fmt.Errorf("must supply at least one filename or './...' to process all files in directory tree")
