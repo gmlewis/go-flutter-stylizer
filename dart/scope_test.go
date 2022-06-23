@@ -60,8 +60,8 @@ func TestScope_Class1(t *testing.T) {
 		BlankLine,       // line #6:
 	}
 
-	runParsePhase(t, opts, source, want)
-	// runFullStylizer(t, opts, source, wantSource, want)
+	runParsePhase(t, opts, source, [][]EntityType{want})
+	// runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestScope_Class2(t *testing.T) {
@@ -81,8 +81,8 @@ func TestScope_Class2(t *testing.T) {
 		BlankLine,       // line #7:
 	}
 
-	runParsePhase(t, opts, source, want)
-	// runFullStylizer(t, opts, source, wantSource, want)
+	runParsePhase(t, opts, source, [][]EntityType{want})
+	// runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestScope_Class3(t *testing.T) {
@@ -144,8 +144,8 @@ func TestScope_Class3(t *testing.T) {
 		BlankLine,               // line #49:
 	}
 
-	// runParsePhase(t, opts, source, want)
-	runFullStylizer(t, opts, source, wantSource, want)
+	// runParsePhase(t, opts, source, [][]EntityType{want})
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestScope_Class4(t *testing.T) {
@@ -168,8 +168,8 @@ func TestScope_Class4(t *testing.T) {
 		BlankLine,       // line #10:
 	}
 
-	runParsePhase(t, opts, source, want)
-	// runFullStylizer(t, opts, source, wantSource, want)
+	runParsePhase(t, opts, source, [][]EntityType{want})
+	// runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestScope_Class5(t *testing.T) {
@@ -195,8 +195,8 @@ func TestScope_Class5(t *testing.T) {
 		BlankLine,       // line #12:
 	}
 
-	runParsePhase(t, opts, source, want)
-	// runFullStylizer(t, opts, source, wantSource, want)
+	runParsePhase(t, opts, source, [][]EntityType{want})
+	// runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestScope_Class6(t *testing.T) {
@@ -291,8 +291,8 @@ func TestScope_Class6(t *testing.T) {
 		BlankLine,               // line #81:
 	}
 
-	runParsePhase(t, opts, source, want)
-	// runFullStylizer(t, opts, source, wantSource, want)
+	runParsePhase(t, opts, source, [][]EntityType{want})
+	// runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestScope_Class7(t *testing.T) {
@@ -313,8 +313,8 @@ func TestScope_Class7(t *testing.T) {
 		BlankLine,       // line #7:
 	}
 
-	runParsePhase(t, opts, source, want)
-	// runFullStylizer(t, opts, source, wantSource, want)
+	runParsePhase(t, opts, source, [][]EntityType{want})
+	// runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestScope_Class8(t *testing.T) {
@@ -435,8 +435,8 @@ func TestScope_Class8(t *testing.T) {
 		BlankLine,               // line #107:
 	}
 
-	runParsePhase(t, opts, source, want)
-	// runFullStylizer(t, opts, source, wantSource, want)
+	runParsePhase(t, opts, source, [][]EntityType{want})
+	// runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestScope_Class9(t *testing.T) {
@@ -458,8 +458,8 @@ func TestScope_Class9(t *testing.T) {
 		BlankLine,       // line #8:
 	}
 
-	runParsePhase(t, opts, source, want)
-	// runFullStylizer(t, opts, source, wantSource, want)
+	runParsePhase(t, opts, source, [][]EntityType{want})
+	// runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestScope_Class10(t *testing.T) {
@@ -501,6 +501,6 @@ func TestScope_Class10(t *testing.T) {
 		BlankLine,               // line #28:
 	}
 
-	runParsePhase(t, opts, source, want)
-	// runFullStylizer(t, opts, source, wantSource, want)
+	runParsePhase(t, opts, source, [][]EntityType{want})
+	// runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }

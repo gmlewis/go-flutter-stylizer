@@ -93,5 +93,5 @@ func TestBindingMixinExample(t *testing.T) {
 		BlankLine,               // line #69:
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }

@@ -76,7 +76,7 @@ func TestBlockKindExample(t *testing.T) {
 		BlankLine,        // line #42:
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestBlockKindExample_StaysTheSame(t *testing.T) {

@@ -71,7 +71,7 @@ func TestIssue26_Case1(t *testing.T) {
 		BlankLine,               // line #23:
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 //go:embed testfiles/issue26_case2.dart.txt
@@ -112,5 +112,5 @@ func TestIssue26_Case2(t *testing.T) {
 		BlankLine,               // line #7:
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }

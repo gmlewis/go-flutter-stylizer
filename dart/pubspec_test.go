@@ -200,6 +200,6 @@ func TestPubspec_Class1(t *testing.T) {
 		BlankLine,        // line #159:
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 	runFullStylizer(t, opts, wantSource, wantSource, nil)
 }

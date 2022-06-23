@@ -60,7 +60,7 @@ func TestIssue6_case1(t *testing.T) {
 		BlankLine,               // line #11:
 	}
 
-	runParsePhase(t, opts, source, want)
+	runParsePhase(t, opts, source, [][]EntityType{want})
 }
 
 func TestIssue6_case2(t *testing.T) {
@@ -98,5 +98,5 @@ func TestIssue6_case2(t *testing.T) {
 		BlankLine,               // line #11:
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }

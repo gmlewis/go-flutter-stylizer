@@ -25,10 +25,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType) (*Client, []*Class) {
+func runParsePhase(t *testing.T, opts *Options, source string, wantClasses [][]EntityType) (*Client, []*Class) {
 	t.Helper()
 
-	var verbose bool
 	testOpts := Options{MemberOrdering: defaultMemberOrdering}
 	if opts != nil {
 		testOpts.GroupAndSortGetterMethods = opts.GroupAndSortGetterMethods
@@ -36,56 +35,61 @@ func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType
 		testOpts.MemberOrdering = opts.MemberOrdering
 		testOpts.SortClassesWithinFile = opts.SortClassesWithinFile
 		testOpts.SortOtherMethods = opts.SortOtherMethods
-		verbose = opts.Verbose
+		testOpts.Debug = opts.Debug
+		testOpts.Verbose = opts.Verbose
 	}
 
-	e, err := NewEditor(source, verbose)
+	e, err := NewEditor(source, testOpts.Verbose)
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}
 
 	c := &Client{editor: e, opts: testOpts}
-	got, err := e.GetClasses(testOpts.GroupAndSortGetterMethods, testOpts.SeparatePrivateMethods)
+	gotAll, err := e.GetClasses(testOpts.GroupAndSortGetterMethods, testOpts.SeparatePrivateMethods)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(want) > 0 {
-		if want := 1; len(got) != want {
-			t.Fatalf("GetClasses = %v, want %v", len(got), want)
-		}
+	if len(wantClasses) == 0 {
+		return c, gotAll
+	}
 
-		if len(got[0].lines) != len(want) {
-			for i := 0; i < len(got[0].lines); i++ {
-				line := got[0].lines[i]
-				fmt.Printf("%v, // line #%v: %v\n", line.entityType, line.originalIndex+1, line.line)
+	if len(gotAll) != len(wantClasses) {
+		t.Fatalf("got %v classes, want %v", len(gotAll), len(wantClasses))
+	}
+
+	for k := 0; k < len(wantClasses); k++ {
+		got := gotAll[k]
+		want := wantClasses[k]
+		if len(got.lines) != len(want) {
+			dump := make([]string, 0, len(got.lines))
+			for j := 0; j < len(got.lines); j++ {
+				line := got.lines[j]
+				dump = append(dump, fmt.Sprintf("  %v, // line #%v: %v", line.entityType, line.originalIndex+1, line.line))
 			}
-			t.Fatalf("getClasses lines = %v, want %v", len(got[0].lines), len(want))
+			fmt.Printf("\n\nvar wantClass%02d = []EntityType{\n%v\n}\n\n", k+1, strings.Join(dump, "\n")) // Keeps the output together
+			t.Errorf("getClasses #%v lines = %v, want %v", k+1, len(got.lines), len(want))
+			continue
 		}
 
-		for i := 0; i < len(got[0].lines); i++ {
-			line := got[0].lines[i]
+		for j := 0; j < len(got.lines); j++ {
+			line := got.lines[j]
 			// fmt.Printf("%v, // line #%v: %v\n", line.entityType, line.originalIndex+1, line.line)
-			if line.entityType != want[i] {
-				t.Errorf("line #%v: got entityType %v, want %v: %v", line.originalIndex+1, line.entityType, want[i], line.line)
+			if line.entityType != want[j] {
+				t.Errorf("getClasses #%v line #%v: got entityType %v, want %v: %v", k+1, line.originalIndex+1, line.entityType, want[j], line.line)
 			}
 		}
 	}
 
-	return c, got
+	return c, gotAll
 }
 
-func runFullStylizer(t *testing.T, opts *Options, source, wantSource string, want []EntityType) []*Class {
+func runFullStylizer(t *testing.T, opts *Options, source, wantSource string, wantClasses [][]EntityType) []*Class {
 	t.Helper()
 
-	c, got := runParsePhase(t, opts, source, want)
+	c, got := runParsePhase(t, opts, source, wantClasses)
 
 	edits := c.generateEdits(got)
-	if len(want) > 0 {
-		if want := 1; len(edits) != want {
-			t.Errorf("got %v edits, want %v", len(edits), want)
-		}
-	}
 
 	newBuf := strings.ReplaceAll(c.rewriteClasses(source, edits), "\r", "")
 	if diff := cmp.Diff(wantSource, newBuf); diff != "" {
@@ -108,7 +112,7 @@ class myClass extends Widget {
 		BlankLine,
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 func TestMainHandler_NoFalsePositives(t *testing.T) {
@@ -147,7 +151,7 @@ class ScannerErrorCode extends ErrorCode {
 		BlankLine,      // line #16:
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 func TestOverrideMethod(t *testing.T) {
@@ -174,7 +178,7 @@ class C {
 		BlankLine,        // line #10:
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 func TestNamedConstructor(t *testing.T) {
@@ -233,7 +237,7 @@ class C {
 		BlankLine,        // line #18:
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 func TestNamedConstructorsAreKeptIntact(t *testing.T) {
@@ -274,7 +278,7 @@ with AnimationEagerListenerMixin, AnimationLocalListenersMixin, AnimationLocalSt
 		BlankLine,        // line #16:
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 func TestPrivateConstructorsAreKeptIntact(t *testing.T) {
@@ -296,7 +300,7 @@ _InterpolationSimulation(this._begin, this._end, Duration duration, this._curve,
 		BlankLine,
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 func TestHandleOverriddenGettersWithBodies(t *testing.T) {
@@ -369,7 +373,7 @@ func TestHandleOverriddenGettersWithBodies(t *testing.T) {
 		BlankLine,      // line #32: }`
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 func TestIssue9_ConstructorFalsePositive(t *testing.T) {
@@ -431,7 +435,7 @@ static PGDateTime parse(String formattedString) =>
 		BlankLine,
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 func TestGetOnSeparateLine(t *testing.T) {
@@ -488,7 +492,7 @@ func TestGetOnSeparateLine(t *testing.T) {
 		BlankLine,               // line #15:
 	}
 
-	runFullStylizer(t, nil, source, wantSource, want)
+	runFullStylizer(t, nil, source, wantSource, [][]EntityType{want})
 	// Run again to make sure no extra blank lines are added.
 	runFullStylizer(t, nil, wantSource, wantSource, nil)
 }
@@ -546,7 +550,7 @@ func TestOperatorOverrides(t *testing.T) {
 		BlankLine,
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 func TestMarkMethodOffsetAlignment(t *testing.T) {
@@ -568,7 +572,7 @@ func TestMarkMethodOffsetAlignment(t *testing.T) {
 		BlankLine,
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 func TestMultipleDecorators(t *testing.T) {
@@ -622,7 +626,7 @@ func TestMultipleDecorators(t *testing.T) {
 		BlankLine,
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 func TestWhiteSpaceAfterFunctionNames(t *testing.T) {
@@ -638,7 +642,7 @@ func TestWhiteSpaceAfterFunctionNames(t *testing.T) {
 		BlankLine,
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 func TestEmbeddedMultilineComments(t *testing.T) {
@@ -656,7 +660,7 @@ func TestEmbeddedMultilineComments(t *testing.T) {
 		BlankLine,
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 //go:embed testfiles/basic_classes_default_order.txt
@@ -717,7 +721,7 @@ func TestIssue11_RunWithDefaultMemberOrdering(t *testing.T) {
 		BlankLine,               // line #54: }
 	}
 
-	runFullStylizer(t, nil, source, wantSource, want)
+	runFullStylizer(t, nil, source, wantSource, [][]EntityType{want})
 }
 
 //go:embed testfiles/basic_classes_custom_order.txt
@@ -793,7 +797,7 @@ func TestIssue11_RunWithCustomMemberOrdering(t *testing.T) {
 		},
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestIssue16SupportNewPublicOverrideVariablesFeature(t *testing.T) {
@@ -849,7 +853,7 @@ class Chat extends Equatable implements SubscriptionObject {
 		BlankLine,
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 func TestIssue17FunctionTypeVariableIsNotAFunction(t *testing.T) {
@@ -880,7 +884,7 @@ class Test {
 		BlankLine,
 	}
 
-	runParsePhase(t, nil, source, want)
+	runParsePhase(t, nil, source, [][]EntityType{want})
 }
 
 //go:embed testfiles/issue18.dart.txt
@@ -936,7 +940,7 @@ func TestIssue18Case1(t *testing.T) {
 		BlankLine,
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestIssue18Case2(t *testing.T) {
@@ -977,7 +981,7 @@ func TestIssue18Case2(t *testing.T) {
 		BlankLine,
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestIssue18Case3(t *testing.T) {
@@ -1018,7 +1022,7 @@ func TestIssue18Case3(t *testing.T) {
 		BlankLine,
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestIssue18Case4(t *testing.T) {
@@ -1059,7 +1063,7 @@ func TestIssue18Case4(t *testing.T) {
 		BlankLine,
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 //go:embed testfiles/issue19.dart.txt
@@ -1121,7 +1125,7 @@ func TestIssue19_FactoryConstructorShouldNotBeDuplicated(t *testing.T) {
 		BlankLine,
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestFindFeatures_linux_mac(t *testing.T) {
@@ -1285,7 +1289,9 @@ class ClassB {
    ClassC comment2
    ClassC comment 3 */
 class ClassC {
-  ClassC();
+  ClassC._();
+
+  static const String kColleted = 'Collected';
 }`
 	classD := `@JsonSerializable()
 class ClassD {
@@ -1297,7 +1303,6 @@ class ClassE {
   ClassE();
 }`
 	abstractClassF := `/// ClassF comment1
-@reflectiveTest
 abstract class ClassF {
   ClassF();
 }`
@@ -1341,7 +1346,9 @@ class ClassB {
    ClassC comment2
    ClassC comment 3 */
 class ClassC {
-  ClassC();
+  ClassC._();
+
+  static const String kColleted = 'Collected';
 }
 
 @JsonSerializable()
@@ -1356,7 +1363,6 @@ class ClassE {
 }
 
 /// ClassF comment1
-@reflectiveTest
 abstract class ClassF {
   ClassF();
 }
@@ -1400,7 +1406,9 @@ class ClassB {
    ClassC comment2
    ClassC comment 3 */
 class ClassC {
-  ClassC();
+  ClassC._();
+
+  static const String kColleted = 'Collected';
 }
 
 @JsonSerializable()
@@ -1415,7 +1423,6 @@ class ClassE {
 }
 
 /// ClassF comment1
-@reflectiveTest
 abstract class ClassF {
   ClassF();
 }

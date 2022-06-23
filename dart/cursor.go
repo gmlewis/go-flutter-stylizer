@@ -93,7 +93,7 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 			return nil
 		}
 
-		c.e.logf("nf=%q matchingPairStack=%v, abs=%v, ind=%v, rel=%v", nf, len(matchingPairStack), c.absOffset, c.lineIndex, c.relStrippedOffset)
+		// c.e.logf("nf=%q matchingPairStack=%v, abs=%v, ind=%v, rel=%v", nf, len(matchingPairStack), c.absOffset, c.lineIndex, c.relStrippedOffset)
 
 		switch nf {
 		case "//":

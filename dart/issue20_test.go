@@ -486,5 +486,5 @@ func TestIssue20(t *testing.T) {
 		BlankLine,               //
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }

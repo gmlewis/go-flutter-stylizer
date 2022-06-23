@@ -60,29 +60,27 @@ func (c *Client) generateEdits(classes []*Class) []*Edit {
 	return edits
 }
 
-func (c *Client) sortClassesWithinFile(edits, allClasses []*Edit) []*Edit {
+func (c *Client) sortClassesWithinFile(edits, origClasses []*Edit) []*Edit {
+	allClasses := append([]*Edit{}, origClasses...)
 	gt := func(a, b int) bool { return allClasses[a].dc.className > allClasses[b].dc.className }
 	if sort.SliceIsSorted(allClasses, gt) {
 		return edits
 	}
 
 	sort.Slice(allClasses, gt)
-	rev := append([]*Edit{}, allClasses...)
-	lt := func(a, b int) bool { return rev[a].dc.className < rev[b].dc.className }
-	sort.Slice(rev, lt)
 
 	var result []*Edit
 	for i, cl := range allClasses {
-		// log.Printf("i=%v, className=%q, old: startPos=%v, endPos=%v, new: startPos=%v, endPos=%v", i, cl.dc.className, cl.startPos, cl.endPos, rev[i].startPos, rev[i].endPos)
+		c.logf("i=%v, className=%q, old: startPos=%v, endPos=%v, new: startPos=%v, endPos=%v", i, cl.dc.className, cl.startPos, cl.endPos, origClasses[i].startPos, origClasses[i].endPos)
 		csp := c.editor.findClassAbsoluteStart(cl.dc)
-		// log.Printf("i=%v, csp=%v\n%s%s", i, csp,
-		rcsp := c.editor.findClassAbsoluteStart(rev[i].dc)
-		// log.Printf("i=%v, rcsp=%v\n%s%s", i, rcsp, c.editor.fullBuf[rcsp:rev[i].startPos], rev[i].text)
+		c.logf("i=%v, csp=%v", i, csp)
+		rcsp := c.editor.findClassAbsoluteStart(origClasses[i].dc)
+		c.logf("i=%v, rcsp=%v, text:\n%s%s", i, rcsp, c.editor.fullBuf[rcsp:origClasses[i].startPos], origClasses[i].text)
 
 		result = append(result, &Edit{
 			dc:       cl.dc,
 			startPos: rcsp,
-			endPos:   rev[i].endPos,
+			endPos:   origClasses[i].endPos,
 			text:     c.editor.fullBuf[csp:cl.startPos] + cl.text,
 		})
 	}

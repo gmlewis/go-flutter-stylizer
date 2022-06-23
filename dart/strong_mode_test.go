@@ -2587,8 +2587,8 @@ func TestStrongMode_Class1(t *testing.T) {
 		BlankLine,               // line #2561:
 	}
 
-	runParsePhase(t, opts, source, want)
-	// runFullStylizer(t, opts, source, wantSource, want)
+	runParsePhase(t, opts, source, [][]EntityType{want})
+	// runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestStrongMode_Class2(t *testing.T) {
@@ -3968,8 +3968,8 @@ func TestStrongMode_Class2(t *testing.T) {
 		BlankLine,   // line #1359:
 	}
 
-	runParsePhase(t, opts, source, want)
-	// runFullStylizer(t, opts, source, wantSource, want)
+	runParsePhase(t, opts, source, [][]EntityType{want})
+	// runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }
 
 func TestStrongMode_Class3(t *testing.T) {
@@ -4250,6 +4250,6 @@ func TestStrongMode_Class3(t *testing.T) {
 		BlankLine,   // line #261:
 	}
 
-	runParsePhase(t, opts, source, want)
-	// runFullStylizer(t, opts, source, wantSource, want)
+	runParsePhase(t, opts, source, [][]EntityType{want})
+	// runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 }

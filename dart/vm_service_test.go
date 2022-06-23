@@ -28,6 +28,9 @@ var vm_service_dart_txt string
 //go:embed testfiles/vm_service_want.txt
 var vm_service_want_txt string
 
+//go:embed testfiles/vm_service_want_sorted.txt
+var vm_service_want_sorted_txt string
+
 func TestVMService_GetClasses(t *testing.T) {
 	e, err := NewEditor(vm_service_dart_txt, false)
 	if err != nil {
@@ -53,6 +56,19 @@ func TestVMService_Source(t *testing.T) {
 	}
 
 	runFullStylizer(t, opts, source, wantSource, nil)
+	runFullStylizer(t, opts, wantSource, wantSource, nil)
+}
+
+func TestVMService_Source_WithClassSorting(t *testing.T) {
+	source := vm_service_dart_txt
+	wantSource := vm_service_want_sorted_txt
+
+	opts := &Options{
+		SortClassesWithinFile: true,
+		MemberOrdering:        defaultMemberOrdering,
+	}
+
+	runFullStylizer(t, opts, source, wantSource, wantVMServiceClassAll)
 	runFullStylizer(t, opts, wantSource, wantSource, nil)
 }
 
@@ -170,7 +186,7 @@ func TestVMService_Class96(t *testing.T) {
 		BlankLine,        // line #103:
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 
 	wantAfter := []EntityType{
 		Unknown,          // line #1: {
@@ -278,7 +294,7 @@ func TestVMService_Class96(t *testing.T) {
 		BlankLine,        // line #103:
 	}
 
-	runParsePhase(t, opts, wantSource, wantAfter)
+	runParsePhase(t, opts, wantSource, [][]EntityType{wantAfter})
 	runFullStylizer(t, opts, wantSource, wantSource, nil)
 }
 
@@ -357,7 +373,7 @@ func TestVMService_RPCErrorClass(t *testing.T) {
 		BlankLine,        // line #58:
 	}
 
-	runFullStylizer(t, opts, source, wantSource, want)
+	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
 
 	// wantAfter := []EntityType{
 	// 	Unknown,          // line #1: {
