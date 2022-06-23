@@ -6,16 +6,20 @@ this file.
 Please make sure you have a backup (preferably in git) of your code before running
 `flutter-stylizer` in case it doesn't handle your code properly.
 
-## [0.1.12]
+## [v0.1.13] - 2022-06-23
+
+- Fix [issue #8](https://github.com/gmlewis/go-flutter-stylizer/issues/8).
+
+## [v0.1.12] - 2022-06-22
 
 - Add new option [issue #8](https://github.com/gmlewis/go-flutter-stylizer/issues/8):
   - `sortClassesWithinFile` (default: `false`)
 
-## [0.1.11]
+## [v0.1.11] - 2022-06-22
 
 - Fix [issue #6](https://github.com/gmlewis/go-flutter-stylizer/issues/6).
 
-## [0.1.8] - 2022-06-14
+## [v0.1.8] - 2022-06-14
 
 - Add new option [issue #31](https://github.com/gmlewis/flutter-stylizer/issues/31):
   - `groupAndSortVariableTypes` (default: `false`)

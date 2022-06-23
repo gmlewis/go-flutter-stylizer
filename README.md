@@ -273,6 +273,10 @@ incorporate the fix into the repo.
 
 ## Release Notes
 
+### v0.1.13
+
+- Fix [issue #8](https://github.com/gmlewis/go-flutter-stylizer/issues/8).
+
 ### v0.1.12
 
 - Add new option [issue #8](https://github.com/gmlewis/go-flutter-stylizer/issues/8):
