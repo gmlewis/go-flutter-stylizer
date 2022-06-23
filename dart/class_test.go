@@ -34,6 +34,7 @@ func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType
 		testOpts.GroupAndSortGetterMethods = opts.GroupAndSortGetterMethods
 		testOpts.GroupAndSortVariableTypes = opts.GroupAndSortVariableTypes
 		testOpts.MemberOrdering = opts.MemberOrdering
+		testOpts.SortClassesWithinFile = opts.SortClassesWithinFile
 		testOpts.SortOtherMethods = opts.SortOtherMethods
 		verbose = opts.Verbose
 	}
@@ -43,7 +44,7 @@ func runParsePhase(t *testing.T, opts *Options, source string, want []EntityType
 		t.Fatalf("NewEditor: %v", err)
 	}
 
-	c := &Client{opts: testOpts}
+	c := &Client{editor: e, opts: testOpts}
 	got, err := e.GetClasses(testOpts.GroupAndSortGetterMethods, testOpts.SeparatePrivateMethods)
 	if err != nil {
 		t.Fatal(err)
@@ -1269,4 +1270,173 @@ func TestFindFeatures_windoze(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestMultipleClassesWithComments(t *testing.T) {
+	classA := `class ClassA {
+  ClassA();
+}`
+	classB := `/// ClassB comment1
+/// ClassB comment2
+class ClassB {
+  ClassB();
+}`
+	classC := `/* ClassC comment1
+   ClassC comment2
+   ClassC comment 3 */
+class ClassC {
+  ClassC();
+}`
+	classD := `@JsonSerializable()
+class ClassD {
+  ClassD();
+}`
+	classE := `/// ClassE comment1
+@reflectiveTest
+class ClassE {
+  ClassE();
+}`
+	abstractClassF := `/// ClassF comment1
+@reflectiveTest
+abstract class ClassF {
+  ClassF();
+}`
+	classG := `class _ClassG {
+  _ClassG();
+}`
+	mainFunc := `main() {
+}`
+	randomStuff := `typedef DisposeHandler = Future Function();
+
+Version _versionFromString(String input) =>
+    input == null ? null : Version.parse(input);`
+
+	tests := []struct {
+		name  string
+		parts []string
+		want  string
+	}{
+		{
+			name:  "sorted classes",
+			parts: []string{mainFunc, randomStuff, classA, classB, classC, classD, classE, abstractClassF, classG},
+			want: `main() {
+}
+
+typedef DisposeHandler = Future Function();
+
+Version _versionFromString(String input) =>
+    input == null ? null : Version.parse(input);
+
+class ClassA {
+  ClassA();
+}
+
+/// ClassB comment1
+/// ClassB comment2
+class ClassB {
+  ClassB();
+}
+
+/* ClassC comment1
+   ClassC comment2
+   ClassC comment 3 */
+class ClassC {
+  ClassC();
+}
+
+@JsonSerializable()
+class ClassD {
+  ClassD();
+}
+
+/// ClassE comment1
+@reflectiveTest
+class ClassE {
+  ClassE();
+}
+
+/// ClassF comment1
+@reflectiveTest
+abstract class ClassF {
+  ClassF();
+}
+
+class _ClassG {
+  _ClassG();
+}`,
+		},
+		{
+			name: "reversed classes",
+			parts: []string{
+				mainFunc,
+				randomStuff,
+				classG,
+				abstractClassF,
+				classE,
+				classD,
+				classC,
+				classB,
+				classA,
+			},
+			want: `main() {
+}
+
+typedef DisposeHandler = Future Function();
+
+Version _versionFromString(String input) =>
+    input == null ? null : Version.parse(input);
+
+class ClassA {
+  ClassA();
+}
+
+/// ClassB comment1
+/// ClassB comment2
+class ClassB {
+  ClassB();
+}
+
+/* ClassC comment1
+   ClassC comment2
+   ClassC comment 3 */
+class ClassC {
+  ClassC();
+}
+
+@JsonSerializable()
+class ClassD {
+  ClassD();
+}
+
+/// ClassE comment1
+@reflectiveTest
+class ClassE {
+  ClassE();
+}
+
+/// ClassF comment1
+@reflectiveTest
+abstract class ClassF {
+  ClassF();
+}
+
+class _ClassG {
+  _ClassG();
+}`,
+		},
+	}
+
+	opts := &Options{
+		MemberOrdering:        defaultMemberOrdering,
+		SortClassesWithinFile: true,
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			source := strings.Join(tt.parts, "\n\n")
+			runFullStylizer(t, opts, source, tt.want, nil)
+			// Run again to make sure no extra blank lines are added.
+			runFullStylizer(t, opts, tt.want, tt.want, nil)
+		})
+	}
 }

@@ -35,7 +35,7 @@ func TestSeparatePrivateMethods_false(t *testing.T) {
 		t.Errorf("got %v classes, want %v", len(classes), want)
 	}
 
-	c := New(Options{})
+	c := New(e, Options{})
 	edits := c.generateEdits(classes)
 	newBuf := c.rewriteClasses(separatePrivateMethodsSource, edits)
 
@@ -75,7 +75,7 @@ func TestSeparatePrivateMethods_true(t *testing.T) {
 			"build-method",
 		},
 	}
-	c := New(opts)
+	c := New(e, opts)
 	edits := c.generateEdits(classes)
 	newBuf := c.rewriteClasses(separatePrivateMethodsSource, edits)
 
