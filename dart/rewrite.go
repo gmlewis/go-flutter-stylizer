@@ -24,7 +24,10 @@ import (
 
 // Edit represents an edit of an editor buffer.
 type Edit struct {
-	dc       *Class
+	dc *Class
+	// sortName is the class name with the leading underscore removed.
+	// See: https://github.com/gmlewis/go-flutter-stylizer/issues/8#issuecomment-1165024520
+	sortName string
 	startPos int
 	endPos   int
 	text     string
@@ -62,7 +65,15 @@ func (c *Client) generateEdits(classes []*Class) []*Edit {
 
 func (c *Client) sortClassesWithinFile(edits, origClasses []*Edit) []*Edit {
 	allClasses := append([]*Edit{}, origClasses...)
-	gt := func(a, b int) bool { return allClasses[a].dc.className > allClasses[b].dc.className }
+	for _, e := range allClasses {
+		e.sortName = strings.TrimPrefix(e.dc.className, "_")
+	}
+	gt := func(a, b int) bool {
+		if allClasses[a].sortName == allClasses[b].sortName {
+			return allClasses[a].dc.className > allClasses[b].dc.className
+		}
+		return allClasses[a].sortName > allClasses[b].sortName
+	}
 	if sort.SliceIsSorted(allClasses, gt) {
 		return edits
 	}
