@@ -19,8 +19,14 @@ package dart
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"runtime/debug"
 	"strings"
+)
+
+var (
+	matchClassOrMixinRE       = regexp.MustCompile(`^(?:abstract\s+)?(class|mixin)\s+(\S+).*$`)
+	matchClassOrMixinOrEnumRE = regexp.MustCompile(`^(?:abstract\s+)?(class|mixin|enum)\s+(\S+).*$`)
 )
 
 // Editor represents a text editor that understands Dart syntax.
@@ -33,15 +39,22 @@ type Editor struct {
 	// classLineIndices contains line indices where a class or abstract class starts.
 	classLineIndices []int
 
+	classMatcher *regexp.Regexp
+
 	Verbose bool
 }
 
 // NewEditor returns a new Editor.
-func NewEditor(buf string, verbose bool) (*Editor, error) {
+func NewEditor(buf string, processEnumsLikeClasses, verbose bool) (*Editor, error) {
 	e := &Editor{
 		fullBuf:       buf,
 		matchingPairs: MatchingPairsMap{},
 		Verbose:       verbose,
+		classMatcher:  matchClassOrMixinRE,
+	}
+
+	if processEnumsLikeClasses {
+		e.classMatcher = matchClassOrMixinOrEnumRE
 	}
 
 	e.fullBuf = buf
@@ -63,7 +76,7 @@ func NewEditor(buf string, verbose bool) (*Editor, error) {
 		reader: strings.NewReader(e.lines[0].stripped),
 	}
 	if err := cursor.parse(e.matchingPairs); err != nil {
-		return nil, fmt.Errorf("parse: %v", err)
+		return nil, fmt.Errorf("parse: %w", err)
 	}
 
 	e.eofOffset = cursor.absOffset
@@ -77,28 +90,29 @@ func (e *Editor) GetClasses(groupAndSortGetterMethods, separatePrivateMethods bo
 
 	for _, lineIndex := range e.classLineIndices {
 		line := e.lines[lineIndex]
-		mm := matchClassOrMixinRE.FindStringSubmatch(line.line)
-		if len(mm) != 2 {
+		mm := e.classMatcher.FindStringSubmatch(line.line)
+		if len(mm) != 3 {
 			return nil, fmt.Errorf("programming error: expected class on line #%v, got %q", lineIndex+1, line.line)
 		}
 
-		className := mm[1]
+		classType := mm[1]
+		className := mm[2]
 		classOffset := line.startOffset
 		openCurlyOffset := e.findStartOfClass(classOffset)
 		if e.fullBuf[openCurlyOffset] == ';' { // this is valid and can be ignored: class D = Object with Function;
 			continue
 		}
 
-		e.logf("\n\nFound new class %q at classOffset=%v, openCurlyOffset=%v, line=%#v", className, classOffset, openCurlyOffset, line)
+		e.logf("\n\nFound new %v %q at classOffset=%v, openCurlyOffset=%v, line=%#v", classType, className, classOffset, openCurlyOffset, line)
 		pair, ok := e.matchingPairs[openCurlyOffset]
 		if !ok {
 			return nil, fmt.Errorf("programming error: no matching pair found at openCurlyOffset %v", openCurlyOffset)
 		}
 
 		closeCurlyOffset := pair.closeAbsOffset
-		e.logf("\n\nFound end of class %q at closeCurlyOffset=%v", className, closeCurlyOffset)
+		e.logf("\n\nFound end of %v %q at closeCurlyOffset=%v", classType, className, closeCurlyOffset)
 
-		dartClass := NewClass(e, className, openCurlyOffset, closeCurlyOffset, groupAndSortGetterMethods, separatePrivateMethods)
+		dartClass := NewClass(e, classType, className, openCurlyOffset, closeCurlyOffset, groupAndSortGetterMethods, separatePrivateMethods)
 		if err := dartClass.FindFeatures(); err != nil {
 			return nil, err
 		}

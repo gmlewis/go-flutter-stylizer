@@ -21,7 +21,7 @@ import (
 )
 
 func TestSeparatePrivateMethods_false(t *testing.T) {
-	e, err := NewEditor(separatePrivateMethodsSource, false)
+	e, err := NewEditor(separatePrivateMethodsSource, false, false)
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestSeparatePrivateMethods_false(t *testing.T) {
 }
 
 func TestSeparatePrivateMethods_true(t *testing.T) {
-	e, err := NewEditor(separatePrivateMethodsSource, false)
+	e, err := NewEditor(separatePrivateMethodsSource, false, false)
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}

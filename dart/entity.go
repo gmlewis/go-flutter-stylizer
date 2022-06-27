@@ -44,6 +44,7 @@ const (
 	OtherMethod
 	BuildMethod
 	GetterMethod
+	LeaveUnmodified // for everything else, like enum values.
 )
 
 func (e EntityType) String() string {
@@ -78,6 +79,8 @@ func (e EntityType) String() string {
 		return "BuildMethod"
 	case GetterMethod:
 		return "GetterMethod"
+	case LeaveUnmodified:
+		return "LeaveUnmodified"
 	}
 }
 

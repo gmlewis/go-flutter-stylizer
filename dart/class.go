@@ -17,6 +17,7 @@ limitations under the License.
 package dart
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -29,6 +30,7 @@ type Class struct {
 	classBody string
 	lines     []*Line
 
+	classType                 string // class, mixin, or enum
 	className                 string
 	openCurlyOffset           int
 	closeCurlyOffset          int
@@ -56,7 +58,7 @@ type Class struct {
 // openCurlyOffset is the position of the "{" for that class.
 // closeCurlyOffset is the position of the "}" for that class.
 // groupAndSortGetterMethods determines how getter methods are processed.
-func NewClass(editor *Editor, className string,
+func NewClass(editor *Editor, classType, className string,
 	openCurlyOffset, closeCurlyOffset int,
 	groupAndSortGetterMethods, separatePrivateMethods bool) *Class {
 	lessThanOffset := strings.Index(className, "<")
@@ -101,6 +103,7 @@ func NewClass(editor *Editor, className string,
 		e:                editor,
 		classBody:        classBody,
 		lines:            classLines,
+		classType:        classType,
 		className:        className,
 		openCurlyOffset:  openCurlyOffset,
 		closeCurlyOffset: closeCurlyOffset,
@@ -134,19 +137,19 @@ func (c *Class) FindFeatures() error {
 
 	// c.identifyMultiLineComments()  // This step is not needed, as the editor marked these already.
 	if err := c.identifyDecoratorsAsComments(); err != nil {
-		return fmt.Errorf("identifyDecoratorsAsComments: %v", err)
+		return fmt.Errorf("identifyDecoratorsAsComments: %w", err)
 	}
 	if err := c.identifyMainConstructor(); err != nil {
-		return fmt.Errorf("identifyMainConstructor: %v", err)
+		return fmt.Errorf("identifyMainConstructor: %w", err)
 	}
 	if err := c.identifyNamedConstructors(); err != nil {
-		return fmt.Errorf("identifyNamedConstructors: %v", err)
+		return fmt.Errorf("identifyNamedConstructors: %w", err)
 	}
 	if err := c.identifyOverrideMethodsAndVars(); err != nil {
-		return fmt.Errorf("identifyOverrideMethodsAndVars: %v", err)
+		return fmt.Errorf("identifyOverrideMethodsAndVars: %w", err)
 	}
 	if err := c.identifyOthers(); err != nil {
-		return fmt.Errorf("identifyOthers: %v", err)
+		return fmt.Errorf("identifyOthers: %w", err)
 	}
 
 	if c.e.Verbose {
@@ -434,7 +437,7 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 
 		features, lineIndex, lastCharAbsOffset, err := c.findNext(lineNum, "=>", "=", "{", ";", "(")
 		if err != nil {
-			return fmt.Errorf("expected valid @override method on line #%v: %v", lineNum+1, err)
+			return fmt.Errorf("expected valid @override method on line #%v: %w", lineNum+1, err)
 		}
 
 		if strings.HasPrefix(features, "operator") || strings.Contains(features, " operator") {
@@ -442,7 +445,7 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 			// a reserved keyword and must be an OverrideMethod.
 			features, lineIndex, lastCharAbsOffset, err = c.findNext(lineNum, "{", "(", ";")
 			if err != nil || features == "" {
-				return fmt.Errorf("expected valid @override operator method on line #%v: %v", lineNum+1, err)
+				return fmt.Errorf("expected valid @override operator method on line #%v: %w", lineNum+1, err)
 			}
 		}
 
@@ -499,7 +502,7 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 			if !strings.HasSuffix(features, ";") {
 				features, lineIndex, lastCharAbsOffset, err = c.findNext(lineNum, ";")
 				if err != nil || features == "" {
-					return fmt.Errorf("expected trailing ';' for @override operator method on line #%v: %v", lineNum+1, err)
+					return fmt.Errorf("expected trailing ';' for @override operator method on line #%v: %w", lineNum+1, err)
 				}
 			}
 		}
@@ -528,6 +531,16 @@ func (c *Class) identifyOthers() error {
 
 		entity, err := c.scanMethod(i)
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				// OK to have a class or enum with no other content.
+				// Mark all unmarked lines as LeaveUnmodified.
+				for j := 1; j < len(c.lines); j++ {
+					if c.lines[j].entityType == Unknown {
+						c.lines[j].entityType = LeaveUnmodified
+					}
+				}
+				return nil
+			}
 			return err
 		}
 
@@ -565,6 +578,7 @@ func (c *Class) identifyOthers() error {
 			c.overrideVariables = append(c.overrideVariables, entity)
 		case PrivateInstanceVariable:
 			c.privateVariables = append(c.privateVariables, entity)
+		case LeaveUnmodified:
 		default:
 			return fmt.Errorf("unexpected EntityType=%v", entity.entityType)
 		}
@@ -597,6 +611,8 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 
 	entity.entityType = InstanceVariable
 	switch {
+	case c.classType == "enum" && lineNum == 1:
+		entity.entityType = LeaveUnmodified
 	case privateVar && staticKeyword:
 		entity.entityType = StaticPrivateVariable
 	case staticKeyword:
@@ -610,7 +626,7 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 		entity.entityType = OtherMethod
 
 	case "();": // instance variable or abstract method.
-		if !strings.HasSuffix(leadingText, " Function") {
+		if c.classType != "enum" && !strings.HasSuffix(leadingText, " Function") {
 			entity.entityType = OtherMethod
 		}
 
@@ -663,7 +679,7 @@ func (c *Class) repairIncorrectlyLabeledLine(lineNum int) error {
 func (c *Class) findSequence(lineNum int) (string, int, string, error) {
 	features, lineIndex, _, err := c.findNext(lineNum, ";", "}")
 	if err != nil || features == "" {
-		return "", 0, "", fmt.Errorf(`findNext: %v`, err)
+		return "", 0, "", fmt.Errorf("findNext: %w", err)
 	}
 
 	sequence, leadingText := findSequenceAndLeadingText(features)
@@ -718,7 +734,7 @@ func (c *Class) markMethod(classLineNum int, methodName string, entityType Entit
 
 	features, classLineIndex, lastCharAbsOffset, err := c.findNext(classCloseLineIndex, "=>", "{", ";")
 	if err != nil {
-		return nil, fmt.Errorf("expected method body starting at classCloseLineIndex=%v: %v", classCloseLineIndex, err)
+		return nil, fmt.Errorf("expected method body starting at classCloseLineIndex=%v: %w", classCloseLineIndex, err)
 	}
 
 	if strings.HasSuffix(features, "{") {
@@ -740,7 +756,7 @@ func (c *Class) markMethod(classLineNum int, methodName string, entityType Entit
 	if strings.HasSuffix(features, "=>") {
 		_, classLineIndex, lastCharAbsOffset, err = c.findNext(classCloseLineIndex, "{", ";")
 		if err != nil {
-			return nil, fmt.Errorf("expected fat arrow method body starting at classCloseLineIndex=%v: %v", classCloseLineIndex, err)
+			return nil, fmt.Errorf("expected fat arrow method body starting at classCloseLineIndex=%v: %w", classCloseLineIndex, err)
 		}
 	}
 

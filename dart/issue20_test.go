@@ -27,7 +27,7 @@ var issue20_dart_txt string
 //go:embed testfiles/issue20_want.txt
 var issue20_want_txt string
 
-func TestIssue20(t *testing.T) {
+func TestIssue20_Ignore_Enums(t *testing.T) {
 	source := issue20_dart_txt
 	wantSource := issue20_want_txt
 
@@ -46,7 +46,52 @@ func TestIssue20(t *testing.T) {
 		},
 	}
 
-	want := []EntityType{
+	runFullStylizer(t, opts, source, wantSource, issue20Want[3:])
+}
+
+func TestIssue20_With_Enums(t *testing.T) {
+	source := issue20_dart_txt
+	wantSource := issue20_want_txt
+
+	opts := &Options{
+		ProcessEnumsLikeClasses: true,
+		MemberOrdering: []string{
+			"public-static-variables",
+			"public-instance-variables",
+			"public-override-variables",
+			"private-static-variables",
+			"private-instance-variables",
+			"public-constructor",
+			"named-constructors",
+			"public-override-methods",
+			"public-other-methods",
+			"build-method",
+		},
+	}
+
+	runFullStylizer(t, opts, source, wantSource, issue20Want)
+}
+
+var issue20Want = [][]EntityType{
+	{
+		Unknown,         // line #26: {
+		LeaveUnmodified, // line #27:   notPublic,
+		LeaveUnmodified, // line #28:   public,
+		LeaveUnmodified, // line #29:   nestedPublic,
+		LeaveUnmodified, // line #30:   nestedPrivate,
+		LeaveUnmodified, // line #31:   nestedFamily,
+		LeaveUnmodified, // line #32:   nestedAssembly,
+		LeaveUnmodified, // line #33:   nestedFamilyAndAssembly,
+		LeaveUnmodified, // line #34:   nestedFamilyOrAssembly
+		BlankLine,       // line #35:
+	},
+	{
+		BlankLine, // line #37: { auto, sequential, explicit
+	},
+	{
+		BlankLine, // line #39: { ansi, unicode, auto, custom
+	},
+	{
 		Unknown,                 // {
 		InstanceVariable,        //   final String typeName;
 		PrivateInstanceVariable, //   final int _attributes;
@@ -484,7 +529,5 @@ func TestIssue20(t *testing.T) {
 		OverrideMethod,          //   @override
 		OverrideMethod,          //   String toString() => 'TypeDef: $typeName';
 		BlankLine,               //
-	}
-
-	runFullStylizer(t, opts, source, wantSource, [][]EntityType{want})
+	},
 }

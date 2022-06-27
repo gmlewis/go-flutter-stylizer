@@ -190,6 +190,7 @@ memberOrdering:
   public-other-methods
   private-other-methods
   build-method
+processEnumsLikeClasses: false
 sortClassesWithinFile: false
 sortOtherMethods: false
 ```
@@ -220,6 +221,10 @@ As of `v0.1.12`, a new option flag was added:
 
 - `sortClassesWithinFile` (default: `false`)
   - Whether to sort multiple classes within each file.
+
+As of `v0.1.15`, a new option flag was added:
+- `processEnumsLikeClasses` (default: `false`)
+  - Whether to process enums identically to how classes are processed.
 
 These features are experimental and should be used with caution.
 Please file any bugs you find on the [GitHub issue tracker].
@@ -272,6 +277,11 @@ incorporate the fix into the repo.
   supported even though the Dart compiler can handle it.
 
 ## Release Notes
+
+### v0.1.15
+
+- Add new option:
+  - `processEnumsLikeClasses` (default: `false`)
 
 ### v0.1.14
 
