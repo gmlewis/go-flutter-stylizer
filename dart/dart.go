@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"log"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/pmezard/go-difflib/difflib"
@@ -40,10 +39,11 @@ type Options struct {
 	GroupAndSortGetterMethods bool
 	GroupAndSortVariableTypes bool
 
-	MemberOrdering         []string
-	SortClassesWithinFile  bool
-	SortOtherMethods       bool
-	SeparatePrivateMethods bool
+	MemberOrdering          []string
+	ProcessEnumsLikeClasses bool
+	SortClassesWithinFile   bool
+	SortOtherMethods        bool
+	SeparatePrivateMethods  bool
 }
 
 // Client represents a Dart processor.
@@ -93,9 +93,9 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 		buf = string(b)
 	}
 
-	e, err := NewEditor(buf, c.opts.Verbose)
+	e, err := NewEditor(buf, c.opts.ProcessEnumsLikeClasses, c.opts.Verbose)
 	if err != nil {
-		return false, fmt.Errorf("NewEditor: %v", err)
+		return false, fmt.Errorf("NewEditor: %w", err)
 	}
 	c.editor = e
 
@@ -186,10 +186,6 @@ func validateMemberOrdering(memberOrdering []string) bool {
 
 	return true
 }
-
-var (
-	matchClassOrMixinRE = regexp.MustCompile(`^(?:abstract\s+)?(?:class|mixin)\s+(\S+).*$`)
-)
 
 // logf logs the line if debug is true.
 func (c *Client) logf(fmtStr string, args ...interface{}) {

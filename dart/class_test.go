@@ -33,13 +33,14 @@ func runParsePhase(t *testing.T, opts *Options, source string, wantClasses [][]E
 		testOpts.GroupAndSortGetterMethods = opts.GroupAndSortGetterMethods
 		testOpts.GroupAndSortVariableTypes = opts.GroupAndSortVariableTypes
 		testOpts.MemberOrdering = opts.MemberOrdering
+		testOpts.ProcessEnumsLikeClasses = opts.ProcessEnumsLikeClasses
 		testOpts.SortClassesWithinFile = opts.SortClassesWithinFile
 		testOpts.SortOtherMethods = opts.SortOtherMethods
 		testOpts.Debug = opts.Debug
 		testOpts.Verbose = opts.Verbose
 	}
 
-	e, err := NewEditor(source, testOpts.Verbose)
+	e, err := NewEditor(source, testOpts.ProcessEnumsLikeClasses, testOpts.Verbose)
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}
@@ -1131,7 +1132,7 @@ func TestIssue19_FactoryConstructorShouldNotBeDuplicated(t *testing.T) {
 func TestFindFeatures_linux_mac(t *testing.T) {
 	bc, bcLineOffset, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
 
-	uc := NewClass(bc, "Class1", bcOCO, bcCCO, false, false)
+	uc := NewClass(bc, "class", "Class1", bcOCO, bcCCO, false, false)
 
 	want := []EntityType{
 		Unknown,                 // line #7: class Class1 {
@@ -1205,7 +1206,7 @@ func TestFindFeatures_linux_mac(t *testing.T) {
 func TestFindFeatures_windoze(t *testing.T) {
 	wz, wzLineOffset, wzOCO, wzCCO := setupEditor(t, "class Class1 {", bcWindoze)
 
-	wc := NewClass(wz, "Class1", wzOCO, wzCCO, false, false)
+	wc := NewClass(wz, "class", "Class1", wzOCO, wzCCO, false, false)
 
 	want := []EntityType{
 		Unknown,                 // line #7: class Class1 {
@@ -1276,16 +1277,71 @@ func TestFindFeatures_windoze(t *testing.T) {
 	})
 }
 
+func TestMainHandler_Enum(t *testing.T) {
+	const source = `// from: https://dart.dev/guides/language/language-tour#enumerated-types
+enum Vehicle implements Comparable<Vehicle> {
+  car(tires: 4, passengers: 5, carbonPerKilometer: 400),
+  bus(tires: 6, passengers: 50, carbonPerKilometer: 800),
+  bicycle(tires: 2, passengers: 1, carbonPerKilometer: 0);
+
+  const Vehicle({
+    required this.tires,
+    required this.passengers,
+    required this.carbonPerKilometer,
+  });
+
+  final int tires;
+  final int passengers;
+  final int carbonPerKilometer;
+
+  int get carbonFootprint => (carbonPerKilometer / passengers).round();
+
+  @override
+  int compareTo(Vehicle other) => carbonFootprint - other.carbonFootprint;
+}`
+
+	want := []EntityType{
+		Unknown,          // line #2: {
+		LeaveUnmodified,  // line #3:   car(tires: 4, passengers: 5, carbonPerKilometer: 400),
+		LeaveUnmodified,  // line #4:   bus(tires: 6, passengers: 50, carbonPerKilometer: 800),
+		LeaveUnmodified,  // line #5:   bicycle(tires: 2, passengers: 1, carbonPerKilometer: 0);
+		BlankLine,        // line #6:
+		MainConstructor,  // line #7:   const Vehicle({
+		MainConstructor,  // line #8:     required this.tires,
+		MainConstructor,  // line #9:     required this.passengers,
+		MainConstructor,  // line #10:     required this.carbonPerKilometer,
+		MainConstructor,  // line #11:   });
+		BlankLine,        // line #12:
+		InstanceVariable, // line #13:   final int tires;
+		InstanceVariable, // line #14:   final int passengers;
+		InstanceVariable, // line #15:   final int carbonPerKilometer;
+		BlankLine,        // line #16:
+		OtherMethod,      // line #17:   int get carbonFootprint => (carbonPerKilometer / passengers).round();
+		BlankLine,        // line #18:
+		OverrideMethod,   // line #19:   @override
+		OverrideMethod,   // line #20:   int compareTo(Vehicle other) => carbonFootprint - other.carbonFootprint;
+		BlankLine,        // line #21:
+	}
+
+	opts := &Options{
+		MemberOrdering:          defaultMemberOrdering,
+		ProcessEnumsLikeClasses: true,
+		SortClassesWithinFile:   true,
+	}
+	runParsePhase(t, opts, source, [][]EntityType{want})
+}
+
 func TestMultipleClassesWithComments(t *testing.T) {
-	classA := `class ClassA {
+	const (
+		classA = `class ClassA {
   ClassA();
 }`
-	classB := `/// ClassB comment1
+		classB = `/// ClassB comment1
 /// ClassB comment2
 class ClassB {
   ClassB();
 }`
-	classC := `/* ClassC comment1
+		classC = `/* ClassC comment1
    ClassC comment2
    ClassC comment 3 */
 class ClassC {
@@ -1293,37 +1349,60 @@ class ClassC {
 
   static const String kColleted = 'Collected';
 }`
-	classD := `@JsonSerializable()
+		classD = `@JsonSerializable()
 class ClassD {
   ClassD();
 }`
-	classE := `/// ClassE comment1
+		classE = `/// ClassE comment1
 @reflectiveTest
 class ClassE {
   ClassE();
 }`
-	abstractClassF := `/// ClassF comment1
+		abstractClassF = `/// ClassF comment1
 abstract class ClassF {
   ClassF();
 }`
-	classG := `class _ClassG {
+		classG = `class _ClassG {
   _ClassG();
 }`
-	mainFunc := `main() {
+		mainFunc = `main() {
 }`
-	randomStuff := `typedef DisposeHandler = Future Function();
+		randomStuff = `typedef DisposeHandler = Future Function();
 
 Version _versionFromString(String input) =>
     input == null ? null : Version.parse(input);`
+		enumVehicle = `// from: https://dart.dev/guides/language/language-tour#enumerated-types
+enum Vehicle implements Comparable<Vehicle> {
+  car(tires: 4, passengers: 5, carbonPerKilometer: 400),
+  bus(tires: 6, passengers: 50, carbonPerKilometer: 800),
+  bicycle(tires: 2, passengers: 1, carbonPerKilometer: 0);
+
+  const Vehicle({
+    required this.tires,
+    required this.passengers,
+    required this.carbonPerKilometer,
+  });
+
+  final int tires;
+  final int passengers;
+  final int carbonPerKilometer;
+
+  int get carbonFootprint => (carbonPerKilometer / passengers).round();
+
+  @override
+  int compareTo(Vehicle other) => carbonFootprint - other.carbonFootprint;
+}`
+	)
 
 	tests := []struct {
-		name  string
-		parts []string
-		want  string
+		name         string
+		parts        []string
+		processEnums bool
+		want         string
 	}{
 		{
 			name:  "sorted classes",
-			parts: []string{mainFunc, randomStuff, classA, classB, classC, classD, classE, abstractClassF, classG},
+			parts: []string{mainFunc, randomStuff, enumVehicle, classA, classB, classC, classD, classE, abstractClassF, classG},
 			want: `main() {
 }
 
@@ -1331,6 +1410,28 @@ typedef DisposeHandler = Future Function();
 
 Version _versionFromString(String input) =>
     input == null ? null : Version.parse(input);
+
+// from: https://dart.dev/guides/language/language-tour#enumerated-types
+enum Vehicle implements Comparable<Vehicle> {
+  car(tires: 4, passengers: 5, carbonPerKilometer: 400),
+  bus(tires: 6, passengers: 50, carbonPerKilometer: 800),
+  bicycle(tires: 2, passengers: 1, carbonPerKilometer: 0);
+
+  const Vehicle({
+    required this.tires,
+    required this.passengers,
+    required this.carbonPerKilometer,
+  });
+
+  final int tires;
+  final int passengers;
+  final int carbonPerKilometer;
+
+  int get carbonFootprint => (carbonPerKilometer / passengers).round();
+
+  @override
+  int compareTo(Vehicle other) => carbonFootprint - other.carbonFootprint;
+}
 
 class ClassA {
   ClassA();
@@ -1376,6 +1477,7 @@ class _ClassG {
 			parts: []string{
 				mainFunc,
 				randomStuff,
+				enumVehicle,
 				classG,
 				abstractClassF,
 				classE,
@@ -1391,6 +1493,186 @@ typedef DisposeHandler = Future Function();
 
 Version _versionFromString(String input) =>
     input == null ? null : Version.parse(input);
+
+// from: https://dart.dev/guides/language/language-tour#enumerated-types
+enum Vehicle implements Comparable<Vehicle> {
+  car(tires: 4, passengers: 5, carbonPerKilometer: 400),
+  bus(tires: 6, passengers: 50, carbonPerKilometer: 800),
+  bicycle(tires: 2, passengers: 1, carbonPerKilometer: 0);
+
+  const Vehicle({
+    required this.tires,
+    required this.passengers,
+    required this.carbonPerKilometer,
+  });
+
+  final int tires;
+  final int passengers;
+  final int carbonPerKilometer;
+
+  int get carbonFootprint => (carbonPerKilometer / passengers).round();
+
+  @override
+  int compareTo(Vehicle other) => carbonFootprint - other.carbonFootprint;
+}
+
+class ClassA {
+  ClassA();
+}
+
+/// ClassB comment1
+/// ClassB comment2
+class ClassB {
+  ClassB();
+}
+
+/* ClassC comment1
+   ClassC comment2
+   ClassC comment 3 */
+class ClassC {
+  ClassC._();
+
+  static const String kColleted = 'Collected';
+}
+
+@JsonSerializable()
+class ClassD {
+  ClassD();
+}
+
+/// ClassE comment1
+@reflectiveTest
+class ClassE {
+  ClassE();
+}
+
+/// ClassF comment1
+abstract class ClassF {
+  ClassF();
+}
+
+class _ClassG {
+  _ClassG();
+}`,
+		},
+
+		{
+			name:         "sorted classes with enums",
+			parts:        []string{mainFunc, randomStuff, enumVehicle, classA, classB, classC, classD, classE, abstractClassF, classG},
+			processEnums: true,
+			want: `main() {
+}
+
+typedef DisposeHandler = Future Function();
+
+Version _versionFromString(String input) =>
+    input == null ? null : Version.parse(input);
+
+// from: https://dart.dev/guides/language/language-tour#enumerated-types
+enum Vehicle implements Comparable<Vehicle> {
+  car(tires: 4, passengers: 5, carbonPerKilometer: 400),
+  bus(tires: 6, passengers: 50, carbonPerKilometer: 800),
+  bicycle(tires: 2, passengers: 1, carbonPerKilometer: 0);
+
+  const Vehicle({
+    required this.tires,
+    required this.passengers,
+    required this.carbonPerKilometer,
+  });
+
+  final int carbonPerKilometer;
+  final int passengers;
+  final int tires;
+
+  @override
+  int compareTo(Vehicle other) => carbonFootprint - other.carbonFootprint;
+
+  int get carbonFootprint => (carbonPerKilometer / passengers).round();
+}
+
+class ClassA {
+  ClassA();
+}
+
+/// ClassB comment1
+/// ClassB comment2
+class ClassB {
+  ClassB();
+}
+
+/* ClassC comment1
+   ClassC comment2
+   ClassC comment 3 */
+class ClassC {
+  ClassC._();
+
+  static const String kColleted = 'Collected';
+}
+
+@JsonSerializable()
+class ClassD {
+  ClassD();
+}
+
+/// ClassE comment1
+@reflectiveTest
+class ClassE {
+  ClassE();
+}
+
+/// ClassF comment1
+abstract class ClassF {
+  ClassF();
+}
+
+class _ClassG {
+  _ClassG();
+}`,
+		},
+		{
+			name: "reversed classes with enums",
+			parts: []string{
+				mainFunc,
+				randomStuff,
+				enumVehicle,
+				classG,
+				abstractClassF,
+				classE,
+				classD,
+				classC,
+				classB,
+				classA,
+			},
+			processEnums: true,
+			want: `main() {
+}
+
+typedef DisposeHandler = Future Function();
+
+Version _versionFromString(String input) =>
+    input == null ? null : Version.parse(input);
+
+// from: https://dart.dev/guides/language/language-tour#enumerated-types
+enum Vehicle implements Comparable<Vehicle> {
+  car(tires: 4, passengers: 5, carbonPerKilometer: 400),
+  bus(tires: 6, passengers: 50, carbonPerKilometer: 800),
+  bicycle(tires: 2, passengers: 1, carbonPerKilometer: 0);
+
+  const Vehicle({
+    required this.tires,
+    required this.passengers,
+    required this.carbonPerKilometer,
+  });
+
+  final int carbonPerKilometer;
+  final int passengers;
+  final int tires;
+
+  @override
+  int compareTo(Vehicle other) => carbonFootprint - other.carbonFootprint;
+
+  int get carbonFootprint => (carbonPerKilometer / passengers).round();
+}
 
 class ClassA {
   ClassA();
@@ -1433,14 +1715,16 @@ class _ClassG {
 		},
 	}
 
-	opts := &Options{
-		MemberOrdering:        defaultMemberOrdering,
-		SortClassesWithinFile: true,
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			source := strings.Join(tt.parts, "\n\n")
+
+			opts := &Options{
+				MemberOrdering:          defaultMemberOrdering,
+				ProcessEnumsLikeClasses: tt.processEnums,
+				SortClassesWithinFile:   true,
+			}
+
 			runFullStylizer(t, opts, source, tt.want, nil)
 			// Run again to make sure no extra blank lines are added.
 			runFullStylizer(t, opts, tt.want, tt.want, nil)

@@ -59,27 +59,27 @@ var rootCmd = &cobra.Command{
 func rootRunE(cmd *cobra.Command, args []string) error {
 	debug, err := cmd.Flags().GetBool("debug")
 	if err != nil {
-		return fmt.Errorf("debug: %v", err)
+		return fmt.Errorf("debug: %w", err)
 	}
 	diff, err := cmd.Flags().GetBool("diff")
 	if err != nil {
-		return fmt.Errorf("diff: %v", err)
+		return fmt.Errorf("diff: %w", err)
 	}
 	list, err := cmd.Flags().GetBool("list")
 	if err != nil {
-		return fmt.Errorf("list: %v", err)
+		return fmt.Errorf("list: %w", err)
 	}
 	write, err := cmd.Flags().GetBool("write")
 	if err != nil {
-		return fmt.Errorf("write: %v", err)
+		return fmt.Errorf("write: %w", err)
 	}
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
-		return fmt.Errorf("verbose: %v", err)
+		return fmt.Errorf("verbose: %w", err)
 	}
 	quiet, err := cmd.Flags().GetBool("quiet")
 	if err != nil {
-		return fmt.Errorf("quiet: %v", err)
+		return fmt.Errorf("quiet: %w", err)
 	}
 
 	var flagCount int
@@ -101,6 +101,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 	groupAndSortGetterMethods := vp.GetBool("groupAndSortGetterMethods")
 	groupAndSortVariableTypes := vp.GetBool("groupAndSortVariableTypes")
 	memberOrdering := vp.GetStringSlice("memberOrdering")
+	processEnumsLikeClasses := vp.GetBool("processEnumsLikeClasses")
 	sortClassesWithinFile := vp.GetBool("sortClassesWithinFile")
 	sortOtherMethods := vp.GetBool("sortOtherMethods")
 	excludeFiles := vp.GetStringSlice("exclude")
@@ -120,9 +121,10 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		GroupAndSortGetterMethods: groupAndSortGetterMethods,
 		GroupAndSortVariableTypes: groupAndSortVariableTypes,
 
-		MemberOrdering:        memberOrdering,
-		SortClassesWithinFile: sortClassesWithinFile,
-		SortOtherMethods:      sortOtherMethods,
+		MemberOrdering:          memberOrdering,
+		ProcessEnumsLikeClasses: processEnumsLikeClasses,
+		SortClassesWithinFile:   sortClassesWithinFile,
+		SortOtherMethods:        sortOtherMethods,
 	}
 	c := dart.New(nil, opts) // Editor is filled in by StylizeFile below.
 
@@ -155,7 +157,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		}
 		diffs, err := c.StylizeFile(arg)
 		if err != nil {
-			return fmt.Errorf("StylizeFile(%q): %v", arg, err)
+			return fmt.Errorf("StylizeFile(%q): %w", arg, err)
 		}
 		anyDiffs = anyDiffs || diffs
 	}

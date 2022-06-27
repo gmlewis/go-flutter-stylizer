@@ -32,7 +32,7 @@ var vm_service_want_txt string
 var vm_service_want_sorted_txt string
 
 func TestVMService_GetClasses(t *testing.T) {
-	e, err := NewEditor(vm_service_dart_txt, false)
+	e, err := NewEditor(vm_service_dart_txt, false, false)
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}

@@ -17,6 +17,7 @@ limitations under the License.
 package dart
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -87,8 +88,8 @@ func (c *Cursor) parse(matchingPairs MatchingPairsMap) (err error) {
 		lastFeature = nf
 		nf, err = c.advanceToNextFeature()
 		if err != nil {
-			if err != io.EOF {
-				return fmt.Errorf("advanceToNextFeature: %v", err)
+			if !errors.Is(err, io.EOF) {
+				return fmt.Errorf("advanceToNextFeature: %w", err)
 			}
 			return nil
 		}
@@ -506,7 +507,7 @@ func (c *Cursor) atTopOfBraceLevel(braceLevel int) bool {
 //
 // It also detects the start of class lines.
 func (c *Cursor) advanceToNextLine() error {
-	if c.lineIndex == 0 && matchClassOrMixinRE.FindStringSubmatch(c.e.lines[c.lineIndex].line) != nil {
+	if c.lineIndex == 0 && c.e.classMatcher.FindStringSubmatch(c.e.lines[c.lineIndex].line) != nil {
 		c.classLineIndices = append(c.classLineIndices, c.lineIndex)
 	}
 
@@ -536,7 +537,7 @@ func (c *Cursor) advanceToNextLine() error {
 		return io.EOF
 	}
 
-	if c.atTopOfBraceLevel(0) && matchClassOrMixinRE.FindStringSubmatch(c.e.lines[c.lineIndex].line) != nil {
+	if c.atTopOfBraceLevel(0) && c.e.classMatcher.FindStringSubmatch(c.e.lines[c.lineIndex].line) != nil {
 		c.classLineIndices = append(c.classLineIndices, c.lineIndex)
 	}
 

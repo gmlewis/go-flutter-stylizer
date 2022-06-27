@@ -1,4 +1,5 @@
 groupAndSortGetterMethods: false
+groupAndSortVariableTypes: false
 memberOrdering:
   public-constructor
   named-constructors
@@ -11,5 +12,6 @@ memberOrdering:
   public-other-methods
   private-other-methods
   build-method
+processEnumsLikeClasses: false
 sortClassesWithinFile: false
 sortOtherMethods: false

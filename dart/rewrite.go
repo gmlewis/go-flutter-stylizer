@@ -67,12 +67,21 @@ func (c *Client) sortClassesWithinFile(edits, origClasses []*Edit) []*Edit {
 	allClasses := append([]*Edit{}, origClasses...)
 	for _, e := range allClasses {
 		e.sortName = strings.TrimPrefix(e.dc.className, "_")
+		if c.opts.ProcessEnumsLikeClasses {
+			if e.dc.classType == "enum" {
+				e.sortName = "0-enum-" + e.sortName // enums before classes
+			} else {
+				e.sortName = "1-class-" + e.sortName // classes and mixins sort together
+			}
+		}
 	}
 	gt := func(a, b int) bool {
-		if allClasses[a].sortName == allClasses[b].sortName {
-			return allClasses[a].dc.className > allClasses[b].dc.className
+		ca := allClasses[a]
+		cb := allClasses[b]
+		if ca.sortName == cb.sortName {
+			return ca.dc.className > cb.dc.className
 		}
-		return allClasses[a].sortName > allClasses[b].sortName
+		return ca.sortName > cb.sortName
 	}
 	if sort.SliceIsSorted(allClasses, gt) {
 		return edits
@@ -103,6 +112,19 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 	var lines []string
 
 	lines = append(lines, dc.lines[0].line) // Curly brace.
+
+	// Add in LeaveUnmodified lines...
+	var foundLeaveUnmodified bool
+	for i := 1; i < len(dc.lines); i++ {
+		line := dc.lines[i]
+		if line.entityType == LeaveUnmodified {
+			lines = append(lines, line.line)
+			foundLeaveUnmodified = true
+		}
+	}
+	if foundLeaveUnmodified {
+		lines = append(lines, "")
+	}
 
 	addEntity := func(entity *Entity, separateEntities bool) {
 		if entity == nil {
