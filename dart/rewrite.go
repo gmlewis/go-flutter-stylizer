@@ -212,7 +212,11 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 			addEntities(dc.staticPrivateVariables, false)
 		case "private-instance-variables":
 			sort.SliceStable(dc.privateVariables, sortFunc(dc.privateVariables))
-			addEntities(dc.privateVariables, false)
+			if c.opts.GroupAndSortVariableTypes {
+				addEntitiesByVarTypes(dc.privateVariables)
+			} else {
+				addEntities(dc.privateVariables, false)
+			}
 		case "public-override-methods":
 			sort.SliceStable(dc.overrideMethods, sortFunc(dc.overrideMethods))
 			addEntities(dc.overrideMethods, true)
