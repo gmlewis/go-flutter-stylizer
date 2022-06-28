@@ -278,6 +278,10 @@ incorporate the fix into the repo.
 
 ## Release Notes
 
+### v0.1.16
+
+- Fix [issue #31](https://github.com/gmlewis/flutter-stylizer/issues/31) for private vars.
+
 ### v0.1.15
 
 - Add new option:

@@ -6,6 +6,11 @@ this file.
 Please make sure you have a backup (preferably in git) of your code before running
 `flutter-stylizer` in case it doesn't handle your code properly.
 
+
+## [v0.1.16] - 2022-06-28
+
+- Fix [issue #31](https://github.com/gmlewis/flutter-stylizer/issues/31) for private vars.
+
 ## [v0.1.15] - 2022-06-27
 
 - Add new option:
