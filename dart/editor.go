@@ -35,25 +35,25 @@ type Editor struct {
 	lines     []*Line
 	eofOffset int
 
+	opts Options
+
 	matchingPairs MatchingPairsMap
 	// classLineIndices contains line indices where a class or abstract class starts.
 	classLineIndices []int
 
 	classMatcher *regexp.Regexp
-
-	Verbose bool
 }
 
 // NewEditor returns a new Editor.
-func NewEditor(buf string, processEnumsLikeClasses, verbose bool) (*Editor, error) {
+func NewEditor(buf string, opts Options) (*Editor, error) {
 	e := &Editor{
 		fullBuf:       buf,
 		matchingPairs: MatchingPairsMap{},
-		Verbose:       verbose,
 		classMatcher:  matchClassOrMixinRE,
+		opts:          opts.validate(),
 	}
 
-	if processEnumsLikeClasses {
+	if opts.ProcessEnumsLikeClasses {
 		e.classMatcher = matchClassOrMixinOrEnumRE
 	}
 
@@ -85,7 +85,7 @@ func NewEditor(buf string, processEnumsLikeClasses, verbose bool) (*Editor, erro
 	return e, nil
 }
 
-func (e *Editor) GetClasses(groupAndSortGetterMethods, separatePrivateMethods bool) ([]*Class, error) {
+func (e *Editor) GetClasses() ([]*Class, error) {
 	var classes []*Class
 
 	for _, lineIndex := range e.classLineIndices {
@@ -112,7 +112,7 @@ func (e *Editor) GetClasses(groupAndSortGetterMethods, separatePrivateMethods bo
 		closeCurlyOffset := pair.closeAbsOffset
 		e.logf("\n\nFound end of %v %q at closeCurlyOffset=%v", classType, className, closeCurlyOffset)
 
-		dartClass := NewClass(e, classType, className, openCurlyOffset, closeCurlyOffset, groupAndSortGetterMethods, separatePrivateMethods)
+		dartClass := NewClass(e, classType, className, openCurlyOffset, closeCurlyOffset, e.opts)
 		if err := dartClass.FindFeatures(); err != nil {
 			return nil, err
 		}
@@ -181,7 +181,7 @@ func (e *Editor) findClassAbsoluteStart(dc *Class) int {
 
 // logf logs the line if verbose is true.
 func (e *Editor) logf(fmtStr string, args ...interface{}) {
-	if e.Verbose {
+	if e.opts.Verbose {
 		log.Printf(fmtStr, args...)
 	}
 }

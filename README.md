@@ -138,21 +138,43 @@ in the following manner (with a blank line separating these parts):
   - (`named-constructors` in configuration)
 * Any static (class) variables are listed next, in sorted order.
   - (`public-static-variables` in configuration)
+* If `public-static-properties` is (optionally) supplied, `get`ters and `set`ters
+  will be separated from `public-static-variables` and grouped together
+  (as pairs by name, first the `get` then the `set`).
+  Using this option will override the groupAndSortGetterMethods setting.
 * Any instance variables are listed next, in sorted order.
   - (`public-instance-variables` in configuration)
+* If `public-instance-properties` is (optionally) supplied, `get`ters and `set`ters
+  will be separated from `public-instance-variables` and grouped together
+  (as pairs by name, first the `get` then the `set`).
+  Using this option will override the groupAndSortGetterMethods setting.
 * Any `@override` variables are listed next, in sorted order.
   - (`public-override-variables` in configuration)
+* If `public-override-properties` is (optionally) supplied, `get`ters and `set`ters
+  will be separated from `public-override-variables` and grouped together
+  (as pairs by name, first the `get` then the `set`).
+  Using this option will override the groupAndSortGetterMethods setting.
 * Any private static (class) variables are listed next, in sorted order.
   - (`private-static-variables` in configuration)
+* If `private-static-properties` is (optionally) supplied, `get`ters and `set`ters
+  will be separated from `private-static-variables` and grouped together
+  (as pairs by name, first the `get` then the `set`).
+  Using this option will override the groupAndSortGetterMethods setting.
 * Any private instance variables are listed next, in sorted order.
   - (`private-instance-variables` in configuration)
+* If `private-instance-properties` is (optionally) supplied, `get`ters and `set`ters
+  will be separated from `private-instance-variables` and grouped together
+  (as pairs by name, first the `get` then the `set`).
+  Using this option will override the groupAndSortGetterMethods setting.
 * Any `@override` methods are listed next, in sorted order.
   - (`public-override-methods` in configuration)
 * Any other methods are listed next in their original (unchanged) order.
   (As of version `v0.0.19`, two new flags affect this section; see below.)
   - (`public-other-methods` in configuration)
-* If `private-other-methods` is (optionally) specified, these will be sorted
+* If `private-other-methods` is (optionally) supplied, these will be sorted
   separately from `public-other-methods`.
+* If `operators` is (optionally) supplied, methods with the `operator` keyword
+  will be sorted and grouped separately from other methods above.
 * The `build` method is listed last.
   - (`build-method` in configuration)
 
@@ -182,13 +204,19 @@ memberOrdering:
   public-constructor
   named-constructors
   public-static-variables
+  public-static-properties
   public-instance-variables
+  public-instance-properties
   public-override-variables
+  public-override-properties
   private-static-variables
+  private-static-properties
   private-instance-variables
+  private-instance-properties
   public-override-methods
   public-other-methods
   private-other-methods
+  operators
   build-method
 processEnumsLikeClasses: false
 sortClassesWithinFile: false
@@ -277,6 +305,17 @@ incorporate the fix into the repo.
   supported even though the Dart compiler can handle it.
 
 ## Release Notes
+
+### v0.1.17
+
+- A number of new optional classifications have been added to address
+  [issue #37](https://github.com/gmlewis/flutter-stylizer/issues/37).
+  - public-static-properties
+  - public-instance-properties
+  - public-override-properties
+  - private-static-properties
+  - private-instance-properties
+  - operators
 
 ### v0.1.16
 

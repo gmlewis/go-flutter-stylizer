@@ -197,6 +197,9 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 		case "public-static-variables":
 			sort.SliceStable(dc.staticVariables, sortFunc(dc.staticVariables))
 			addEntities(dc.staticVariables, false)
+		case "public-static-properties":
+			sort.SliceStable(dc.staticProperties, sortFunc(dc.staticProperties))
+			addEntities(dc.staticProperties, false)
 		case "public-instance-variables":
 			sort.SliceStable(dc.instanceVariables, sortFunc(dc.instanceVariables))
 			if c.opts.GroupAndSortVariableTypes {
@@ -204,12 +207,21 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 			} else {
 				addEntities(dc.instanceVariables, false)
 			}
+		case "public-instance-properties":
+			sort.SliceStable(dc.instanceProperties, sortFunc(dc.instanceProperties))
+			addEntities(dc.instanceProperties, false)
 		case "public-override-variables":
 			sort.SliceStable(dc.overrideVariables, sortFunc(dc.overrideVariables))
 			addEntities(dc.overrideVariables, false)
+		case "public-override-properties":
+			sort.SliceStable(dc.overrideProperties, sortFunc(dc.overrideProperties))
+			addEntities(dc.overrideProperties, false)
 		case "private-static-variables":
 			sort.SliceStable(dc.staticPrivateVariables, sortFunc(dc.staticPrivateVariables))
 			addEntities(dc.staticPrivateVariables, false)
+		case "private-static-properties":
+			sort.SliceStable(dc.staticPrivateProperties, sortFunc(dc.staticPrivateProperties))
+			addEntities(dc.staticPrivateProperties, false)
 		case "private-instance-variables":
 			sort.SliceStable(dc.privateVariables, sortFunc(dc.privateVariables))
 			if c.opts.GroupAndSortVariableTypes {
@@ -217,11 +229,14 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 			} else {
 				addEntities(dc.privateVariables, false)
 			}
+		case "private-instance-properties":
+			sort.SliceStable(dc.privateProperties, sortFunc(dc.privateProperties))
+			addEntities(dc.privateProperties, false)
 		case "public-override-methods":
 			sort.SliceStable(dc.overrideMethods, sortFunc(dc.overrideMethods))
 			addEntities(dc.overrideMethods, true)
 		case "private-other-methods":
-			if c.opts.SeparatePrivateMethods {
+			if c.opts.hasPrivateOtherMethods {
 				if c.opts.SortOtherMethods {
 					sort.SliceStable(dc.otherPrivateMethods, sortFunc(dc.otherPrivateMethods))
 				}
@@ -248,6 +263,10 @@ func (c *Client) reorderClass(dc *Class) ([]string, bool) {
 				if foundComment {
 					lines = append(lines, "")
 				}
+			}
+		case "operators":
+			if c.opts.hasOperators {
+				addEntities(dc.operators, true)
 			}
 		case "build-method":
 			addEntity(dc.buildMethod, true)

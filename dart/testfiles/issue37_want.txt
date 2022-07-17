@@ -1,0 +1,15 @@
+class Rectangle {
+  Rectangle(this.left, this.top, this.width, this.height);
+
+  double left, top, width, height;
+
+  Rectangle operator +(Rectangle v) => Rectangle(left, top, width + v.width, height + v.height);
+
+  double get right => left + width;
+
+  set right(double value) => left = value - width;
+
+  double get bottom => top + height;
+
+  set bottom(double value) => top = value - height;
+}

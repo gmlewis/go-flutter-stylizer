@@ -43,7 +43,14 @@ type Options struct {
 	ProcessEnumsLikeClasses bool
 	SortClassesWithinFile   bool
 	SortOtherMethods        bool
-	SeparatePrivateMethods  bool
+
+	hasPublicStaticProperties    bool
+	hasPublicInstanceProperties  bool
+	hasPublicOverrideProperties  bool
+	hasPrivateStaticProperties   bool
+	hasPrivateInstanceProperties bool
+	hasPrivateOtherMethods       bool
+	hasOperators                 bool
 }
 
 // Client represents a Dart processor.
@@ -52,33 +59,9 @@ type Client struct {
 	opts   Options
 }
 
-var defaultMemberOrdering = []string{
-	"public-constructor",
-	"named-constructors",
-	"public-static-variables",
-	"public-instance-variables",
-	"public-override-variables",
-	"private-static-variables",
-	"private-instance-variables",
-	"public-override-methods",
-	"public-other-methods",
-	"private-other-methods", // optional!
-	"build-method",
-}
-
 // New returns a new Dart processor.
 func New(e *Editor, opts Options) *Client {
-	if !validateMemberOrdering(opts.MemberOrdering) {
-		opts.MemberOrdering = defaultMemberOrdering
-	}
-
-	for _, v := range opts.MemberOrdering {
-		if v == "private-other-methods" {
-			opts.SeparatePrivateMethods = true
-		}
-	}
-
-	return &Client{editor: e, opts: opts}
+	return &Client{editor: e, opts: opts.validate()}
 }
 
 // StylizeFile sylizes a single Dart file using the provided options.
@@ -93,14 +76,13 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 		buf = string(b)
 	}
 
-	e, err := NewEditor(buf, c.opts.ProcessEnumsLikeClasses, c.opts.Verbose)
+	e, err := NewEditor(buf, c.opts)
 	if err != nil {
 		return false, fmt.Errorf("NewEditor: %w", err)
 	}
 	c.editor = e
 
-	e.Verbose = c.opts.Verbose
-	classes, err := e.GetClasses(c.opts.GroupAndSortGetterMethods, c.opts.SeparatePrivateMethods)
+	classes, err := e.GetClasses()
 	if err != nil {
 		return false, err
 	}
@@ -158,33 +140,6 @@ func (c *Client) StylizeFile(filename string) (bool, error) {
 	}
 
 	return len(edits) != 0, nil
-}
-
-func validateMemberOrdering(memberOrdering []string) bool {
-	if got, want := len(memberOrdering), len(defaultMemberOrdering); got < want-1 || got > want {
-		log.Printf("flutterStylizer.memberOrdering must have %v or %v values, but found %v. Ignoring and using defaults.", want-1, want, got)
-		return false
-	}
-
-	lookup := map[string]bool{}
-	for _, s := range defaultMemberOrdering {
-		lookup[s] = true
-	}
-
-	seen := map[string]bool{}
-	for _, el := range memberOrdering {
-		if !lookup[el] {
-			log.Printf("Unknown member %q in flutterStylizer.memberOrdering. Ignoring and using defaults.", el)
-			return false
-		}
-		if seen[el] {
-			log.Printf("Duplicate member %q in flutterStylizer.memberOrdering. Ignoring and using defaults.", el)
-			return false
-		}
-		seen[el] = true
-	}
-
-	return true
 }
 
 // logf logs the line if debug is true.
