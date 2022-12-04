@@ -1,4 +1,4 @@
-# flutter-stylizer
+# flutter-stylizer - Mothballed/Archived Project
 
 [![CodeQL](https://github.com/gmlewis/go-flutter-stylizer/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/gmlewis/go-flutter-stylizer/actions/workflows/codeql-analysis.yml)
 
@@ -13,6 +13,10 @@ This makes it particularly well-suited to be used in GitHub Actions,
 Bitbucket, or other CI/CD pipelines, to maintain Flutter code repositories.
 
 ## Status
+
+After 5 years, 119K installs, 4.9/5 stars, and zero sponsors, this project
+is now mothballed and archived. Feel free to fork the project to create your
+own version of the plugin and add your own customizations to your liking.
 
 This has been run on the Flutter source code base (consisting of 8003 *.dart
 files) located here (on Linux):
