@@ -21,12 +21,13 @@ import (
 )
 
 func TestSeparatePrivateMethods_false(t *testing.T) {
-	e, err := NewEditor(separatePrivateMethodsSource, false, false)
+	opts := Options{}
+	e, err := NewEditor(separatePrivateMethodsSource, opts)
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}
 
-	classes, err := e.GetClasses(false, false)
+	classes, err := e.GetClasses()
 	if err != nil {
 		t.Fatalf("GetClasses: %v", err)
 	}
@@ -35,7 +36,7 @@ func TestSeparatePrivateMethods_false(t *testing.T) {
 		t.Errorf("got %v classes, want %v", len(classes), want)
 	}
 
-	c := New(e, Options{})
+	c := New(e, opts)
 	edits := c.generateEdits(classes)
 	newBuf := c.rewriteClasses(separatePrivateMethodsSource, edits)
 
@@ -45,22 +46,7 @@ func TestSeparatePrivateMethods_false(t *testing.T) {
 }
 
 func TestSeparatePrivateMethods_true(t *testing.T) {
-	e, err := NewEditor(separatePrivateMethodsSource, false, false)
-	if err != nil {
-		t.Fatalf("NewEditor: %v", err)
-	}
-
-	classes, err := e.GetClasses(false, true)
-	if err != nil {
-		t.Fatalf("GetClasses: %v", err)
-	}
-
-	if got, want := len(classes), 1; got != want {
-		t.Errorf("got %v classes, want %v", len(classes), want)
-	}
-
 	opts := Options{
-		SeparatePrivateMethods: true,
 		MemberOrdering: []string{
 			"public-constructor",
 			"named-constructors",
@@ -75,6 +61,21 @@ func TestSeparatePrivateMethods_true(t *testing.T) {
 			"build-method",
 		},
 	}
+
+	e, err := NewEditor(separatePrivateMethodsSource, opts)
+	if err != nil {
+		t.Fatalf("NewEditor: %v", err)
+	}
+
+	classes, err := e.GetClasses()
+	if err != nil {
+		t.Fatalf("GetClasses: %v", err)
+	}
+
+	if got, want := len(classes), 1; got != want {
+		t.Errorf("got %v classes, want %v", len(classes), want)
+	}
+
 	c := New(e, opts)
 	edits := c.generateEdits(classes)
 	newBuf := c.rewriteClasses(separatePrivateMethodsSource, edits)

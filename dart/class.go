@@ -35,18 +35,31 @@ type Class struct {
 	openCurlyOffset           int
 	closeCurlyOffset          int
 	groupAndSortGetterMethods bool
-	separatePrivateMethods    bool
+
+	hasPublicStaticProperties    bool
+	hasPublicInstanceProperties  bool
+	hasPublicOverrideProperties  bool
+	hasPrivateStaticProperties   bool
+	hasPrivateInstanceProperties bool
+	hasPrivateOtherMethods       bool
+	hasOperators                 bool
 
 	theConstructor          *Entity
 	namedConstructors       []*Entity
 	staticVariables         []*Entity
+	staticProperties        []*Entity
 	instanceVariables       []*Entity
+	instanceProperties      []*Entity
 	overrideVariables       []*Entity
+	overrideProperties      []*Entity
 	staticPrivateVariables  []*Entity
+	staticPrivateProperties []*Entity
 	privateVariables        []*Entity
+	privateProperties       []*Entity
 	overrideMethods         []*Entity
 	otherAllOrPublicMethods []*Entity
 	otherPrivateMethods     []*Entity
+	operators               []*Entity
 	buildMethod             *Entity
 	getterMethods           []*Entity
 }
@@ -60,7 +73,7 @@ type Class struct {
 // groupAndSortGetterMethods determines how getter methods are processed.
 func NewClass(editor *Editor, classType, className string,
 	openCurlyOffset, closeCurlyOffset int,
-	groupAndSortGetterMethods, separatePrivateMethods bool) *Class {
+	opts Options) *Class {
 	lessThanOffset := strings.Index(className, "<")
 	if lessThanOffset >= 0 { // Strip off <T>.
 		className = className[0:lessThanOffset]
@@ -108,8 +121,15 @@ func NewClass(editor *Editor, classType, className string,
 		openCurlyOffset:  openCurlyOffset,
 		closeCurlyOffset: closeCurlyOffset,
 
-		groupAndSortGetterMethods: groupAndSortGetterMethods,
-		separatePrivateMethods:    separatePrivateMethods,
+		groupAndSortGetterMethods: opts.GroupAndSortGetterMethods,
+
+		hasPublicStaticProperties:    opts.hasPublicStaticProperties,
+		hasPublicInstanceProperties:  opts.hasPublicInstanceProperties,
+		hasPublicOverrideProperties:  opts.hasPublicOverrideProperties,
+		hasPrivateStaticProperties:   opts.hasPrivateStaticProperties,
+		hasPrivateInstanceProperties: opts.hasPrivateInstanceProperties,
+		hasPrivateOtherMethods:       opts.hasPrivateOtherMethods,
+		hasOperators:                 opts.hasOperators,
 	}
 }
 
@@ -152,7 +172,7 @@ func (c *Class) FindFeatures() error {
 		return fmt.Errorf("identifyOthers: %w", err)
 	}
 
-	if c.e.Verbose {
+	if c.e.opts.Verbose {
 		for i, line := range c.lines {
 			c.e.logf("line #%v type=%v: %v", i+1, line.entityType, line.line)
 		}
@@ -513,7 +533,11 @@ func (c *Class) identifyOverrideMethodsAndVars() error {
 		}
 
 		if entity.entityType == OverrideVariable {
-			c.overrideVariables = append(c.overrideVariables, entity)
+			if c.hasPublicOverrideProperties && entity.isProperty() {
+				c.overrideProperties = append(c.overrideProperties, entity)
+			} else {
+				c.overrideVariables = append(c.overrideVariables, entity)
+			}
 		} else {
 			c.overrideMethods = append(c.overrideMethods, entity)
 		}
@@ -561,9 +585,20 @@ func (c *Class) identifyOthers() error {
 
 		switch entity.entityType {
 		case OtherMethod:
-			if c.separatePrivateMethods && entity.isPrivateMethod() {
+			switch {
+			case c.hasPublicStaticProperties && entity.isProperty() && !entity.private && entity.static:
+				c.staticProperties = append(c.staticProperties, entity)
+			case c.hasPrivateStaticProperties && entity.isProperty() && entity.private && entity.static:
+				c.staticPrivateProperties = append(c.staticPrivateProperties, entity)
+			case c.hasPublicInstanceProperties && entity.isProperty() && !entity.private && !entity.static:
+				c.instanceProperties = append(c.instanceProperties, entity)
+			case c.hasPrivateInstanceProperties && entity.isProperty() && entity.private && !entity.static:
+				c.privateProperties = append(c.privateProperties, entity)
+			case c.hasOperators && entity.isOperator():
+				c.operators = append(c.operators, entity)
+			case c.hasPrivateOtherMethods && entity.isPrivateMethod():
 				c.otherPrivateMethods = append(c.otherPrivateMethods, entity)
-			} else {
+			default:
 				c.otherAllOrPublicMethods = append(c.otherAllOrPublicMethods, entity)
 			}
 		case GetterMethod:
@@ -575,7 +610,11 @@ func (c *Class) identifyOthers() error {
 		case InstanceVariable:
 			c.instanceVariables = append(c.instanceVariables, entity)
 		case OverrideVariable:
-			c.overrideVariables = append(c.overrideVariables, entity)
+			if c.hasPublicOverrideProperties && entity.isProperty() {
+				c.overrideProperties = append(c.overrideProperties, entity)
+			} else {
+				c.overrideVariables = append(c.overrideVariables, entity)
+			}
 		case PrivateInstanceVariable:
 			c.privateVariables = append(c.privateVariables, entity)
 		case LeaveUnmodified:
@@ -597,15 +636,13 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 	c.e.logf("scanMethod(line=#%v), sequence=%v, lineCount=%v, leadingText=%q", lineNum+1, sequence, lineCount, leadingText)
 
 	nameParts := strings.Split(leadingText, " ")
-	var staticKeyword bool
-	var privateVar bool
 	if len(nameParts) > 0 {
 		entity.name = nameParts[len(nameParts)-1]
 		if strings.HasPrefix(entity.name, "_") {
-			privateVar = true
+			entity.private = true
 		}
 		if nameParts[0] == "static" {
-			staticKeyword = true
+			entity.static = true
 		}
 	}
 
@@ -613,11 +650,11 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 	switch {
 	case c.classType == "enum" && lineNum == 1:
 		entity.entityType = LeaveUnmodified
-	case privateVar && staticKeyword:
+	case entity.private && entity.static:
 		entity.entityType = StaticPrivateVariable
-	case staticKeyword:
+	case entity.static:
 		entity.entityType = StaticVariable
-	case privateVar:
+	case entity.private:
 		entity.entityType = PrivateInstanceVariable
 	}
 
@@ -639,8 +676,8 @@ func (c *Class) scanMethod(lineNum int) (*Entity, error) {
 		}
 	}
 
-	// Force getters to be methods.
-	if strings.Contains(leadingText, " get ") {
+	// Force getters and setters to be methods.
+	if strings.Contains(leadingText, " get ") || strings.Contains(leadingText, "set ") {
 		if c.groupAndSortGetterMethods {
 			entity.entityType = GetterMethod
 		} else {

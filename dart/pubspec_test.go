@@ -28,12 +28,12 @@ var pubspec_dart_txt string
 var pubspec_want_txt string
 
 func TestPubspec_GetClasses(t *testing.T) {
-	e, err := NewEditor(pubspec_dart_txt, false, false)
+	e, err := NewEditor(pubspec_dart_txt, Options{})
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}
 
-	classes, err := e.GetClasses(false, false)
+	classes, err := e.GetClasses()
 	if err != nil {
 		t.Fatalf("GetClasses: %v", err)
 	}

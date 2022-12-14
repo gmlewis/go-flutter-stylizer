@@ -32,12 +32,13 @@ var vm_service_want_txt string
 var vm_service_want_sorted_txt string
 
 func TestVMService_GetClasses(t *testing.T) {
-	e, err := NewEditor(vm_service_dart_txt, false, false)
+	opts := Options{}
+	e, err := NewEditor(vm_service_dart_txt, opts)
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}
 
-	classes, err := e.GetClasses(false, false)
+	classes, err := e.GetClasses()
 	if err != nil {
 		t.Fatalf("GetClasses: %v", err)
 	}
@@ -52,7 +53,18 @@ func TestVMService_Source(t *testing.T) {
 	wantSource := vm_service_want_txt
 
 	opts := &Options{
-		MemberOrdering: defaultMemberOrdering,
+		MemberOrdering: []string{
+			"public-constructor",
+			"named-constructors",
+			"public-static-variables",
+			"public-instance-variables",
+			"public-override-variables",
+			"private-static-variables",
+			"private-instance-variables",
+			"public-override-methods",
+			"public-other-methods",
+			"build-method",
+		},
 	}
 
 	runFullStylizer(t, opts, source, wantSource, nil)
@@ -65,7 +77,18 @@ func TestVMService_Source_WithClassSorting(t *testing.T) {
 
 	opts := &Options{
 		SortClassesWithinFile: true,
-		MemberOrdering:        defaultMemberOrdering,
+		MemberOrdering: []string{
+			"public-constructor",
+			"named-constructors",
+			"public-static-variables",
+			"public-instance-variables",
+			"public-override-variables",
+			"private-static-variables",
+			"private-instance-variables",
+			"public-override-methods",
+			"public-other-methods",
+			"build-method",
+		},
 	}
 
 	runFullStylizer(t, opts, source, wantSource, wantVMServiceClassAll)

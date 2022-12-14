@@ -4,13 +4,19 @@ memberOrdering:
   public-constructor
   named-constructors
   public-static-variables
+  public-static-properties
   public-instance-variables
+  public-instance-properties
   public-override-variables
+  public-override-properties
   private-static-variables
+  private-static-properties
   private-instance-variables
+  private-instance-properties
   public-override-methods
   public-other-methods
   private-other-methods
+  operators
   build-method
 processEnumsLikeClasses: false
 sortClassesWithinFile: false

@@ -23,6 +23,9 @@ type Entity struct {
 	entityType EntityType
 	lines      []*Line
 	name       string // Used for sorting, but could be "".
+
+	private bool // has leading "_" in the name.
+	static  bool // has "static" keyword.
 }
 
 // EntityType represents a type of Dart Line.
@@ -86,4 +89,22 @@ func (e EntityType) String() string {
 
 func (e *Entity) isPrivateMethod() bool {
 	return strings.HasPrefix(e.name, "_")
+}
+
+func (e *Entity) isOperator() bool {
+	for _, line := range e.lines {
+		if strings.Contains(line.classLevelText, " operator ") {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *Entity) isProperty() bool {
+	for _, line := range e.lines {
+		if strings.Contains(line.classLevelText, " get ") || strings.Contains(line.classLevelText, "set ") {
+			return true
+		}
+	}
+	return false
 }

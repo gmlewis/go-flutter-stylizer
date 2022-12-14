@@ -25,12 +25,12 @@ import (
 var flowAnalysis string
 
 func TestFlowAnalysis_GetClasses(t *testing.T) {
-	e, err := NewEditor(flowAnalysis, false, false)
+	e, err := NewEditor(flowAnalysis, Options{})
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}
 
-	classes, err := e.GetClasses(false, false)
+	classes, err := e.GetClasses()
 	if err != nil {
 		t.Fatalf("GetClasses: %v", err)
 	}

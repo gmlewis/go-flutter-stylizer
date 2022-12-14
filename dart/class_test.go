@@ -30,23 +30,16 @@ func runParsePhase(t *testing.T, opts *Options, source string, wantClasses [][]E
 
 	testOpts := Options{MemberOrdering: defaultMemberOrdering}
 	if opts != nil {
-		testOpts.GroupAndSortGetterMethods = opts.GroupAndSortGetterMethods
-		testOpts.GroupAndSortVariableTypes = opts.GroupAndSortVariableTypes
-		testOpts.MemberOrdering = opts.MemberOrdering
-		testOpts.ProcessEnumsLikeClasses = opts.ProcessEnumsLikeClasses
-		testOpts.SortClassesWithinFile = opts.SortClassesWithinFile
-		testOpts.SortOtherMethods = opts.SortOtherMethods
-		testOpts.Debug = opts.Debug
-		testOpts.Verbose = opts.Verbose
+		testOpts = *opts
 	}
 
-	e, err := NewEditor(source, testOpts.ProcessEnumsLikeClasses, testOpts.Verbose)
+	e, err := NewEditor(source, testOpts)
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}
 
-	c := &Client{editor: e, opts: testOpts}
-	gotAll, err := e.GetClasses(testOpts.GroupAndSortGetterMethods, testOpts.SeparatePrivateMethods)
+	c := New(e, testOpts)
+	gotAll, err := e.GetClasses()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1132,7 +1125,7 @@ func TestIssue19_FactoryConstructorShouldNotBeDuplicated(t *testing.T) {
 func TestFindFeatures_linux_mac(t *testing.T) {
 	bc, bcLineOffset, bcOCO, bcCCO := setupEditor(t, "class Class1 {", basicClasses)
 
-	uc := NewClass(bc, "class", "Class1", bcOCO, bcCCO, false, false)
+	uc := NewClass(bc, "class", "Class1", bcOCO, bcCCO, Options{})
 
 	want := []EntityType{
 		Unknown,                 // line #7: class Class1 {
@@ -1206,7 +1199,7 @@ func TestFindFeatures_linux_mac(t *testing.T) {
 func TestFindFeatures_windoze(t *testing.T) {
 	wz, wzLineOffset, wzOCO, wzCCO := setupEditor(t, "class Class1 {", bcWindoze)
 
-	wc := NewClass(wz, "class", "Class1", wzOCO, wzCCO, false, false)
+	wc := NewClass(wz, "class", "Class1", wzOCO, wzCCO, Options{})
 
 	want := []EntityType{
 		Unknown,                 // line #7: class Class1 {

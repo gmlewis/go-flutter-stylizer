@@ -28,12 +28,13 @@ var strong_mode_dart_txt string
 // var strong_mode_want_txt string
 
 func TestStrongMode_GetClasses(t *testing.T) {
-	e, err := NewEditor(strong_mode_dart_txt, false, false)
+	opts := Options{}
+	e, err := NewEditor(strong_mode_dart_txt, opts)
 	if err != nil {
 		t.Fatalf("NewEditor: %v", err)
 	}
 
-	classes, err := e.GetClasses(false, false)
+	classes, err := e.GetClasses()
 	if err != nil {
 		t.Fatalf("GetClasses: %v", err)
 	}

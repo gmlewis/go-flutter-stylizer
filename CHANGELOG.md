@@ -7,6 +7,17 @@ Please make sure you have a backup (preferably in git) of your code before runni
 `flutter-stylizer` in case it doesn't handle your code properly.
 
 
+## [v0.1.17] - 2022-07-17
+
+- A number of new optional classifications have been added to address
+  [issue #37](https://github.com/gmlewis/flutter-stylizer/issues/37).
+  - public-static-properties
+  - public-instance-properties
+  - public-override-properties
+  - private-static-properties
+  - private-instance-properties
+  - operators
+
 ## [v0.1.16] - 2022-06-28
 
 - Fix [issue #31](https://github.com/gmlewis/flutter-stylizer/issues/31) for private vars.
